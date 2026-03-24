@@ -64,7 +64,8 @@ def fetch_ohlcv(
         logger.warning("No symbols provided — returning empty DataFrame")
         return pl.DataFrame(schema=empty_schema)
 
-    end_date = datetime.now(tz=UTC).date()
+    # yfinance 'end' is exclusive, so add 1 day to include today's close
+    end_date = datetime.now(tz=UTC).date() + timedelta(days=1)
     start_date = end_date - timedelta(days=lookback_days)
 
     # Translate internal symbols to Yahoo Finance tickers
