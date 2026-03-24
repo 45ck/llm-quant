@@ -1,0 +1,17 @@
+[general]
+db_path = "data/llm_quant.duckdb"
+initial_capital = 100_000.0
+base_currency = "USD"
+
+[llm]
+model = "claude-sonnet-4-20250514"
+temperature = 0.0
+max_tokens = 4096
+max_trades_per_session = 5
+
+[data]
+lookback_days = 252  # 1 year of trading days
+fetch_timeout = 30
+
+[logging]
+level = "INFO"

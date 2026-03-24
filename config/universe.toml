@@ -1,0 +1,184 @@
+[universe]
+name = "US ETF Core 30"
+description = "Top 30 liquid ETFs covering equities, sectors, bonds, and commodities"
+
+[[etfs]]
+symbol = "SPY"
+name = "S&P 500"
+category = "equity"
+sector = "broad_market"
+
+[[etfs]]
+symbol = "QQQ"
+name = "Nasdaq 100"
+category = "equity"
+sector = "tech"
+
+[[etfs]]
+symbol = "IWM"
+name = "Russell 2000"
+category = "equity"
+sector = "small_cap"
+
+[[etfs]]
+symbol = "DIA"
+name = "Dow Jones Industrial"
+category = "equity"
+sector = "broad_market"
+
+[[etfs]]
+symbol = "VTI"
+name = "Total US Stock Market"
+category = "equity"
+sector = "broad_market"
+
+[[etfs]]
+symbol = "IVV"
+name = "S&P 500 (iShares)"
+category = "equity"
+sector = "broad_market"
+
+[[etfs]]
+symbol = "XLK"
+name = "Technology Select"
+category = "equity"
+sector = "technology"
+
+[[etfs]]
+symbol = "XLF"
+name = "Financial Select"
+category = "equity"
+sector = "financials"
+
+[[etfs]]
+symbol = "XLE"
+name = "Energy Select"
+category = "equity"
+sector = "energy"
+
+[[etfs]]
+symbol = "XLV"
+name = "Health Care Select"
+category = "equity"
+sector = "healthcare"
+
+[[etfs]]
+symbol = "XLI"
+name = "Industrial Select"
+category = "equity"
+sector = "industrials"
+
+[[etfs]]
+symbol = "XLY"
+name = "Consumer Discretionary"
+category = "equity"
+sector = "consumer_discretionary"
+
+[[etfs]]
+symbol = "XLP"
+name = "Consumer Staples"
+category = "equity"
+sector = "consumer_staples"
+
+[[etfs]]
+symbol = "XLU"
+name = "Utilities Select"
+category = "equity"
+sector = "utilities"
+
+[[etfs]]
+symbol = "XLRE"
+name = "Real Estate Select"
+category = "equity"
+sector = "real_estate"
+
+[[etfs]]
+symbol = "XLB"
+name = "Materials Select"
+category = "equity"
+sector = "materials"
+
+[[etfs]]
+symbol = "XLC"
+name = "Communication Services"
+category = "equity"
+sector = "communication"
+
+[[etfs]]
+symbol = "VGK"
+name = "FTSE Europe"
+category = "equity"
+sector = "international"
+
+[[etfs]]
+symbol = "EEM"
+name = "Emerging Markets"
+category = "equity"
+sector = "emerging"
+
+[[etfs]]
+symbol = "EFA"
+name = "EAFE (Intl Developed)"
+category = "equity"
+sector = "international"
+
+[[etfs]]
+symbol = "TLT"
+name = "20+ Year Treasury Bond"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "IEF"
+name = "7-10 Year Treasury Bond"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "SHY"
+name = "1-3 Year Treasury Bond"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "LQD"
+name = "Investment Grade Corporate"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "HYG"
+name = "High Yield Corporate"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "TIP"
+name = "TIPS (Inflation Protected)"
+category = "fixed_income"
+sector = "bonds"
+
+[[etfs]]
+symbol = "GLD"
+name = "Gold"
+category = "commodity"
+sector = "precious_metals"
+
+[[etfs]]
+symbol = "SLV"
+name = "Silver"
+category = "commodity"
+sector = "precious_metals"
+
+[[etfs]]
+symbol = "USO"
+name = "Crude Oil"
+category = "commodity"
+sector = "energy"
+
+[[etfs]]
+symbol = "VIX"
+name = "VIX (for reference only)"
+category = "volatility"
+sector = "volatility"
+tradeable = false

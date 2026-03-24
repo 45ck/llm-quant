@@ -1,0 +1,25 @@
+[limits]
+# Maximum weight for a single position as fraction of NAV
+max_position_weight = 0.10  # 10%
+
+# Maximum capital allocated to a single trade as fraction of NAV
+max_trade_size = 0.02  # 2%
+
+# Maximum gross exposure as fraction of NAV (long + short)
+max_gross_exposure = 2.0  # 200%
+
+# Maximum net exposure as fraction of NAV (long - short)
+max_net_exposure = 1.0  # 100%
+
+# Maximum concentration in a single sector
+max_sector_concentration = 0.30  # 30%
+
+# Maximum number of new trades per session
+max_trades_per_session = 5
+
+# Minimum cash reserve as fraction of NAV
+min_cash_reserve = 0.05  # 5%
+
+# Stop-loss required on every position (percentage below entry)
+require_stop_loss = true
+default_stop_loss_pct = 0.05  # 5%
