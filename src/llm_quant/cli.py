@@ -1,7 +1,7 @@
 """CLI entry point for llm-quant paper trading system."""
 
 import logging
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
@@ -29,6 +29,7 @@ def _setup_logging(level: str = "INFO") -> None:
 
 def _get_config():
     from llm_quant.config import load_config
+
     return load_config()
 
 
@@ -80,7 +81,9 @@ def fetch():
         )
 
     if df.is_empty():
-        console.print("[red]FAIL[/red] No data fetched. Check your internet connection.")
+        console.print(
+            "[red]FAIL[/red] No data fetched. Check your internet connection."
+        )
         raise typer.Exit(1)
 
     console.print(f"  Fetched {len(df)} rows for {df['symbol'].n_unique()} symbols")
@@ -97,7 +100,12 @@ def fetch():
 
 @app.command()
 def run(
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Show signals without executing trades"),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        "-n",
+        help="Show signals without executing trades",
+    ),
 ):
     """Full cycle: fetch -> indicators -> Claude -> trade -> log."""
     _setup_logging()
@@ -117,25 +125,28 @@ def run(
     from llm_quant.trading.portfolio import Portfolio
 
     conn = get_connection(db_path)
-    today = date.today()
+    today = datetime.now(tz=UTC).date()
 
     # Step 1: Fetch latest data
     symbols = get_tradeable_symbols(config)
-    console.print(f"\n[bold]Step 1/5:[/bold] Fetching market data for {len(symbols)} symbols...")
+    console.print(
+        f"\n[bold]Step 1/5:[/bold] Fetching market data for {len(symbols)} symbols..."
+    )
     df = fetch_ohlcv(symbols, lookback_days=config.data.lookback_days)
     if not df.is_empty():
         df = compute_indicators(df)
         upsert_market_data(conn, df)
         console.print(f"  [green]OK[/green] Updated {df['symbol'].n_unique()} symbols")
     else:
-        console.print("  [yellow]WARN[/yellow] No new data fetched, using existing DB data")
+        console.print(
+            "  [yellow]WARN[/yellow] No new data fetched, using existing DB data"
+        )
 
     # Step 2: Load portfolio
     console.print("[bold]Step 2/5:[/bold] Loading portfolio...")
     portfolio = Portfolio.from_db(conn, config.general.initial_capital)
 
     # Get latest prices for portfolio
-    all_symbols = symbols
     latest = conn.execute(
         """
         SELECT symbol, close as price FROM market_data_daily
@@ -144,10 +155,19 @@ def run(
         )
         """
     ).pl()
-    prices = dict(zip(latest["symbol"].to_list(), latest["price"].to_list()))
+    prices = dict(
+        zip(
+            latest["symbol"].to_list(),
+            latest["price"].to_list(),
+            strict=True,
+        )
+    )
     portfolio.update_prices(prices)
 
-    console.print(f"  NAV: ${portfolio.nav:,.2f} | Cash: ${portfolio.cash:,.2f} | Positions: {len(portfolio.positions)}")
+    console.print(
+        f"  NAV: ${portfolio.nav:,.2f} | Cash: ${portfolio.cash:,.2f}"
+        f" | Positions: {len(portfolio.positions)}"
+    )
 
     # Step 3: Build context and get Claude's signals
     console.print("[bold]Step 3/5:[/bold] Consulting Claude...")
@@ -171,10 +191,13 @@ def run(
     approved, rejected = risk_mgr.filter_signals(decision.signals, portfolio, prices)
 
     if rejected:
-        console.print(f"  [yellow]WARN[/yellow] {len(rejected)} signals rejected by risk manager:")
+        console.print(
+            f"  [yellow]WARN[/yellow] {len(rejected)} signals rejected by risk manager:"
+        )
         for sig, checks in rejected:
             failed = [c for c in checks if not c.passed]
-            console.print(f"    {sig.symbol} {sig.action.value}: {', '.join(c.message for c in failed)}")
+            reasons = ", ".join(c.message for c in failed)
+            console.print(f"    {sig.symbol} {sig.action.value}: {reasons}")
 
     if approved:
         executed = execute_signals(portfolio, approved, prices, portfolio.nav)
@@ -204,8 +227,10 @@ def _display_decision(decision):
     regime_colors = {"risk_on": "green", "risk_off": "red", "transition": "yellow"}
     color = regime_colors.get(decision.market_regime.value, "white")
 
-    console.print(f"\n  Regime: [{color}]{decision.market_regime.value}[/{color}] "
-                  f"(confidence: {decision.regime_confidence:.0%})")
+    console.print(
+        f"\n  Regime: [{color}]{decision.market_regime.value}[/{color}] "
+        f"(confidence: {decision.regime_confidence:.0%})"
+    )
     console.print(f"  Reasoning: {decision.regime_reasoning}")
 
     if decision.signals:
@@ -217,7 +242,12 @@ def _display_decision(decision):
         table.add_column("Stop Loss")
         table.add_column("Reasoning", max_width=50)
 
-        action_colors = {"buy": "green", "sell": "red", "close": "red", "hold": "yellow"}
+        action_colors = {
+            "buy": "green",
+            "sell": "red",
+            "close": "red",
+            "hold": "yellow",
+        }
         for sig in decision.signals:
             a_color = action_colors.get(sig.action.value, "white")
             table.add_row(
@@ -234,7 +264,9 @@ def _display_decision(decision):
         console.print(f"\n  Commentary: {decision.portfolio_commentary}")
 
     if decision.total_tokens > 0:
-        console.print(f"  Tokens: {decision.total_tokens} | Cost: ${decision.cost_usd:.4f}")
+        console.print(
+            f"  Tokens: {decision.total_tokens} | Cost: ${decision.cost_usd:.4f}"
+        )
 
 
 @app.command()
@@ -261,16 +293,22 @@ def status():
         """
     ).pl()
     if not latest.is_empty():
-        prices = dict(zip(latest["symbol"].to_list(), latest["price"].to_list()))
+        prices = dict(
+            zip(latest["symbol"].to_list(), latest["price"].to_list(), strict=True)
+        )
         portfolio.update_prices(prices)
 
     # Portfolio summary
-    console.print(Panel(
-        f"[bold]NAV:[/bold] ${portfolio.nav:,.2f}  |  "
-        f"[bold]Cash:[/bold] ${portfolio.cash:,.2f} ({portfolio.cash / portfolio.nav * 100:.1f}%)  |  "
-        f"[bold]P&L:[/bold] ${portfolio.total_pnl:,.2f} ({portfolio.total_pnl / portfolio.initial_capital * 100:+.2f}%)",
-        title="Portfolio Status",
-    ))
+    cash_pct = portfolio.cash / portfolio.nav * 100
+    pnl_pct = portfolio.total_pnl / portfolio.initial_capital * 100
+    console.print(
+        Panel(
+            f"[bold]NAV:[/bold] ${portfolio.nav:,.2f}  |  "
+            f"[bold]Cash:[/bold] ${portfolio.cash:,.2f} ({cash_pct:.1f}%)  |  "
+            f"[bold]P&L:[/bold] ${portfolio.total_pnl:,.2f} ({pnl_pct:+.2f}%)",
+            title="Portfolio Status",
+        )
+    )
 
     # Positions table
     if portfolio.positions:
@@ -306,21 +344,28 @@ def status():
     # Performance metrics
     metrics = compute_performance(conn, config.general.initial_capital)
     if metrics.get("total_trades", 0) > 0:
-        console.print(Panel(
-            f"[bold]Total Return:[/bold] {metrics['total_return']:.2%}  |  "
-            f"[bold]Sharpe:[/bold] {metrics['sharpe_ratio']:.2f}  |  "
-            f"[bold]Max DD:[/bold] {metrics['max_drawdown']:.2%}  |  "
-            f"[bold]Win Rate:[/bold] {metrics['win_rate']:.0%}  |  "
-            f"[bold]Trades:[/bold] {metrics['total_trades']}",
-            title="Performance",
-        ))
+        console.print(
+            Panel(
+                f"[bold]Total Return:[/bold] {metrics['total_return']:.2%}  |  "
+                f"[bold]Sharpe:[/bold] {metrics['sharpe_ratio']:.2f}  |  "
+                f"[bold]Max DD:[/bold] {metrics['max_drawdown']:.2%}  |  "
+                f"[bold]Win Rate:[/bold] {metrics['win_rate']:.0%}  |  "
+                f"[bold]Trades:[/bold] {metrics['total_trades']}",
+                title="Performance",
+            )
+        )
 
     conn.close()
 
 
 @app.command()
 def trades(
-    limit: int = typer.Option(20, "--limit", "-l", help="Number of recent trades to show"),
+    limit: int = typer.Option(
+        20,
+        "--limit",
+        "-l",
+        help="Number of recent trades to show",
+    ),
 ):
     """Show recent trades with LLM reasoning."""
     _setup_logging("WARNING")
@@ -378,7 +423,7 @@ def verify():
     from llm_quant.db.schema import get_connection
 
     conn = get_connection(db_path)
-    ok, last_id, message = verify_chain(conn)
+    ok, _last_id, message = verify_chain(conn)
     conn.close()
 
     if ok:

@@ -50,7 +50,7 @@ def _build_jinja_env(prompts_dir: Path) -> Environment:
     """Create a Jinja2 environment rooted at the prompts directory."""
     return Environment(
         loader=FileSystemLoader(str(prompts_dir)),
-        autoescape=False,          # Markdown/text templates, no HTML escaping
+        autoescape=True,
         keep_trailing_newline=True,
         trim_blocks=True,
         lstrip_blocks=True,
@@ -82,9 +82,7 @@ def load_system_prompt(config_dir: Path | None = None) -> str:
         raise FileNotFoundError(f"System prompt template not found: {template_path}")
 
     content = template_path.read_text(encoding="utf-8")
-    logger.debug(
-        "Loaded system prompt from %s (%d chars)", template_path, len(content)
-    )
+    logger.debug("Loaded system prompt from %s (%d chars)", template_path, len(content))
     return content
 
 
@@ -119,10 +117,11 @@ def render_decision_prompt(
 
     try:
         template = env.get_template(_DECISION_TEMPLATE)
-    except TemplateNotFound:
+    except TemplateNotFound as err:
         raise FileNotFoundError(
-            f"Decision prompt template '{_DECISION_TEMPLATE}' not found in {prompts_dir}"
-        )
+            f"Decision prompt template '{_DECISION_TEMPLATE}'"
+            f" not found in {prompts_dir}"
+        ) from err
 
     # Convert dataclass to dict for Jinja2 template rendering.
     # We keep positions and market_data as lists of dataclass instances so that

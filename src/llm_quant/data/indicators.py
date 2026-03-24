@@ -48,13 +48,30 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
 
     if len(df) == 0:
         logger.warning("Empty DataFrame — returning with null indicator columns")
-        for col in ("sma_20", "sma_50", "rsi_14", "macd", "macd_signal", "macd_hist", "atr_14"):
+        indicator_names = (
+            "sma_20",
+            "sma_50",
+            "rsi_14",
+            "macd",
+            "macd_signal",
+            "macd_hist",
+            "atr_14",
+        )
+        for col in indicator_names:
             if col not in df.columns:
                 df = df.with_columns(pl.lit(None).cast(pl.Float64).alias(col))
         return df
 
     # Drop any pre-existing indicator columns so we can recompute cleanly
-    indicator_cols = ["sma_20", "sma_50", "rsi_14", "macd", "macd_signal", "macd_hist", "atr_14"]
+    indicator_cols = [
+        "sma_20",
+        "sma_50",
+        "rsi_14",
+        "macd",
+        "macd_signal",
+        "macd_hist",
+        "atr_14",
+    ]
     existing = [c for c in indicator_cols if c in df.columns]
     if existing:
         df = df.drop(existing)
@@ -130,15 +147,12 @@ def _compute_rsi(df: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     df = df.with_columns(
         pl.when(pl.col("_avg_loss") == 0.0)
         .then(100.0)
-        .otherwise(
-            100.0 - 100.0 / (1.0 + pl.col("_avg_gain") / pl.col("_avg_loss"))
-        )
+        .otherwise(100.0 - 100.0 / (1.0 + pl.col("_avg_gain") / pl.col("_avg_loss")))
         .alias("rsi_14"),
     )
 
     # Clean up helper columns
-    df = df.drop(["_delta", "_gain", "_loss", "_avg_gain", "_avg_loss"])
-    return df
+    return df.drop(["_delta", "_gain", "_loss", "_avg_gain", "_avg_loss"])
 
 
 def _compute_macd(
@@ -179,8 +193,7 @@ def _compute_macd(
         (pl.col("macd") - pl.col("macd_signal")).alias("macd_hist"),
     )
 
-    df = df.drop(["_ema_fast", "_ema_slow"])
-    return df
+    return df.drop(["_ema_fast", "_ema_slow"])
 
 
 def _compute_atr(df: pl.DataFrame, period: int = 14) -> pl.DataFrame:
@@ -210,5 +223,4 @@ def _compute_atr(df: pl.DataFrame, period: int = 14) -> pl.DataFrame:
         .alias("atr_14"),
     )
 
-    df = df.drop(["_prev_close", "_tr"])
-    return df
+    return df.drop(["_prev_close", "_tr"])

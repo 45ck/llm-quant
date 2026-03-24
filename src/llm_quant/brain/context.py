@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import UTC
 from typing import Any
 
 import duckdb
@@ -43,10 +43,18 @@ def _fetch_latest_market_data(
     """
     rows = conn.execute(query, symbols).fetchall()
     columns = [
-        "symbol", "date", "close", "volume",
-        "sma_20", "sma_50", "rsi_14", "macd", "atr_14", "rn",
+        "symbol",
+        "date",
+        "close",
+        "volume",
+        "sma_20",
+        "sma_50",
+        "rsi_14",
+        "macd",
+        "atr_14",
+        "rn",
     ]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(zip(columns, row, strict=True)) for row in rows]
 
 
 def _compute_change_pct(
@@ -140,7 +148,12 @@ def _get_yield_spread(conn: duckdb.DuckDBPyConnection) -> float:
     if tlt and shy and shy != 0:
         # Spread approximation: higher TLT/SHY ratio => steeper curve
         spread = (tlt / shy - 1.0) * 100.0
-        logger.debug("Yield spread proxy %.2f bps (TLT=%.2f, SHY=%.2f)", spread, tlt, shy)
+        logger.debug(
+            "Yield spread proxy %.2f bps (TLT=%.2f, SHY=%.2f)",
+            spread,
+            tlt,
+            shy,
+        )
         return round(spread, 2)
 
     logger.warning("TLT/SHY data not available; yield spread defaults to 0.0")
@@ -166,7 +179,7 @@ def _get_spy_trend(conn: duckdb.DuckDBPyConnection) -> str:
         logger.warning("SPY data not found; trend defaults to neutral")
         return "neutral"
 
-    close, sma_20, sma_50 = (float(v) if v is not None else None for v in row)
+    close, _sma_20, sma_50 = (float(v) if v is not None else None for v in row)
 
     # Try to get SMA200 from a wider window (manual check via row count)
     sma200_row = conn.execute(
@@ -207,7 +220,12 @@ def _get_spy_trend(conn: duckdb.DuckDBPyConnection) -> str:
             trend = "bearish"
         else:
             trend = "neutral"
-        logger.debug("SPY trend=%s (close=%.2f vs SMA50=%.2f, no SMA200)", trend, close, sma_50)
+        logger.debug(
+            "SPY trend=%s (close=%.2f vs SMA50=%.2f, no SMA200)",
+            trend,
+            close,
+            sma_50,
+        )
     else:
         trend = "neutral"
         logger.debug("SPY trend=neutral (insufficient indicator data)")
@@ -337,24 +355,26 @@ def build_market_context(
     cash_pct = (cash / nav * 100.0) if nav > 0 else 100.0
 
     long_exposure = sum(
-        abs(p.shares * p.current_price)
-        for p in position_rows
-        if p.shares > 0
+        abs(p.shares * p.current_price) for p in position_rows if p.shares > 0
     )
     short_exposure = sum(
-        abs(p.shares * p.current_price)
-        for p in position_rows
-        if p.shares < 0
+        abs(p.shares * p.current_price) for p in position_rows if p.shares < 0
     )
-    gross_exposure_pct = ((long_exposure + short_exposure) / nav * 100.0) if nav > 0 else 0.0
-    net_exposure_pct = ((long_exposure - short_exposure) / nav * 100.0) if nav > 0 else 0.0
+    gross_exposure_pct = (
+        (long_exposure + short_exposure) / nav * 100.0 if nav > 0 else 0.0
+    )
+    net_exposure_pct = (
+        (long_exposure - short_exposure) / nav * 100.0 if nav > 0 else 0.0
+    )
 
     # Macro indicators
     vix = _get_vix(conn)
     yield_spread = _get_yield_spread(conn)
     spy_trend = _get_spy_trend(conn)
 
-    today = date.today()
+    from datetime import datetime
+
+    today = datetime.now(tz=UTC).date()
 
     context = MarketContext(
         date=today,

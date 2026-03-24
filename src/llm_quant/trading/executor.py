@@ -10,9 +10,13 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from llm_quant.brain.models import Action, TradeSignal
 from llm_quant.trading.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    from llm_quant.trading.portfolio import Position
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +25,16 @@ logger = logging.getLogger(__name__)
 # Executed trade record
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ExecutedTrade:
     """Immutable record of a single trade that was applied to the portfolio."""
 
     symbol: str
-    action: str          # "buy" / "sell" / "close"
+    action: str  # "buy" / "sell" / "close"
     shares: float
     price: float
-    notional: float      # abs(shares * price)
+    notional: float  # abs(shares * price)
     conviction: str
     reasoning: str
 
@@ -37,6 +42,7 @@ class ExecutedTrade:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def execute_signals(
     portfolio: Portfolio,
@@ -113,6 +119,7 @@ def execute_signals(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _execute_buy(
     portfolio: Portfolio,
     signal: TradeSignal,
@@ -168,9 +175,8 @@ def _execute_buy(
         # Weighted average cost
         total_shares = existing.shares + shares_to_buy
         existing.avg_cost = (
-            (existing.shares * existing.avg_cost + shares_to_buy * price)
-            / total_shares
-        )
+            existing.shares * existing.avg_cost + shares_to_buy * price
+        ) / total_shares
         existing.shares = total_shares
         existing.current_price = price
         existing.stop_loss = signal.stop_loss
@@ -199,9 +205,7 @@ def _execute_sell(
     """Reduce a position toward a target weight."""
     existing = portfolio.positions.get(signal.symbol)
     if existing is None or existing.shares <= 0:
-        logger.warning(
-            "SELL %s: no position to sell.", signal.symbol
-        )
+        logger.warning("SELL %s: no position to sell.", signal.symbol)
         return None
 
     target_notional = signal.target_weight * nav
@@ -252,9 +256,7 @@ def _execute_close(
     """Close an entire position."""
     existing = portfolio.positions.get(signal.symbol)
     if existing is None or existing.shares <= 0:
-        logger.warning(
-            "CLOSE %s: no position to close.", signal.symbol
-        )
+        logger.warning("CLOSE %s: no position to close.", signal.symbol)
         return None
 
     shares_to_close = existing.shares

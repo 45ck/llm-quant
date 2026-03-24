@@ -73,22 +73,25 @@ def compute_performance(
         {
             "date": [r[0] for r in snap_rows],
             "nav": [float(r[1]) for r in snap_rows],
-            "daily_pnl": [
-                float(r[2]) if r[2] is not None else None
-                for r in snap_rows
-            ],
+            "daily_pnl": [float(r[2]) if r[2] is not None else None for r in snap_rows],
         }
     )
 
     # Keep one row per date (last snapshot of each day)
-    snap_df = snap_df.group_by("date").agg(
-        pl.col("nav").last().alias("nav"),
-        pl.col("daily_pnl").last().alias("daily_pnl"),
-    ).sort("date")
+    snap_df = (
+        snap_df.group_by("date")
+        .agg(
+            pl.col("nav").last().alias("nav"),
+            pl.col("daily_pnl").last().alias("daily_pnl"),
+        )
+        .sort("date")
+    )
 
     latest_nav: float = snap_df["nav"][-1]
     total_pnl: float = latest_nav - initial_capital
-    total_return: float = (latest_nav / initial_capital) - 1.0 if initial_capital else 0.0
+    total_return: float = (
+        (latest_nav / initial_capital) - 1.0 if initial_capital else 0.0
+    )
 
     # ------------------------------------------------------------------
     # 2. Daily returns & Sharpe ratio
@@ -101,8 +104,12 @@ def compute_performance(
         ).drop_nulls("daily_return")
 
         if returns_df.height >= 2:
-            mean_ret: float = returns_df["daily_return"].mean()  # type: ignore[assignment]
-            std_ret: float = returns_df["daily_return"].std()    # type: ignore[assignment]
+            mean_ret: float = (  # type: ignore[assignment]
+                returns_df["daily_return"].mean()
+            )
+            std_ret: float = (  # type: ignore[assignment]
+                returns_df["daily_return"].std()
+            )
 
             if std_ret is not None and std_ret > 0.0:
                 sharpe_ratio = (mean_ret / std_ret) * math.sqrt(_TRADING_DAYS)
@@ -158,8 +165,6 @@ def compute_performance(
             price: float = float(row[3])
 
             if action == "buy":
-                # Update cost basis (running weighted average)
-                prev_cost = cost_basis.get(symbol, 0.0)
                 # We don't track cumulative share count here; we use a
                 # simplified per-trade P&L model.  For a proper FIFO we
                 # would need lot tracking.  Instead, record cost for

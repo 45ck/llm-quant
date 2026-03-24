@@ -25,11 +25,7 @@ def get_tradeable_symbols(config: AppConfig) -> list[str]:
     list[str]
         Sorted list of ticker symbol strings where ``tradeable`` is True.
     """
-    symbols = [
-        asset.symbol
-        for asset in config.universe.assets
-        if asset.tradeable
-    ]
+    symbols = [asset.symbol for asset in config.universe.assets if asset.tradeable]
     symbols.sort()
     logger.info(
         "Resolved %d tradeable symbols from universe '%s'",
@@ -73,10 +69,18 @@ def sync_universe_to_db(
         try:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO universe (symbol, name, category, sector, tradeable, added_at)
+                INSERT OR REPLACE INTO universe
+                    (symbol, name, category, sector, tradeable, added_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                [asset.symbol, asset.name, asset.category, asset.sector, asset.tradeable, now],
+                [
+                    asset.symbol,
+                    asset.name,
+                    asset.category,
+                    asset.sector,
+                    asset.tradeable,
+                    now,
+                ],
             )
             count += 1
         except duckdb.Error:

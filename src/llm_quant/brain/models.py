@@ -4,23 +4,23 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 
-class Action(str, Enum):
+class Action(StrEnum):
     BUY = "buy"
     SELL = "sell"
     HOLD = "hold"
     CLOSE = "close"
 
 
-class Conviction(str, Enum):
+class Conviction(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
 
 
-class MarketRegime(str, Enum):
+class MarketRegime(StrEnum):
     RISK_ON = "risk_on"
     RISK_OFF = "risk_off"
     TRANSITION = "transition"
@@ -55,6 +55,7 @@ class TradingDecision:
 @dataclass
 class MarketRow:
     """Single ETF's market data for the decision prompt."""
+
     symbol: str
     close: float
     change_pct: float
@@ -69,6 +70,7 @@ class MarketRow:
 @dataclass
 class PositionRow:
     """Current position for the decision prompt."""
+
     symbol: str
     shares: float
     avg_cost: float
@@ -81,6 +83,7 @@ class PositionRow:
 @dataclass
 class MarketContext:
     """Full context assembled for the LLM decision prompt."""
+
     date: date
     nav: float
     cash: float

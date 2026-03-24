@@ -4,7 +4,9 @@ Parses the JSON decision, runs risk checks, executes trades,
 saves portfolio snapshot, and prints execution summary.
 
 Usage:
-    cd E:/llm-quant && PYTHONPATH=src python scripts/execute_decision.py <<< '{"market_regime": "risk_on", ...}'
+    cd E:/llm-quant && PYTHONPATH=src \\
+        python scripts/execute_decision.py \\
+        <<< '{"market_regime": "risk_on", ...}'
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -48,7 +50,7 @@ def main() -> None:
 
     try:
         # Parse the trading decision
-        today = date.today()
+        today = datetime.now(tz=UTC).date()
         decision = parse_trading_decision(raw_input, today)
 
         # Load portfolio
@@ -64,7 +66,9 @@ def main() -> None:
 
         for symbol in symbols:
             row = conn.execute(
-                "SELECT close FROM market_data_daily WHERE symbol = ? ORDER BY date DESC LIMIT 1",
+                "SELECT close FROM market_data_daily"
+                " WHERE symbol = ? ORDER BY date DESC"
+                " LIMIT 1",
                 [symbol],
             ).fetchone()
             if row and row[0] is not None:
@@ -84,10 +88,7 @@ def main() -> None:
 
         # Log trades and save snapshot
         decision_id = None
-        if executed:
-            trade_ids = log_trades(conn, executed, today, decision_id)
-        else:
-            trade_ids = []
+        trade_ids = log_trades(conn, executed, today, decision_id) if executed else []
 
         snapshot_id = save_portfolio_snapshot(conn, portfolio, today)
 
@@ -141,7 +142,7 @@ def main() -> None:
     except ValueError as e:
         print(json.dumps({"error": f"Failed to parse decision: {e}"}))
         sys.exit(1)
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         print(json.dumps({"error": f"Execution failed: {e}"}))
         sys.exit(1)
     finally:

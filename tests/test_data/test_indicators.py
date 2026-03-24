@@ -10,6 +10,7 @@ from llm_quant.data.indicators import compute_indicators
 def _make_ohlcv(n_days: int = 60, symbol: str = "TEST") -> pl.DataFrame:
     """Generate synthetic OHLCV data for testing."""
     import random
+
     random.seed(42)
 
     dates = [date(2026, 1, 1) + timedelta(days=i) for i in range(n_days)]
@@ -19,22 +20,32 @@ def _make_ohlcv(n_days: int = 60, symbol: str = "TEST") -> pl.DataFrame:
         base_price += random.uniform(-2, 2.1)
         closes.append(round(base_price, 2))
 
-    return pl.DataFrame({
-        "symbol": [symbol] * n_days,
-        "date": dates,
-        "open": [c - random.uniform(0, 1) for c in closes],
-        "high": [c + random.uniform(0, 2) for c in closes],
-        "low": [c - random.uniform(0, 2) for c in closes],
-        "close": closes,
-        "volume": [random.randint(1_000_000, 10_000_000) for _ in range(n_days)],
-    })
+    return pl.DataFrame(
+        {
+            "symbol": [symbol] * n_days,
+            "date": dates,
+            "open": [c - random.uniform(0, 1) for c in closes],
+            "high": [c + random.uniform(0, 2) for c in closes],
+            "low": [c - random.uniform(0, 2) for c in closes],
+            "close": closes,
+            "volume": [random.randint(1_000_000, 10_000_000) for _ in range(n_days)],
+        }
+    )
 
 
 def test_compute_indicators_columns():
     df = _make_ohlcv(60)
     result = compute_indicators(df)
 
-    expected_cols = {"sma_20", "sma_50", "rsi_14", "macd", "macd_signal", "macd_hist", "atr_14"}
+    expected_cols = {
+        "sma_20",
+        "sma_50",
+        "rsi_14",
+        "macd",
+        "macd_signal",
+        "macd_hist",
+        "atr_14",
+    }
     assert expected_cols.issubset(set(result.columns))
 
 
@@ -75,16 +86,26 @@ def test_multi_symbol():
 
 
 def test_empty_dataframe():
-    df = pl.DataFrame({
-        "symbol": [],
-        "date": [],
-        "open": [],
-        "high": [],
-        "low": [],
-        "close": [],
-        "volume": [],
-    }).cast({"date": pl.Date, "open": pl.Float64, "high": pl.Float64,
-             "low": pl.Float64, "close": pl.Float64, "volume": pl.Int64})
+    df = pl.DataFrame(
+        {
+            "symbol": [],
+            "date": [],
+            "open": [],
+            "high": [],
+            "low": [],
+            "close": [],
+            "volume": [],
+        }
+    ).cast(
+        {
+            "date": pl.Date,
+            "open": pl.Float64,
+            "high": pl.Float64,
+            "low": pl.Float64,
+            "close": pl.Float64,
+            "volume": pl.Int64,
+        }
+    )
 
     result = compute_indicators(df)
     assert len(result) == 0

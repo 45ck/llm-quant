@@ -1,13 +1,8 @@
 """Configuration loading and validation via Pydantic."""
 
 import os
-import sys
+import tomllib
 from pathlib import Path
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 from pydantic import BaseModel, Field
 
@@ -101,7 +96,7 @@ class AppConfig(BaseModel):
 
 def _load_toml(path: Path) -> dict:
     """Load a TOML file and return as dict."""
-    with open(path, "rb") as f:
+    with path.open("rb") as f:
         return tomllib.load(f)
 
 

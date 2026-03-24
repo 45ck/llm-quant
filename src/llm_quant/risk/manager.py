@@ -111,7 +111,12 @@ class RiskManager:
         results.append(
             check_position_weight(
                 current_weight,
-                signal.target_weight if is_buy else max(current_weight - (trade_notional / nav if nav else 0), 0.0),
+                signal.target_weight
+                if is_buy
+                else max(
+                    current_weight - (trade_notional / nav if nav else 0),
+                    0.0,
+                ),
                 self.limits.max_position_weight,
             )
         )
@@ -280,9 +285,7 @@ class RiskManager:
                 "low": 2,
             }
             # Stable sort – preserves input order for equal conviction.
-            tradeable.sort(
-                key=lambda s: conviction_rank.get(s.conviction.value, 99)
-            )
+            tradeable.sort(key=lambda s: conviction_rank.get(s.conviction.value, 99))
             trimmed = tradeable[max_trades:]
             tradeable = tradeable[:max_trades]
 

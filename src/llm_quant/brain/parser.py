@@ -66,8 +66,7 @@ def _extract_json_string(raw: str) -> str:
         return stripped[first_brace : last_brace + 1]
 
     raise ValueError(
-        "Could not locate JSON object in response. "
-        f"First 200 chars: {stripped[:200]!r}"
+        f"Could not locate JSON object in response. First 200 chars: {stripped[:200]!r}"
     )
 
 
@@ -86,7 +85,12 @@ def _parse_enum_safe(enum_cls: type, value: Any, default: Any = None) -> Any:
             return enum_cls[value.upper().strip()]
         except KeyError:
             pass
-    logger.warning("Invalid %s value: %r; using default %s", enum_cls.__name__, value, default)
+    logger.warning(
+        "Invalid %s value: %r; using default %s",
+        enum_cls.__name__,
+        value,
+        default,
+    )
     return default
 
 
@@ -111,7 +115,11 @@ def _parse_signal(raw_signal: dict[str, Any]) -> TradeSignal | None:
     # Parse action enum
     action = _parse_enum_safe(Action, raw_signal.get("action"))
     if action is None:
-        logger.warning("Signal for %s has invalid action: %r; skipping", symbol, raw_signal.get("action"))
+        logger.warning(
+            "Signal for %s has invalid action: %r; skipping",
+            symbol,
+            raw_signal.get("action"),
+        )
         return None
 
     # Parse conviction enum (default to MEDIUM if missing)
@@ -205,7 +213,7 @@ def parse_trading_decision(
         ) from exc
 
     if not isinstance(data, dict):
-        raise ValueError(
+        raise TypeError(
             f"Expected a JSON object at top level, got {type(data).__name__}"
         )
 
@@ -236,7 +244,10 @@ def parse_trading_decision(
     # -- Signals ---------------------------------------------------------
     raw_signals = data.get("signals", [])
     if not isinstance(raw_signals, list):
-        logger.warning("'signals' is not a list: %r; treating as empty", type(raw_signals).__name__)
+        logger.warning(
+            "'signals' is not a list: %r; treating as empty",
+            type(raw_signals).__name__,
+        )
         raw_signals = []
 
     signals: list[TradeSignal] = []

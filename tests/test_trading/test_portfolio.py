@@ -1,11 +1,16 @@
 """Tests for portfolio state management."""
 
-
 from llm_quant.trading.portfolio import Portfolio, Position
 
 
 def test_position_properties():
-    pos = Position(symbol="SPY", shares=10, avg_cost=450.0, current_price=460.0, stop_loss=427.5)
+    pos = Position(
+        symbol="SPY",
+        shares=10,
+        avg_cost=450.0,
+        current_price=460.0,
+        stop_loss=427.5,
+    )
     assert pos.market_value == 4600.0
     assert pos.unrealized_pnl == 100.0
     assert abs(pos.pnl_pct - 0.02222) < 0.001

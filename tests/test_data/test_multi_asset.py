@@ -9,22 +9,44 @@ class TestAssetEntry:
     """AssetEntry model and backward compat."""
 
     def test_default_asset_class_is_equity(self):
-        entry = AssetEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad_market")
+        entry = AssetEntry(
+            symbol="SPY",
+            name="S&P 500",
+            category="equity",
+            sector="broad_market",
+        )
         assert entry.asset_class == "equity"
 
     def test_crypto_asset_class(self):
-        entry = AssetEntry(symbol="BTC-USD", name="Bitcoin", category="crypto", sector="layer1", asset_class="crypto")
+        entry = AssetEntry(
+            symbol="BTC-USD",
+            name="Bitcoin",
+            category="crypto",
+            sector="layer1",
+            asset_class="crypto",
+        )
         assert entry.asset_class == "crypto"
         assert entry.symbol == "BTC-USD"
 
     def test_forex_asset_class(self):
-        entry = AssetEntry(symbol="EURUSD=X", name="EUR/USD", category="forex", sector="major_pairs", asset_class="forex")
+        entry = AssetEntry(
+            symbol="EURUSD=X",
+            name="EUR/USD",
+            category="forex",
+            sector="major_pairs",
+            asset_class="forex",
+        )
         assert entry.asset_class == "forex"
 
     def test_etfentry_is_alias(self):
         """ETFEntry is a backward-compatible alias for AssetEntry."""
         assert ETFEntry is AssetEntry
-        entry = ETFEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad_market")
+        entry = ETFEntry(
+            symbol="SPY",
+            name="S&P 500",
+            category="equity",
+            sector="broad_market",
+        )
         assert entry.asset_class == "equity"
 
 
@@ -34,7 +56,13 @@ class TestUniverseConfig:
     def test_assets_field(self):
         entries = [
             AssetEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad"),
-            AssetEntry(symbol="BTC-USD", name="Bitcoin", category="crypto", sector="layer1", asset_class="crypto"),
+            AssetEntry(
+                symbol="BTC-USD",
+                name="Bitcoin",
+                category="crypto",
+                sector="layer1",
+                asset_class="crypto",
+            ),
         ]
         config = UniverseConfig(name="Test", assets=entries)
         assert len(config.assets) == 2
@@ -77,6 +105,7 @@ class TestGetTradeableSymbols:
 
     def test_includes_all_asset_classes(self, sample_config):
         from llm_quant.data.universe import get_tradeable_symbols
+
         symbols = get_tradeable_symbols(sample_config)
         # sample_config from conftest has SPY, QQQ, TLT, GLD, BTC-USD, EURUSD=X
         assert "SPY" in symbols
@@ -90,12 +119,25 @@ class TestGetTradeableSymbols:
             UniverseConfig,
         )
         from llm_quant.data.universe import get_tradeable_symbols
+
         config = AppConfig(
             universe=UniverseConfig(
                 name="Test",
                 assets=[
-                    AssetEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad"),
-                    AssetEntry(symbol="DOGE-USD", name="Dogecoin", category="crypto", sector="meme", asset_class="crypto", tradeable=False),
+                    AssetEntry(
+                        symbol="SPY",
+                        name="S&P 500",
+                        category="equity",
+                        sector="broad",
+                    ),
+                    AssetEntry(
+                        symbol="DOGE-USD",
+                        name="Dogecoin",
+                        category="crypto",
+                        sector="meme",
+                        asset_class="crypto",
+                        tradeable=False,
+                    ),
                 ],
             ),
         )
@@ -109,6 +151,7 @@ class TestSyncUniverse:
 
     def test_syncs_all_asset_classes(self, tmp_db, sample_config):
         from llm_quant.data.universe import sync_universe_to_db
+
         count = sync_universe_to_db(tmp_db, sample_config)
         assert count == len(sample_config.universe.assets)
 

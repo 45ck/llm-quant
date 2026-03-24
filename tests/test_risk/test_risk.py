@@ -1,6 +1,5 @@
 """Tests for risk limit checks and risk manager."""
 
-
 from llm_quant.brain.models import Action, Conviction, TradeSignal
 from llm_quant.risk.limits import (
     check_cash_reserve,
@@ -83,7 +82,11 @@ def test_stop_loss_not_required():
     assert result.passed
 
 
-def test_risk_manager_approves_valid_signal(sample_portfolio, sample_prices, sample_config):
+def test_risk_manager_approves_valid_signal(
+    sample_portfolio,
+    sample_prices,
+    sample_config,
+):
     mgr = RiskManager(sample_config)
     signal = TradeSignal(
         symbol="GLD",
@@ -113,7 +116,11 @@ def test_risk_manager_rejects_oversized(sample_portfolio, sample_prices, sample_
     assert len(rejected) == 1
 
 
-def test_risk_manager_enforces_trade_limit(sample_portfolio, sample_prices, sample_config):
+def test_risk_manager_enforces_trade_limit(
+    sample_portfolio,
+    sample_prices,
+    sample_config,
+):
     """Only max_trades_per_session signals should be approved."""
     mgr = RiskManager(sample_config)
     signals = [
@@ -131,5 +138,5 @@ def test_risk_manager_enforces_trade_limit(sample_portfolio, sample_prices, samp
     for i in range(10):
         sample_prices[f"ETF{i}"] = 100.0
 
-    approved, rejected = mgr.filter_signals(signals, sample_portfolio, sample_prices)
+    approved, _rejected = mgr.filter_signals(signals, sample_portfolio, sample_prices)
     assert len(approved) <= sample_config.risk.max_trades_per_session

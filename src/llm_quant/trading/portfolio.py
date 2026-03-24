@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # Position
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Position:
     """A single holding in the portfolio."""
@@ -58,6 +59,7 @@ class Position:
 # Portfolio
 # ---------------------------------------------------------------------------
 
+
 class Portfolio:
     """In-memory representation of the full portfolio state."""
 
@@ -65,18 +67,14 @@ class Portfolio:
         self.cash: float = initial_capital
         self.positions: dict[str, Position] = {}
         self.initial_capital: float = initial_capital
-        logger.info(
-            "Portfolio initialised with capital=%.2f", initial_capital
-        )
+        logger.info("Portfolio initialised with capital=%.2f", initial_capital)
 
     # -- aggregate properties ----------------------------------------------
 
     @property
     def nav(self) -> float:
         """Net asset value: cash + sum of position market values."""
-        return self.cash + sum(
-            p.market_value for p in self.positions.values()
-        )
+        return self.cash + sum(p.market_value for p in self.positions.values())
 
     @property
     def gross_exposure(self) -> float:
@@ -121,9 +119,7 @@ class Portfolio:
             return 0.0
         return pos.market_value / current_nav
 
-    def get_sector_exposure(
-        self, sector_map: dict[str, str]
-    ) -> dict[str, float]:
+    def get_sector_exposure(self, sector_map: dict[str, str]) -> dict[str, float]:
         """Compute aggregate weight per sector.
 
         Parameters
@@ -171,9 +167,7 @@ class Portfolio:
                     "market_value": p.market_value,
                     "unrealized_pnl": p.unrealized_pnl,
                     "pnl_pct": p.pnl_pct,
-                    "weight": (
-                        p.market_value / current_nav if current_nav else 0.0
-                    ),
+                    "weight": (p.market_value / current_nav if current_nav else 0.0),
                     "stop_loss": p.stop_loss,
                 }
                 for p in self.positions.values()
@@ -205,8 +199,7 @@ class Portfolio:
 
         if row is None:
             logger.info(
-                "No existing snapshot found – returning fresh portfolio "
-                "(capital=%.2f)",
+                "No existing snapshot found – returning fresh portfolio (capital=%.2f)",
                 initial_capital,
             )
             return cls(initial_capital=initial_capital)
@@ -239,8 +232,7 @@ class Portfolio:
             )
 
         logger.info(
-            "Restored portfolio from snapshot %d: NAV=%.2f, cash=%.2f, "
-            "%d position(s)",
+            "Restored portfolio from snapshot %d: NAV=%.2f, cash=%.2f, %d position(s)",
             snapshot_id,
             nav_db,
             cash_db,

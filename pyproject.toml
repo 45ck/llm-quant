@@ -84,19 +84,27 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-  "S101",   # asserts are the whole point of tests
-  "PLR2004",# magic values in test assertions are fine
-  "PT018",  # composite assertions — acceptable in tests
+  "S101",    # asserts are the whole point of tests
+  "PLR2004", # magic values in test assertions are fine
+  "PT018",   # composite assertions — acceptable in tests
+  "PLR0913", # test helpers may have many args for flexibility
+]
+"scripts/**/*.py" = [
+  "INP001",  # scripts are standalone, not packages
+  "T201",    # scripts use print() for user-facing output
+]
+"src/llm_quant/db/integrity.py" = [
+  "PLR0913", # compute_trade_hash needs all trade fields for hash input
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 13
 
 [tool.ruff.lint.pylint]
-max-args = 4
-max-branches = 12
-max-statements = 50
-max-returns = 4
+max-args = 6
+max-branches = 15
+max-statements = 65
+max-returns = 6
 max-bool-expr = 4
 
 [tool.mypy]

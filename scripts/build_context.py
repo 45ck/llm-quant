@@ -12,20 +12,20 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Ensure src is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from llm_quant.brain.context import build_market_context
+from llm_quant.brain.prompts import load_system_prompt, render_decision_prompt
 from llm_quant.config import load_config
 from llm_quant.data.fetcher import fetch_ohlcv
 from llm_quant.data.indicators import compute_indicators
 from llm_quant.data.store import get_latest_date, upsert_market_data
 from llm_quant.data.universe import get_tradeable_symbols
 from llm_quant.db.schema import get_connection, init_schema
-from llm_quant.brain.context import build_market_context
-from llm_quant.brain.prompts import load_system_prompt, render_decision_prompt
 from llm_quant.trading.portfolio import Portfolio
 
 logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
@@ -41,7 +41,7 @@ def _ensure_db(db_path: str) -> None:
 
 def _data_is_stale(conn, symbols: list[str]) -> bool:
     """Check if market data needs refreshing (>1 trading day old)."""
-    today = date.today()
+    today = datetime.now(tz=UTC).date()
     # On weekends, latest data from Friday is acceptable
     if today.weekday() == 5:  # Saturday
         threshold = today - timedelta(days=1)
@@ -106,7 +106,9 @@ def main() -> None:
         prices: dict[str, float] = {}
         for symbol in list(portfolio.positions.keys()) + symbols:
             row = conn.execute(
-                "SELECT close FROM market_data_daily WHERE symbol = ? ORDER BY date DESC LIMIT 1",
+                "SELECT close FROM market_data_daily"
+                " WHERE symbol = ? ORDER BY date DESC"
+                " LIMIT 1",
                 [symbol],
             ).fetchone()
             if row and row[0] is not None:

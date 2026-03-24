@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from datetime import date as date_type
 
 import duckdb
@@ -71,11 +72,11 @@ def upsert_market_data(
     # Ensure all table columns exist in the DataFrame (fill missing with null)
     for col in _ALL_COLUMNS:
         if col not in df.columns:
-            if col in ("symbol",):
+            if col == "symbol":
                 df = df.with_columns(pl.lit(None).cast(pl.Utf8).alias(col))
-            elif col in ("date",):
+            elif col == "date":
                 df = df.with_columns(pl.lit(None).cast(pl.Date).alias(col))
-            elif col in ("volume",):
+            elif col == "volume":
                 df = df.with_columns(pl.lit(None).cast(pl.Int64).alias(col))
             else:
                 df = df.with_columns(pl.lit(None).cast(pl.Float64).alias(col))
@@ -93,14 +94,14 @@ def upsert_market_data(
     try:
         cols = ", ".join(_ALL_COLUMNS)
         placeholders = ", ".join(["?"] * len(_ALL_COLUMNS))
-        stmt = f"INSERT OR REPLACE INTO market_data_daily ({cols}) VALUES ({placeholders})"
+        stmt = (
+            f"INSERT OR REPLACE INTO market_data_daily ({cols}) VALUES ({placeholders})"
+        )
         rows = df.rows()
         conn.executemany(stmt, rows)
         conn.commit()
     except duckdb.Error:
-        logger.exception(
-            "Failed to upsert %d rows into market_data_daily", row_count
-        )
+        logger.exception("Failed to upsert %d rows into market_data_daily", row_count)
         raise
 
     logger.info("Upserted %d rows into market_data_daily", row_count)
@@ -137,11 +138,16 @@ def get_market_data(
     if not symbols:
         logger.warning("No symbols provided — returning empty DataFrame")
         return pl.DataFrame(
-            schema={c: pl.Utf8 if c == "symbol" else pl.Date if c == "date" else pl.Float64 for c in _ALL_COLUMNS}
+            schema={
+                c: (
+                    pl.Utf8 if c == "symbol" else pl.Date if c == "date" else pl.Float64
+                )
+                for c in _ALL_COLUMNS
+            }
         )
 
     if end_date is None:
-        end_date = date_type.today()
+        end_date = datetime.now(tz=UTC).date()
 
     start_str = str(start_date)
     end_str = str(end_date)
@@ -214,8 +220,7 @@ def get_latest_date(
 
     # DuckDB may return a datetime.date, datetime.datetime, or string
     if isinstance(latest, str):
-        from datetime import datetime
-        latest = datetime.strptime(latest, "%Y-%m-%d").date()
+        latest = datetime.strptime(latest, "%Y-%m-%d").replace(tzinfo=UTC).date()
     elif hasattr(latest, "date"):
         # datetime object
         latest = latest.date()

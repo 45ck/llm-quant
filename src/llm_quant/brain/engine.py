@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 # Pricing per million tokens (Claude Sonnet, as of 2025).
 # These are used for cost estimation only -- actual billing comes from Anthropic.
-_COST_INPUT_PER_M: float = 3.0     # $3 per 1M input tokens
-_COST_OUTPUT_PER_M: float = 15.0   # $15 per 1M output tokens
+_COST_INPUT_PER_M: float = 3.0  # $3 per 1M input tokens
+_COST_OUTPUT_PER_M: float = 15.0  # $15 per 1M output tokens
 
 
 def _estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:
@@ -232,7 +232,7 @@ class SignalEngine:
         anthropic.types.Message
             The full API response.
         """
-        message = self._client.messages.create(
+        return self._client.messages.create(
             model=self._config.llm.model,
             max_tokens=self._config.llm.max_tokens,
             temperature=self._config.llm.temperature,
@@ -241,4 +241,3 @@ class SignalEngine:
                 {"role": "user", "content": user_prompt},
             ],
         )
-        return message

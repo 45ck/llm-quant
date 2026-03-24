@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 
 import polars as pl
 import yfinance as yf
@@ -55,7 +55,7 @@ def fetch_ohlcv(
         logger.warning("No symbols provided — returning empty DataFrame")
         return pl.DataFrame(schema=empty_schema)
 
-    end_date = date.today()
+    end_date = datetime.now(tz=UTC).date()
     start_date = end_date - timedelta(days=lookback_days)
 
     logger.info(
@@ -120,14 +120,13 @@ def fetch_ohlcv(
         logger.warning("No valid data after processing — returning empty DataFrame")
         return pl.DataFrame(schema=empty_schema)
 
-    result = pl.concat(frames, how="vertical").sort(["symbol", "date"])
-    logger.info("Fetched %d total rows for %d symbols", len(result), len(frames))
-    return result
+    return pl.concat(frames, how="vertical").sort(["symbol", "date"])
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _pandas_to_polars(pandas_df: object, symbol: str) -> pl.DataFrame | None:
     """Convert a single-symbol pandas OHLCV DataFrame to Polars.
@@ -153,7 +152,7 @@ def _pandas_to_polars(pandas_df: object, symbol: str) -> pl.DataFrame | None:
         "adj close": "adj_close",
         "adjclose": "adj_close",
     }
-    pdf.rename(columns=rename_map, inplace=True)
+    pdf = pdf.rename(columns=rename_map)
 
     required = {"date", "open", "high", "low", "close", "volume"}
     missing = required - set(pdf.columns)
@@ -177,7 +176,7 @@ def _pandas_to_polars(pandas_df: object, symbol: str) -> pl.DataFrame | None:
     df = pl.from_pandas(pdf)
 
     # Coerce types
-    df = df.with_columns(
+    return df.with_columns(
         pl.col("date").cast(pl.Date),
         pl.col("open").cast(pl.Float64),
         pl.col("high").cast(pl.Float64),
@@ -187,5 +186,3 @@ def _pandas_to_polars(pandas_df: object, symbol: str) -> pl.DataFrame | None:
         pl.col("adj_close").cast(pl.Float64),
         pl.col("symbol").cast(pl.Utf8),
     )
-
-    return df

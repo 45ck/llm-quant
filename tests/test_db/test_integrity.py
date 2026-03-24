@@ -14,13 +14,26 @@ from llm_quant.db.integrity import (
 
 # ── helpers ──────────────────────────────────────────────────────────
 
-SAMPLE_CREATED = datetime(2025, 6, 15, 10, 30, 0)
+SAMPLE_CREATED = datetime(2025, 6, 15, 10, 30, 0)  # noqa: DTZ001
 
 
-def _insert_trade(conn, trade_id, *, prev_hash="", row_hash="", symbol="SPY",
-                   action="buy", shares=10.0, price=450.0, notional=4500.0,
-                   conviction="high", reasoning="test", decision_id=1,
-                   trade_date=None, created_at=None):
+def _insert_trade(
+    conn,
+    trade_id,
+    *,
+    prev_hash="",
+    row_hash="",
+    symbol="SPY",
+    action="buy",
+    shares=10.0,
+    price=450.0,
+    notional=4500.0,
+    conviction="high",
+    reasoning="test",
+    decision_id=1,
+    trade_date=None,
+    created_at=None,
+):
     """Insert a trade row directly (bypasses ledger to control hashes)."""
     trade_date = trade_date or date(2025, 6, 15)
     created_at = created_at or SAMPLE_CREATED
@@ -32,25 +45,53 @@ def _insert_trade(conn, trade_id, *, prev_hash="", row_hash="", symbol="SPY",
             prev_hash, row_hash
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        [trade_id, trade_date, symbol, action, shares, price, notional,
-         conviction, reasoning, decision_id, created_at, prev_hash, row_hash],
+        [
+            trade_id,
+            trade_date,
+            symbol,
+            action,
+            shares,
+            price,
+            notional,
+            conviction,
+            reasoning,
+            decision_id,
+            created_at,
+            prev_hash,
+            row_hash,
+        ],
     )
     conn.commit()
 
 
 def _insert_chained(conn, trade_id, prev_hash, **kwargs):
     """Insert a trade and compute valid hashes."""
-    defaults = dict(
-        symbol="SPY", action="buy", shares=10.0, price=450.0, notional=4500.0,
-        conviction="high", reasoning="test", decision_id=1,
-        trade_date=date(2025, 6, 15), created_at=SAMPLE_CREATED,
-    )
+    defaults = {
+        "symbol": "SPY",
+        "action": "buy",
+        "shares": 10.0,
+        "price": 450.0,
+        "notional": 4500.0,
+        "conviction": "high",
+        "reasoning": "test",
+        "decision_id": 1,
+        "trade_date": date(2025, 6, 15),
+        "created_at": SAMPLE_CREATED,
+    }
     defaults.update(kwargs)
     row_hash = compute_trade_hash(
-        prev_hash, trade_id, defaults["trade_date"], defaults["symbol"],
-        defaults["action"], defaults["shares"], defaults["price"],
-        defaults["notional"], defaults["conviction"], defaults["reasoning"],
-        defaults["decision_id"], defaults["created_at"],
+        prev_hash,
+        trade_id,
+        defaults["trade_date"],
+        defaults["symbol"],
+        defaults["action"],
+        defaults["shares"],
+        defaults["price"],
+        defaults["notional"],
+        defaults["conviction"],
+        defaults["reasoning"],
+        defaults["decision_id"],
+        defaults["created_at"],
     )
     _insert_trade(conn, trade_id, prev_hash=prev_hash, row_hash=row_hash, **defaults)
     return row_hash
@@ -58,29 +99,70 @@ def _insert_chained(conn, trade_id, prev_hash, **kwargs):
 
 # ── tests ────────────────────────────────────────────────────────────
 
+
 class TestComputeTradeHash:
     """compute_trade_hash is deterministic."""
 
     def test_deterministic(self):
         h1 = compute_trade_hash(
-            GENESIS_HASH, 1, date(2025, 6, 15), "SPY", "buy",
-            10.0, 450.0, 4500.0, "high", "test", 1, SAMPLE_CREATED,
+            GENESIS_HASH,
+            1,
+            date(2025, 6, 15),
+            "SPY",
+            "buy",
+            10.0,
+            450.0,
+            4500.0,
+            "high",
+            "test",
+            1,
+            SAMPLE_CREATED,
         )
         h2 = compute_trade_hash(
-            GENESIS_HASH, 1, date(2025, 6, 15), "SPY", "buy",
-            10.0, 450.0, 4500.0, "high", "test", 1, SAMPLE_CREATED,
+            GENESIS_HASH,
+            1,
+            date(2025, 6, 15),
+            "SPY",
+            "buy",
+            10.0,
+            450.0,
+            4500.0,
+            "high",
+            "test",
+            1,
+            SAMPLE_CREATED,
         )
         assert h1 == h2
         assert len(h1) == 64  # hex-encoded SHA-256
 
     def test_different_input_different_hash(self):
         h1 = compute_trade_hash(
-            GENESIS_HASH, 1, date(2025, 6, 15), "SPY", "buy",
-            10.0, 450.0, 4500.0, "high", "test", 1, SAMPLE_CREATED,
+            GENESIS_HASH,
+            1,
+            date(2025, 6, 15),
+            "SPY",
+            "buy",
+            10.0,
+            450.0,
+            4500.0,
+            "high",
+            "test",
+            1,
+            SAMPLE_CREATED,
         )
         h2 = compute_trade_hash(
-            GENESIS_HASH, 1, date(2025, 6, 15), "QQQ", "buy",
-            10.0, 450.0, 4500.0, "high", "test", 1, SAMPLE_CREATED,
+            GENESIS_HASH,
+            1,
+            date(2025, 6, 15),
+            "QQQ",
+            "buy",
+            10.0,
+            450.0,
+            4500.0,
+            "high",
+            "test",
+            1,
+            SAMPLE_CREATED,
         )
         assert h1 != h2
 
@@ -89,20 +171,35 @@ class TestVerifyChain:
     """verify_chain validates the full chain."""
 
     def test_empty_table_is_valid(self, tmp_db):
-        ok, last_id, msg = verify_chain(tmp_db)
+        ok, last_id, _msg = verify_chain(tmp_db)
         assert ok is True
         assert last_id is None
 
     def test_single_trade_valid(self, tmp_db):
         _insert_chained(tmp_db, 1, GENESIS_HASH)
-        ok, last_id, msg = verify_chain(tmp_db)
+        ok, last_id, _msg = verify_chain(tmp_db)
         assert ok is True
         assert last_id == 1
 
     def test_three_trade_chain_valid(self, tmp_db):
         h1 = _insert_chained(tmp_db, 1, GENESIS_HASH, symbol="SPY")
-        h2 = _insert_chained(tmp_db, 2, h1, symbol="QQQ", price=380.0, notional=3800.0)
-        _insert_chained(tmp_db, 3, h2, symbol="TLT", action="sell", price=95.0, notional=950.0)
+        h2 = _insert_chained(
+            tmp_db,
+            2,
+            h1,
+            symbol="QQQ",
+            price=380.0,
+            notional=3800.0,
+        )
+        _insert_chained(
+            tmp_db,
+            3,
+            h2,
+            symbol="TLT",
+            action="sell",
+            price=95.0,
+            notional=950.0,
+        )
 
         ok, last_id, msg = verify_chain(tmp_db)
         assert ok is True

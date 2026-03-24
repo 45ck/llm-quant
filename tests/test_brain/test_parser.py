@@ -95,7 +95,7 @@ def test_parse_invalid_signal_skipped():
 
 
 def test_parse_invalid_json_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Could not locate JSON"):
         parse_trading_decision("not json at all", date(2026, 3, 24))
 
 

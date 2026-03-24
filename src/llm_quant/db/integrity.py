@@ -41,20 +41,22 @@ def compute_trade_hash(
     representation.  ``None`` values are serialized as the literal
     string ``"None"``.
     """
-    parts = "|".join([
-        str(prev_hash),
-        str(trade_id),
-        str(date),
-        str(symbol),
-        str(action),
-        f"{shares:.8f}",
-        f"{price:.8f}",
-        f"{notional:.8f}",
-        str(conviction),
-        str(reasoning),
-        str(decision_id),
-        str(created_at),
-    ])
+    parts = "|".join(
+        [
+            str(prev_hash),
+            str(trade_id),
+            str(date),
+            str(symbol),
+            str(action),
+            f"{shares:.8f}",
+            f"{price:.8f}",
+            f"{notional:.8f}",
+            str(conviction),
+            str(reasoning),
+            str(decision_id),
+            str(created_at),
+        ]
+    )
     return hashlib.sha256(parts.encode("utf-8")).hexdigest()
 
 
@@ -91,9 +93,21 @@ def verify_chain(conn: duckdb.DuckDBPyConnection) -> tuple[bool, int | None, str
 
     prev = GENESIS_HASH
     for row in rows:
-        (trade_id, dt, symbol, action, shares, price,
-         notional, conviction, reasoning, decision_id,
-         created_at, stored_prev, stored_hash) = row
+        (
+            trade_id,
+            dt,
+            symbol,
+            action,
+            shares,
+            price,
+            notional,
+            conviction,
+            reasoning,
+            decision_id,
+            created_at,
+            stored_prev,
+            stored_hash,
+        ) = row
 
         if stored_prev != prev:
             return (
@@ -104,9 +118,18 @@ def verify_chain(conn: duckdb.DuckDBPyConnection) -> tuple[bool, int | None, str
             )
 
         expected = compute_trade_hash(
-            prev, trade_id, dt, symbol, action,
-            float(shares), float(price), float(notional),
-            conviction, reasoning, decision_id, created_at,
+            prev,
+            trade_id,
+            dt,
+            symbol,
+            action,
+            float(shares),
+            float(price),
+            float(notional),
+            conviction,
+            reasoning,
+            decision_id,
+            created_at,
         )
 
         if stored_hash != expected:
@@ -152,13 +175,33 @@ def backfill_hashes(conn: duckdb.DuckDBPyConnection) -> int:
 
     count = 0
     for row in rows:
-        (trade_id, dt, symbol, action, shares, price,
-         notional, conviction, reasoning, decision_id, created_at) = row
+        (
+            trade_id,
+            dt,
+            symbol,
+            action,
+            shares,
+            price,
+            notional,
+            conviction,
+            reasoning,
+            decision_id,
+            created_at,
+        ) = row
 
         row_hash = compute_trade_hash(
-            prev, trade_id, dt, symbol, action,
-            float(shares), float(price), float(notional),
-            conviction, reasoning, decision_id, created_at,
+            prev,
+            trade_id,
+            dt,
+            symbol,
+            action,
+            float(shares),
+            float(price),
+            float(notional),
+            conviction,
+            reasoning,
+            decision_id,
+            created_at,
         )
 
         conn.execute(

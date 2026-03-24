@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Trade logging
 # ---------------------------------------------------------------------------
 
+
 def log_trades(
     conn: duckdb.DuckDBPyConnection,
     trades: list[ExecutedTrade],
@@ -91,9 +92,18 @@ def log_trades(
         created_at = created_row[0]
 
         row_hash = compute_trade_hash(
-            prev_hash, trade_id, trade_date, trade.symbol, trade.action,
-            trade.shares, trade.price, trade.notional,
-            trade.conviction, trade.reasoning, decision_id, created_at,
+            prev_hash,
+            trade_id,
+            trade_date,
+            trade.symbol,
+            trade.action,
+            trade.shares,
+            trade.price,
+            trade.notional,
+            trade.conviction,
+            trade.reasoning,
+            decision_id,
+            created_at,
         )
 
         conn.execute(
@@ -127,6 +137,7 @@ def log_trades(
 # ---------------------------------------------------------------------------
 # Portfolio snapshots
 # ---------------------------------------------------------------------------
+
 
 def save_portfolio_snapshot(
     conn: duckdb.DuckDBPyConnection,
@@ -219,6 +230,7 @@ def save_portfolio_snapshot(
 # Query helpers
 # ---------------------------------------------------------------------------
 
+
 def get_recent_trades(
     conn: duckdb.DuckDBPyConnection,
     limit: int = 20,
@@ -272,9 +284,7 @@ def get_recent_trades(
         "created_at",
     ]
 
-    trades: list[dict] = []
-    for row in result:
-        trades.append(dict(zip(columns, row)))
+    trades = [dict(zip(columns, row, strict=True)) for row in result]
 
     logger.debug("Fetched %d recent trade(s).", len(trades))
     return trades
@@ -330,9 +340,7 @@ def get_portfolio_history(
         "created_at",
     ]
 
-    history: list[dict] = []
-    for row in result:
-        history.append(dict(zip(columns, row)))
+    history = [dict(zip(columns, row, strict=True)) for row in result]
 
     logger.debug("Fetched %d snapshot(s) over last %d day(s).", len(history), days)
     return history

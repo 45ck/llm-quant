@@ -28,6 +28,7 @@ class RiskCheckResult:
 # Individual checks
 # ---------------------------------------------------------------------------
 
+
 def check_position_size(
     trade_notional: float,
     nav: float,
@@ -284,9 +285,7 @@ def check_stop_loss(
         passed=passed,
         rule="stop_loss",
         message=(
-            "Stop-loss is set."
-            if passed
-            else "Stop-loss required but not provided."
+            "Stop-loss is set." if passed else "Stop-loss required but not provided."
         ),
         current_value=1.0 if has_stop_loss else 0.0,
         limit_value=1.0,
