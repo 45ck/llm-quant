@@ -60,20 +60,35 @@ class RiskLimits(BaseModel):
     min_cash_reserve: float = 0.05
     require_stop_loss: bool = True
     default_stop_loss_pct: float = 0.05
+    # Per-asset-class overrides (crypto is more volatile, forex less so)
+    crypto_max_position_weight: float = 0.05
+    crypto_default_stop_loss_pct: float = 0.15
+    forex_max_position_weight: float = 0.08
+    forex_default_stop_loss_pct: float = 0.03
 
 
-class ETFEntry(BaseModel):
+class AssetEntry(BaseModel):
     symbol: str
     name: str
     category: str
     sector: str
+    asset_class: str = "equity"  # equity, crypto, forex
     tradeable: bool = True
 
 
+# Backward-compatible alias
+ETFEntry = AssetEntry
+
+
 class UniverseConfig(BaseModel):
-    name: str = "US ETF Core 30"
+    name: str = "Multi-Asset Universe"
     description: str = ""
-    etfs: list[ETFEntry] = Field(default_factory=list)
+    assets: list[AssetEntry] = Field(default_factory=list)
+
+    @property
+    def etfs(self) -> list[AssetEntry]:
+        """Backward-compatible alias for assets."""
+        return self.assets
 
 
 class AppConfig(BaseModel):
@@ -119,7 +134,8 @@ def load_config(config_dir: Path | None = None) -> AppConfig:
     if universe_path.exists():
         raw = _load_toml(universe_path)
         universe_data = raw.get("universe", {})
-        universe_data["etfs"] = raw.get("etfs", [])
+        # Accept both "assets" (new) and "etfs" (legacy) keys
+        universe_data["assets"] = raw.get("assets", []) or raw.get("etfs", [])
 
     # Override db_path from env
     env_db = os.environ.get("LLM_QUANT_DB_PATH")

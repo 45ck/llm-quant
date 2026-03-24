@@ -1,5 +1,5 @@
-# Data
-data/
+# Data (root-level only — don't ignore src/llm_quant/data/)
+/data/
 *.duckdb
 *.duckdb.wal
 

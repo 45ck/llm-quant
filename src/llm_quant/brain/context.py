@@ -274,7 +274,7 @@ def build_market_context(
         Dict with keys ``nav``, ``cash``, ``positions`` (list of dicts
         with ``symbol``, ``shares``, ``avg_cost``, ``stop_loss``).
     config:
-        Application configuration (used to determine the ETF universe).
+        Application configuration (used to determine the asset universe).
 
     Returns
     -------
@@ -287,10 +287,10 @@ def build_market_context(
 
     # Determine universe symbols from config
     universe_symbols: list[str] = [
-        etf.symbol for etf in config.universe.etfs if etf.tradeable
+        asset.symbol for asset in config.universe.assets if asset.tradeable
     ]
     if not universe_symbols:
-        logger.warning("No tradeable ETF symbols found in universe config")
+        logger.warning("No tradeable asset symbols found in universe config")
 
     # Also include symbols of currently-held positions
     held_symbols = {pos["symbol"] for pos in raw_positions}

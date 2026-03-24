@@ -37,7 +37,7 @@ class RiskManager:
     def __init__(self, config: AppConfig) -> None:
         self.limits = config.risk
         self.sector_map: dict[str, str] = {
-            e.symbol: e.sector for e in config.universe.etfs
+            e.symbol: e.sector for e in config.universe.assets
         }
         logger.info(
             "RiskManager initialised – %d sector mappings, limits=%s",

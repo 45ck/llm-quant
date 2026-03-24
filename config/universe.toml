@@ -1,184 +1,292 @@
 [universe]
-name = "US ETF Core 30"
-description = "Top 30 liquid ETFs covering equities, sectors, bonds, and commodities"
+name = "Multi-Asset Universe"
+description = "ETFs, crypto, and forex pairs for diversified macro trading"
 
-[[etfs]]
+[[assets]]
 symbol = "SPY"
 name = "S&P 500"
 category = "equity"
 sector = "broad_market"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "QQQ"
 name = "Nasdaq 100"
 category = "equity"
 sector = "tech"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "IWM"
 name = "Russell 2000"
 category = "equity"
 sector = "small_cap"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "DIA"
 name = "Dow Jones Industrial"
 category = "equity"
 sector = "broad_market"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "VTI"
 name = "Total US Stock Market"
 category = "equity"
 sector = "broad_market"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "IVV"
 name = "S&P 500 (iShares)"
 category = "equity"
 sector = "broad_market"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLK"
 name = "Technology Select"
 category = "equity"
 sector = "technology"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLF"
 name = "Financial Select"
 category = "equity"
 sector = "financials"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLE"
 name = "Energy Select"
 category = "equity"
 sector = "energy"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLV"
 name = "Health Care Select"
 category = "equity"
 sector = "healthcare"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLI"
 name = "Industrial Select"
 category = "equity"
 sector = "industrials"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLY"
 name = "Consumer Discretionary"
 category = "equity"
 sector = "consumer_discretionary"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLP"
 name = "Consumer Staples"
 category = "equity"
 sector = "consumer_staples"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLU"
 name = "Utilities Select"
 category = "equity"
 sector = "utilities"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLRE"
 name = "Real Estate Select"
 category = "equity"
 sector = "real_estate"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLB"
 name = "Materials Select"
 category = "equity"
 sector = "materials"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "XLC"
 name = "Communication Services"
 category = "equity"
 sector = "communication"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "VGK"
 name = "FTSE Europe"
 category = "equity"
 sector = "international"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "EEM"
 name = "Emerging Markets"
 category = "equity"
 sector = "emerging"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "EFA"
 name = "EAFE (Intl Developed)"
 category = "equity"
 sector = "international"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "TLT"
 name = "20+ Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "IEF"
 name = "7-10 Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "SHY"
 name = "1-3 Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "LQD"
 name = "Investment Grade Corporate"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "HYG"
 name = "High Yield Corporate"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "TIP"
 name = "TIPS (Inflation Protected)"
 category = "fixed_income"
 sector = "bonds"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "GLD"
 name = "Gold"
 category = "commodity"
 sector = "precious_metals"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "SLV"
 name = "Silver"
 category = "commodity"
 sector = "precious_metals"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "USO"
 name = "Crude Oil"
 category = "commodity"
 sector = "energy"
+asset_class = "equity"
 
-[[etfs]]
+[[assets]]
 symbol = "VIX"
 name = "VIX (for reference only)"
 category = "volatility"
 sector = "volatility"
+asset_class = "equity"
 tradeable = false
+
+[[assets]]
+symbol = "BTC-USD"
+name = "Bitcoin"
+category = "crypto"
+sector = "layer1"
+asset_class = "crypto"
+
+[[assets]]
+symbol = "ETH-USD"
+name = "Ethereum"
+category = "crypto"
+sector = "layer1"
+asset_class = "crypto"
+
+[[assets]]
+symbol = "SOL-USD"
+name = "Solana"
+category = "crypto"
+sector = "layer1"
+asset_class = "crypto"
+
+[[assets]]
+symbol = "XRP-USD"
+name = "Ripple"
+category = "crypto"
+sector = "payments"
+asset_class = "crypto"
+
+[[assets]]
+symbol = "ADA-USD"
+name = "Cardano"
+category = "crypto"
+sector = "layer1"
+asset_class = "crypto"
+
+[[assets]]
+symbol = "DOGE-USD"
+name = "Dogecoin"
+category = "crypto"
+sector = "meme"
+asset_class = "crypto"
+tradeable = false
+
+[[assets]]
+symbol = "EURUSD=X"
+name = "EUR/USD"
+category = "forex"
+sector = "major_pairs"
+asset_class = "forex"
+
+[[assets]]
+symbol = "GBPUSD=X"
+name = "GBP/USD"
+category = "forex"
+sector = "major_pairs"
+asset_class = "forex"
+
+[[assets]]
+symbol = "USDJPY=X"
+name = "USD/JPY"
+category = "forex"
+sector = "major_pairs"
+asset_class = "forex"
+
+[[assets]]
+symbol = "AUDUSD=X"
+name = "AUD/USD"
+category = "forex"
+sector = "major_pairs"
+asset_class = "forex"
+
+[[assets]]
+symbol = "USDCHF=X"
+name = "USD/CHF"
+category = "forex"
+sector = "major_pairs"
+asset_class = "forex"

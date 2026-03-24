@@ -8,7 +8,7 @@ from pathlib import Path
 import duckdb
 import pytest
 
-from llm_quant.config import AppConfig, GeneralConfig, LLMConfig, DataConfig, RiskLimits, UniverseConfig, ETFEntry
+from llm_quant.config import AppConfig, GeneralConfig, LLMConfig, DataConfig, RiskLimits, UniverseConfig, AssetEntry, ETFEntry
 from llm_quant.db.schema import init_schema
 from llm_quant.trading.portfolio import Portfolio, Position
 
@@ -32,11 +32,13 @@ def sample_config(tmp_path):
         risk=RiskLimits(),
         universe=UniverseConfig(
             name="Test Universe",
-            etfs=[
-                ETFEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad_market"),
-                ETFEntry(symbol="QQQ", name="Nasdaq 100", category="equity", sector="tech"),
-                ETFEntry(symbol="TLT", name="20Y Treasury", category="fixed_income", sector="bonds"),
-                ETFEntry(symbol="GLD", name="Gold", category="commodity", sector="precious_metals"),
+            assets=[
+                AssetEntry(symbol="SPY", name="S&P 500", category="equity", sector="broad_market"),
+                AssetEntry(symbol="QQQ", name="Nasdaq 100", category="equity", sector="tech"),
+                AssetEntry(symbol="TLT", name="20Y Treasury", category="fixed_income", sector="bonds"),
+                AssetEntry(symbol="GLD", name="Gold", category="commodity", sector="precious_metals"),
+                AssetEntry(symbol="BTC-USD", name="Bitcoin", category="crypto", sector="layer1", asset_class="crypto"),
+                AssetEntry(symbol="EURUSD=X", name="EUR/USD", category="forex", sector="major_pairs", asset_class="forex"),
             ],
         ),
     )

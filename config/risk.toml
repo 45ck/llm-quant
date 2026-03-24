@@ -23,3 +23,13 @@ min_cash_reserve = 0.05  # 5%
 # Stop-loss required on every position (percentage below entry)
 require_stop_loss = true
 default_stop_loss_pct = 0.05  # 5%
+
+# --- Per-asset-class overrides ---
+
+# Crypto: Higher volatility → tighter position weight, wider stop-loss
+crypto_max_position_weight = 0.05   # 5%  (vs 10% default)
+crypto_default_stop_loss_pct = 0.15 # 15% (vs 5% default — wider to avoid noise-triggered exits)
+
+# Forex: Lower volatility → moderate position weight, tight stop-loss
+forex_max_position_weight = 0.08    # 8%  (vs 10% default)
+forex_default_stop_loss_pct = 0.03  # 3%  (vs 5% default — tighter given low vol)
