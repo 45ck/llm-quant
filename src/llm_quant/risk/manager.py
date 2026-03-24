@@ -13,6 +13,7 @@ from llm_quant.config import AppConfig
 from llm_quant.risk.limits import (
     RiskCheckResult,
     check_cash_reserve,
+    check_drawdown_limit,
     check_gross_exposure,
     check_net_exposure,
     check_position_size,
@@ -39,9 +40,13 @@ class RiskManager:
         self.sector_map: dict[str, str] = {
             e.symbol: e.sector for e in config.universe.assets
         }
+        self.asset_class_map: dict[str, str] = {
+            e.symbol: e.asset_class for e in config.universe.assets
+        }
         logger.info(
-            "RiskManager initialised – %d sector mappings, limits=%s",
+            "RiskManager initialised – %d sector, %d asset-class mappings, limits=%s",
             len(self.sector_map),
+            len(self.asset_class_map),
             self.limits.model_dump(),
         )
 
@@ -49,7 +54,7 @@ class RiskManager:
     # Single-signal evaluation
     # ------------------------------------------------------------------
 
-    def check_trade(
+    def check_trade(  # noqa: PLR0912
         self,
         signal: TradeSignal,
         portfolio: Portfolio,
@@ -108,6 +113,15 @@ class RiskManager:
         )
 
         # 2. Position weight
+        # Determine per-asset-class position weight limit
+        asset_class = self.asset_class_map.get(signal.symbol, "equity")
+        if asset_class == "crypto":
+            max_weight = self.limits.crypto_max_position_weight
+        elif asset_class == "forex":
+            max_weight = self.limits.forex_max_position_weight
+        else:
+            max_weight = self.limits.max_position_weight
+
         results.append(
             check_position_weight(
                 current_weight,
@@ -117,7 +131,7 @@ class RiskManager:
                     current_weight - (trade_notional / nav if nav else 0),
                     0.0,
                 ),
-                self.limits.max_position_weight,
+                max_weight,
             )
         )
 
@@ -207,6 +221,22 @@ class RiskManager:
                 require=self.limits.require_stop_loss,
             )
         )
+
+        # 8. Portfolio drawdown circuit breaker (buys only)
+        if is_buy:
+            peak_nav = getattr(portfolio, "peak_nav", None)
+            if peak_nav is None:
+                peak_nav = max(nav, portfolio.initial_capital)
+            max_drawdown_pct = getattr(self.limits, "max_drawdown_pct", 0.15)
+            results.append(check_drawdown_limit(nav, peak_nav, max_drawdown_pct))
+        else:
+            results.append(
+                RiskCheckResult(
+                    passed=True,
+                    rule="drawdown_limit",
+                    message="Sell/close not blocked by drawdown limit.",
+                )
+            )
 
         return results
 

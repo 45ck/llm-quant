@@ -290,3 +290,46 @@ def check_stop_loss(
         current_value=1.0 if has_stop_loss else 0.0,
         limit_value=1.0,
     )
+
+
+def check_drawdown_limit(
+    current_nav: float,
+    peak_nav: float,
+    max_drawdown_pct: float,
+) -> RiskCheckResult:
+    """Block new BUY signals when portfolio drawdown approaches the limit.
+
+    Triggers when current drawdown exceeds (max_drawdown_pct - 0.03),
+    giving a 3% buffer before hitting the hard limit.
+
+    Parameters
+    ----------
+    current_nav:
+        Current net asset value.
+    peak_nav:
+        Highest NAV recorded so far.
+    max_drawdown_pct:
+        Maximum allowed drawdown as a positive fraction (e.g. 0.15 for 15%).
+    """
+    if peak_nav <= 0.0:
+        return RiskCheckResult(
+            passed=True,
+            rule="drawdown_limit",
+            message="No peak NAV recorded yet.",
+        )
+
+    current_dd = (current_nav - peak_nav) / peak_nav  # negative when in drawdown
+    threshold = -(max_drawdown_pct - 0.03)  # e.g., -0.12 for 15% limit
+
+    passed = current_dd >= threshold
+    return RiskCheckResult(
+        passed=passed,
+        rule="drawdown_limit",
+        message=(
+            f"Current drawdown {current_dd:.2%} "
+            f"{'>=' if passed else '<'} threshold {threshold:.2%} "
+            f"(hard limit {-max_drawdown_pct:.2%})."
+        ),
+        current_value=current_dd,
+        limit_value=threshold,
+    )

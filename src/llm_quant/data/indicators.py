@@ -23,6 +23,10 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
 
     * **sma_20** -- 20-day simple moving average of *close*.
     * **sma_50** -- 50-day simple moving average of *close*.
+    * **sma_200** -- 200-day simple moving average of *close*.
+    * **bb_upper** -- Upper Bollinger Band (SMA-20 + 2 std devs).
+    * **bb_lower** -- Lower Bollinger Band (SMA-20 - 2 std devs).
+    * **bb_pct_b** -- Bollinger %B (position of close within the bands).
     * **rsi_14** -- 14-period RSI (Wilder's smoothing).
     * **macd** -- MACD line (EMA-12 minus EMA-26 of *close*).
     * **macd_signal** -- 9-period EMA of the MACD line.
@@ -38,7 +42,7 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     Returns
     -------
     pl.DataFrame
-        The original DataFrame with the seven indicator columns appended
+        The original DataFrame with the eleven indicator columns appended
         (or replaced if they already existed).
     """
     required = {"symbol", "date", "close", "high", "low"}
@@ -51,6 +55,10 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
         indicator_names = (
             "sma_20",
             "sma_50",
+            "sma_200",
+            "bb_upper",
+            "bb_lower",
+            "bb_pct_b",
             "rsi_14",
             "macd",
             "macd_signal",
@@ -66,6 +74,10 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     indicator_cols = [
         "sma_20",
         "sma_50",
+        "sma_200",
+        "bb_upper",
+        "bb_lower",
+        "bb_pct_b",
         "rsi_14",
         "macd",
         "macd_signal",
@@ -89,7 +101,33 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
         .rolling_mean(window_size=50, min_samples=50)
         .over("symbol")
         .alias("sma_50"),
+        pl.col("close")
+        .rolling_mean(window_size=200, min_samples=200)
+        .over("symbol")
+        .alias("sma_200"),
     )
+
+    # -- Bollinger Bands (20-period, 2 std devs) --------------------------------
+    df = df.with_columns(
+        pl.col("close")
+        .rolling_std(window_size=20, min_samples=20)
+        .over("symbol")
+        .alias("_bb_std"),
+    )
+    df = df.with_columns(
+        (pl.col("sma_20") + 2.0 * pl.col("_bb_std")).alias("bb_upper"),
+        (pl.col("sma_20") - 2.0 * pl.col("_bb_std")).alias("bb_lower"),
+    )
+    df = df.with_columns(
+        pl.when((pl.col("bb_upper") - pl.col("bb_lower")).abs() > 1e-10)
+        .then(
+            (pl.col("close") - pl.col("bb_lower"))
+            / (pl.col("bb_upper") - pl.col("bb_lower"))
+        )
+        .otherwise(0.5)
+        .alias("bb_pct_b"),
+    )
+    df = df.drop("_bb_std")
 
     # -- RSI (Wilder's) -------------------------------------------------------
     df = _compute_rsi(df, period=14)

@@ -55,6 +55,7 @@ class RiskLimits(BaseModel):
     min_cash_reserve: float = 0.05
     require_stop_loss: bool = True
     default_stop_loss_pct: float = 0.05
+    max_drawdown_pct: float = 0.15  # Portfolio drawdown circuit breaker
     # Per-asset-class overrides (crypto is more volatile, forex less so)
     crypto_max_position_weight: float = 0.05
     crypto_default_stop_loss_pct: float = 0.15

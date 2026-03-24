@@ -10,7 +10,7 @@ max_tokens = 4096
 max_trades_per_session = 5
 
 [data]
-lookback_days = 252  # 1 year of trading days
+lookback_days = 504  # 2 years of trading days
 fetch_timeout = 30
 
 [logging]

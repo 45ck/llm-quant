@@ -31,17 +31,17 @@ sector = "broad_market"
 asset_class = "equity"
 
 [[assets]]
-symbol = "VTI"
-name = "Total US Stock Market"
-category = "equity"
-sector = "broad_market"
-asset_class = "equity"
+symbol = "DBA"
+name = "Agriculture"
+category = "commodity"
+sector = "agriculture"
+asset_class = "commodity"
 
 [[assets]]
-symbol = "IVV"
-name = "S&P 500 (iShares)"
+symbol = "EWJ"
+name = "MSCI Japan"
 category = "equity"
-sector = "broad_market"
+sector = "international"
 asset_class = "equity"
 
 [[assets]]
@@ -147,70 +147,70 @@ symbol = "TLT"
 name = "20+ Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "IEF"
 name = "7-10 Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "SHY"
 name = "1-3 Year Treasury Bond"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "LQD"
 name = "Investment Grade Corporate"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "HYG"
 name = "High Yield Corporate"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "TIP"
 name = "TIPS (Inflation Protected)"
 category = "fixed_income"
 sector = "bonds"
-asset_class = "equity"
+asset_class = "fixed_income"
 
 [[assets]]
 symbol = "GLD"
 name = "Gold"
 category = "commodity"
 sector = "precious_metals"
-asset_class = "equity"
+asset_class = "commodity"
 
 [[assets]]
 symbol = "SLV"
 name = "Silver"
 category = "commodity"
 sector = "precious_metals"
-asset_class = "equity"
+asset_class = "commodity"
 
 [[assets]]
 symbol = "USO"
 name = "Crude Oil"
 category = "commodity"
 sector = "energy"
-asset_class = "equity"
+asset_class = "commodity"
 
 [[assets]]
 symbol = "VIX"
 name = "VIX (for reference only)"
 category = "volatility"
 sector = "volatility"
-asset_class = "equity"
+asset_class = "volatility"
 tradeable = false
 
 [[assets]]

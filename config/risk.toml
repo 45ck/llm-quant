@@ -1,9 +1,9 @@
 [limits]
 # Maximum weight for a single position as fraction of NAV
-max_position_weight = 0.10  # 10%
+max_position_weight = 0.12  # 12%
 
 # Maximum capital allocated to a single trade as fraction of NAV
-max_trade_size = 0.02  # 2%
+max_trade_size = 0.04  # 4%
 
 # Maximum gross exposure as fraction of NAV (long + short)
 max_gross_exposure = 2.0  # 200%
@@ -23,6 +23,9 @@ min_cash_reserve = 0.05  # 5%
 # Stop-loss required on every position (percentage below entry)
 require_stop_loss = true
 default_stop_loss_pct = 0.05  # 5%
+
+# Portfolio-level drawdown circuit breaker (blocks new buys when breached)
+max_drawdown_pct = 0.15  # 15%
 
 # --- Per-asset-class overrides ---
 

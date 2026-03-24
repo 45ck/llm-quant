@@ -40,6 +40,10 @@ def test_compute_indicators_columns():
     expected_cols = {
         "sma_20",
         "sma_50",
+        "sma_200",
+        "bb_upper",
+        "bb_lower",
+        "bb_pct_b",
         "rsi_14",
         "macd",
         "macd_signal",
