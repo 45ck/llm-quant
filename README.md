@@ -13,6 +13,40 @@ The unique angle: the LLM *is* the strategy, not hard-coded rules.
 5. **Execute** paper trades after pre-trade risk checks
 6. **Track** everything in DuckDB — trades, decisions, portfolio snapshots
 
+## Performance
+
+| Metric | Value | Target |
+|--------|-------|--------|
+| NAV | $100,000 | — |
+| Total Return | 0.00% | 8-15% ann. |
+| Sharpe Ratio | — | > 0.80 |
+| Sortino Ratio | — | > 1.00 |
+| Max Drawdown | 0.00% | < 15% |
+| Benchmark (60/40) | — | — |
+
+> Updated daily via [automated reports](reports/).
+
+## Reports
+
+Performance reports are generated automatically and committed to git as an immutable public record.
+
+- [Daily Reports](reports/daily/) — Portfolio snapshot, trades, metrics
+- [Weekly Reports](reports/weekly/) — Weekly performance summary
+- [Monthly Reports](reports/monthly/) — Full metrics dashboard and trade analysis
+
+Reports are generated from the live DuckDB database by `scripts/generate_report.py` and auto-committed via GitHub Actions.
+
+## Transparency
+
+This is a live paper trading system. Every trade decision is:
+
+1. **Logged with reasoning** — Each trade includes the LLM's hypothesis and conviction level
+2. **Hash-chain verified** — Trade ledger uses SHA-256 hash chain for tamper evidence
+3. **Git-tracked** — All reports committed automatically, creating an immutable public record
+4. **Auditable** — Run `pq verify` to validate the entire trade history
+
+The system benchmarks against a passive 60/40 SPY/TLT portfolio. All performance metrics are computed from raw trade data, not self-reported.
+
 ## Quick Start
 
 ### Prerequisites

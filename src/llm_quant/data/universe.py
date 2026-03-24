@@ -35,6 +35,32 @@ def get_tradeable_symbols(config: AppConfig) -> list[str]:
     return symbols
 
 
+def get_all_fetch_symbols(config: AppConfig) -> list[str]:
+    """Return all symbols to fetch, including non-tradeable reference data.
+
+    This includes tradeable symbols plus non-tradeable symbols like VIX that
+    are needed for regime identification and market context.
+
+    Parameters
+    ----------
+    config:
+        The application configuration containing the universe definition.
+
+    Returns
+    -------
+    list[str]
+        Sorted list of all ticker symbol strings in the universe.
+    """
+    symbols = [asset.symbol for asset in config.universe.assets]
+    symbols.sort()
+    logger.info(
+        "Resolved %d total symbols (including reference) from universe '%s'",
+        len(symbols),
+        config.universe.name,
+    )
+    return symbols
+
+
 def sync_universe_to_db(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,

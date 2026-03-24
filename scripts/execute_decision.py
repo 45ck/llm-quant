@@ -73,6 +73,12 @@ def main() -> None:
             ).fetchone()
             if row and row[0] is not None:
                 prices[symbol] = float(row[0])
+            else:
+                logger.warning(
+                    "No price data in market_data_daily for %s — "
+                    "trades for this symbol will be skipped",
+                    symbol,
+                )
 
         portfolio.update_prices(prices)
         nav_before = portfolio.nav

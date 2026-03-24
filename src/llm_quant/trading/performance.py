@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+from datetime import date as date_type
 
 import duckdb
 import polars as pl
@@ -17,17 +18,117 @@ logger = logging.getLogger(__name__)
 # Annualisation factor (trading days per year)
 _TRADING_DAYS: int = 252
 
+# 60/40 benchmark weights
+_BENCHMARK_WEIGHTS: dict[str, float] = {"SPY": 0.60, "TLT": 0.40}
 
-def compute_performance(
+
+def _compute_benchmark_return(
+    conn: duckdb.DuckDBPyConnection,
+    first_date: date_type,
+    last_date: date_type,
+) -> float | None:
+    """Compute 60/40 SPY/TLT buy-and-hold return over the given period.
+
+    Returns *None* if price data is unavailable for either symbol.
+    """
+    benchmark_return: float = 0.0
+
+    for symbol, weight in _BENCHMARK_WEIGHTS.items():
+        rows = conn.execute(
+            """
+            SELECT date, close
+            FROM market_data_daily
+            WHERE symbol = ?
+              AND date >= ?
+              AND date <= ?
+            ORDER BY date ASC
+            """,
+            [symbol, first_date, last_date],
+        ).fetchall()
+
+        if len(rows) < 2:
+            logger.warning(
+                "Insufficient benchmark data for %s (%d rows) – "
+                "cannot compute benchmark return.",
+                symbol,
+                len(rows),
+            )
+            return None
+
+        first_close: float = float(rows[0][1])
+        last_close: float = float(rows[-1][1])
+
+        if first_close == 0.0:
+            return None
+
+        asset_return = (last_close / first_close) - 1.0
+        benchmark_return += weight * asset_return
+
+    return benchmark_return
+
+
+def _get_best_worst_positions(
+    conn: duckdb.DuckDBPyConnection,
+    n: int = 3,
+) -> tuple[list[dict], list[dict]]:
+    """Return top-*n* best and worst positions by unrealized_pnl.
+
+    Reads from the ``positions`` table for the latest snapshot.
+    Returns ``(best, worst)`` where each is a list of dicts with
+    keys ``symbol``, ``unrealized_pnl``, ``weight``.
+    """
+    latest_snap = conn.execute("""
+        SELECT snapshot_id
+        FROM portfolio_snapshots
+        ORDER BY date DESC, snapshot_id DESC
+        LIMIT 1
+        """).fetchone()
+
+    if latest_snap is None:
+        return [], []
+
+    snapshot_id: int = latest_snap[0]
+
+    rows = conn.execute(
+        """
+        SELECT symbol, unrealized_pnl, weight
+        FROM positions
+        WHERE snapshot_id = ?
+        ORDER BY unrealized_pnl DESC
+        """,
+        [snapshot_id],
+    ).fetchall()
+
+    positions = [
+        {
+            "symbol": r[0],
+            "unrealized_pnl": round(float(r[1]), 2),
+            "weight": round(float(r[2]), 4),
+        }
+        for r in rows
+    ]
+
+    best = positions[:n]
+    worst = (
+        list(reversed(positions[-n:]))
+        if len(positions) >= n
+        else list(reversed(positions))
+    )
+
+    return best, worst
+
+
+def compute_performance(  # noqa: C901, PLR0912, PLR0915
     conn: duckdb.DuckDBPyConnection,
     initial_capital: float = 100_000.0,
 ) -> dict:
     """Compute headline performance metrics.
 
-    Reads from ``portfolio_snapshots`` and ``trades`` tables.  If there is
-    insufficient data (no snapshots or fewer than two data points) the
-    function returns a dict of zero / default values so callers never need
-    to guard against missing keys.
+    Reads from ``portfolio_snapshots``, ``trades``, ``positions``, and
+    ``market_data_daily`` tables.  If there is insufficient data (no
+    snapshots or fewer than two data points) the function returns a dict
+    of zero / default values so callers never need to guard against
+    missing keys.
 
     Parameters
     ----------
@@ -39,31 +140,40 @@ def compute_performance(
     Returns
     -------
     dict
-        Keys: ``total_return``, ``sharpe_ratio``, ``max_drawdown``,
+        Keys: ``total_return``, ``sharpe_ratio``, ``sortino_ratio``,
+        ``calmar_ratio``, ``annualized_return``, ``max_drawdown``,
         ``win_rate``, ``total_trades``, ``avg_trade_pnl``,
-        ``latest_nav``, ``total_pnl``.
+        ``latest_nav``, ``total_pnl``, ``benchmark_return``,
+        ``excess_return``, ``daily_returns``, ``best_positions``,
+        ``worst_positions``.
     """
     defaults: dict = {
         "total_return": 0.0,
         "sharpe_ratio": 0.0,
+        "sortino_ratio": None,
+        "calmar_ratio": None,
+        "annualized_return": 0.0,
         "max_drawdown": 0.0,
         "win_rate": 0.0,
         "total_trades": 0,
         "avg_trade_pnl": 0.0,
         "latest_nav": initial_capital,
         "total_pnl": 0.0,
+        "benchmark_return": None,
+        "excess_return": None,
+        "daily_returns": [],
+        "best_positions": [],
+        "worst_positions": [],
     }
 
     # ------------------------------------------------------------------
     # 1. Load portfolio snapshots into Polars
     # ------------------------------------------------------------------
-    snap_rows = conn.execute(
-        """
+    snap_rows = conn.execute("""
         SELECT date, nav, daily_pnl
         FROM portfolio_snapshots
         ORDER BY date ASC, snapshot_id ASC
-        """
-    ).fetchall()
+        """).fetchall()
 
     if not snap_rows:
         logger.info("No portfolio snapshots – returning default metrics.")
@@ -93,26 +203,40 @@ def compute_performance(
         (latest_nav / initial_capital) - 1.0 if initial_capital else 0.0
     )
 
+    trading_days: int = snap_df.height
+
     # ------------------------------------------------------------------
     # 2. Daily returns & Sharpe ratio
     # ------------------------------------------------------------------
     sharpe_ratio: float = 0.0
+    sortino_ratio: float | None = None
+    daily_returns_list: list[tuple[date_type, float]] = []
 
     if snap_df.height >= 2:
         returns_df = snap_df.with_columns(
             (pl.col("nav") / pl.col("nav").shift(1) - 1.0).alias("daily_return")
         ).drop_nulls("daily_return")
 
+        # Build daily_returns list for report generator
+        dates_col = returns_df["date"].to_list()
+        rets_col = returns_df["daily_return"].to_list()
+        daily_returns_list = list(zip(dates_col, rets_col, strict=True))
+
         if returns_df.height >= 2:
-            mean_ret: float = (  # type: ignore[assignment]
-                returns_df["daily_return"].mean()
-            )
-            std_ret: float = (  # type: ignore[assignment]
-                returns_df["daily_return"].std()
-            )
+            mean_ret: float = returns_df["daily_return"].mean()  # type: ignore[assignment]
+            std_ret: float = returns_df["daily_return"].std()  # type: ignore[assignment]
 
             if std_ret is not None and std_ret > 0.0:
                 sharpe_ratio = (mean_ret / std_ret) * math.sqrt(_TRADING_DAYS)
+
+            # Sortino ratio: downside deviation from negative returns only
+            neg_returns = returns_df.filter(pl.col("daily_return") < 0.0)[
+                "daily_return"
+            ]
+            if neg_returns.len() > 0:
+                downside_dev: float = neg_returns.std()  # type: ignore[assignment]
+                if downside_dev is not None and downside_dev > 0.0:
+                    sortino_ratio = (mean_ret / downside_dev) * math.sqrt(_TRADING_DAYS)
 
     # ------------------------------------------------------------------
     # 3. Maximum drawdown
@@ -130,14 +254,25 @@ def compute_performance(
             max_drawdown = min_dd  # negative value (or zero)
 
     # ------------------------------------------------------------------
+    # 3b. Annualised return & Calmar ratio
+    # ------------------------------------------------------------------
+    annualized_return: float = 0.0
+    calmar_ratio: float | None = None
+
+    if trading_days >= 2 and initial_capital > 0.0:
+        annualized_return = (1.0 + total_return) ** (_TRADING_DAYS / trading_days) - 1.0
+
+        if max_drawdown != 0.0:
+            calmar_ratio = annualized_return / abs(max_drawdown)
+
+    # ------------------------------------------------------------------
     # 4. Trade-level statistics
     # ------------------------------------------------------------------
     total_trades: int = 0
     win_rate: float = 0.0
     avg_trade_pnl: float = 0.0
 
-    trade_rows = conn.execute(
-        """
+    trade_rows = conn.execute("""
         SELECT
             t.symbol,
             t.action,
@@ -146,8 +281,7 @@ def compute_performance(
             t.notional
         FROM trades t
         ORDER BY t.date ASC, t.trade_id ASC
-        """
-    ).fetchall()
+        """).fetchall()
 
     total_trades = len(trade_rows)
 
@@ -181,27 +315,63 @@ def compute_performance(
             avg_trade_pnl = sum(pnl_list) / len(pnl_list)
 
     # ------------------------------------------------------------------
-    # 5. Assemble result
+    # 5. Benchmark return (60/40 SPY/TLT)
+    # ------------------------------------------------------------------
+    benchmark_return: float | None = None
+    excess_return: float | None = None
+
+    if snap_df.height >= 2:
+        first_date = snap_df["date"][0]
+        last_date = snap_df["date"][-1]
+        benchmark_return = _compute_benchmark_return(conn, first_date, last_date)
+
+        if benchmark_return is not None:
+            excess_return = total_return - benchmark_return
+
+    # ------------------------------------------------------------------
+    # 6. Best / worst positions
+    # ------------------------------------------------------------------
+    best_positions, worst_positions = _get_best_worst_positions(conn)
+
+    # ------------------------------------------------------------------
+    # 7. Assemble result
     # ------------------------------------------------------------------
     metrics: dict = {
         "total_return": round(total_return, 6),
         "sharpe_ratio": round(sharpe_ratio, 4),
+        "sortino_ratio": round(sortino_ratio, 4) if sortino_ratio is not None else None,
+        "calmar_ratio": round(calmar_ratio, 4) if calmar_ratio is not None else None,
+        "annualized_return": round(annualized_return, 6),
         "max_drawdown": round(max_drawdown, 6),
         "win_rate": round(win_rate, 4),
         "total_trades": total_trades,
         "avg_trade_pnl": round(avg_trade_pnl, 2),
         "latest_nav": round(latest_nav, 2),
         "total_pnl": round(total_pnl, 2),
+        "benchmark_return": (
+            round(benchmark_return, 6) if benchmark_return is not None else None
+        ),
+        "excess_return": (
+            round(excess_return, 6) if excess_return is not None else None
+        ),
+        "daily_returns": daily_returns_list,
+        "best_positions": best_positions,
+        "worst_positions": worst_positions,
     }
 
     logger.info(
-        "Performance: return=%.2f%%, sharpe=%.2f, drawdown=%.2f%%, "
-        "trades=%d, win_rate=%.1f%%",
+        "Performance: return=%.2f%%, sharpe=%.2f, sortino=%s, calmar=%s, "
+        "drawdown=%.2f%%, trades=%d, win_rate=%.1f%%, "
+        "benchmark=%s, excess=%s",
         total_return * 100,
         sharpe_ratio,
+        f"{sortino_ratio:.2f}" if sortino_ratio is not None else "N/A",
+        f"{calmar_ratio:.2f}" if calmar_ratio is not None else "N/A",
         max_drawdown * 100,
         total_trades,
         win_rate * 100,
+        f"{benchmark_return * 100:.2f}%" if benchmark_return is not None else "N/A",
+        f"{excess_return * 100:.2f}%" if excess_return is not None else "N/A",
     )
 
     return metrics

@@ -24,7 +24,7 @@ from llm_quant.config import load_config
 from llm_quant.data.fetcher import fetch_ohlcv
 from llm_quant.data.indicators import compute_indicators
 from llm_quant.data.store import get_latest_date, upsert_market_data
-from llm_quant.data.universe import get_tradeable_symbols
+from llm_quant.data.universe import get_all_fetch_symbols, get_tradeable_symbols
 from llm_quant.db.schema import get_connection, init_schema
 from llm_quant.trading.portfolio import Portfolio
 
@@ -62,7 +62,7 @@ def _data_is_stale(conn, symbols: list[str]) -> bool:
 
 def _fetch_and_store(conn, config) -> None:
     """Fetch fresh data from Yahoo Finance, compute indicators, store."""
-    symbols = get_tradeable_symbols(config)
+    symbols = get_all_fetch_symbols(config)
     print("Fetching market data...", file=sys.stderr)
 
     df = fetch_ohlcv(

@@ -147,14 +147,12 @@ def run(
     portfolio = Portfolio.from_db(conn, config.general.initial_capital)
 
     # Get latest prices for portfolio
-    latest = conn.execute(
-        """
+    latest = conn.execute("""
         SELECT symbol, close as price FROM market_data_daily
         WHERE (symbol, date) IN (
             SELECT symbol, MAX(date) FROM market_data_daily GROUP BY symbol
         )
-        """
-    ).pl()
+        """).pl()
     prices = dict(
         zip(
             latest["symbol"].to_list(),
@@ -284,14 +282,12 @@ def status():
     portfolio = Portfolio.from_db(conn, config.general.initial_capital)
 
     # Update with latest prices
-    latest = conn.execute(
-        """
+    latest = conn.execute("""
         SELECT symbol, close as price FROM market_data_daily
         WHERE (symbol, date) IN (
             SELECT symbol, MAX(date) FROM market_data_daily GROUP BY symbol
         )
-        """
-    ).pl()
+        """).pl()
     if not latest.is_empty():
         prices = dict(
             zip(latest["symbol"].to_list(), latest["price"].to_list(), strict=True)
@@ -431,6 +427,31 @@ def verify():
     else:
         console.print(f"[red]FAIL[/red] {message}")
         raise typer.Exit(1)
+
+
+@app.command()
+def report(
+    report_type: str = typer.Argument(
+        "daily", help="Report type: daily, weekly, or monthly"
+    ),
+    date: str = typer.Option(None, "--date", "-d", help="Report date (YYYY-MM-DD)"),
+):
+    """Generate a performance report."""
+    import subprocess
+    import sys
+
+    cmd = [sys.executable, "scripts/generate_report.py", report_type]
+    if date:
+        cmd.extend(["--date", date])
+
+    env = {**__import__("os").environ, "PYTHONPATH": "src"}
+    result = subprocess.run(cmd, env=env, check=False)  # noqa: S603
+    if result.returncode != 0:
+        console.print(
+            f"[red]FAIL[/red] Report generation exited with code {result.returncode}"
+        )
+        raise typer.Exit(result.returncode)
+    console.print(f"[green]OK[/green] {report_type.capitalize()} report generated")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,95 @@
+name: Daily Reports
+
+on:
+  schedule:
+    - cron: '0 22 * * 1-5'  # 10pm UTC weekdays (after US market close)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Report date (YYYY-MM-DD)'
+        required: false
+      type:
+        description: 'Report type'
+        required: false
+        default: 'daily'
+        type: choice
+        options:
+          - daily
+          - weekly
+          - monthly
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Initialize database if needed
+        run: |
+          if [ ! -f data/llm_quant.duckdb ]; then
+            mkdir -p data
+            PYTHONPATH=src python -c "
+          from llm_quant.db.schema import init_schema
+          from pathlib import Path
+          init_schema(Path('data/llm_quant.duckdb'))
+          print('Database initialized.')
+          "
+          fi
+
+      - name: Set report date
+        id: date
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            echo "report_date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "report_date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate daily report
+        if: inputs.type == '' || inputs.type == 'daily'
+        run: |
+          PYTHONPATH=src python scripts/generate_report.py daily \
+            --date "${{ steps.date.outputs.report_date }}" || true
+
+      - name: Generate weekly report (Monday or manual)
+        if: inputs.type == 'weekly' || (inputs.type == '' && github.event_name == 'schedule')
+        run: |
+          DAY_OF_WEEK=$(date -u +%u)
+          if [ "$DAY_OF_WEEK" = "1" ] || [ "${{ inputs.type }}" = "weekly" ]; then
+            PYTHONPATH=src python scripts/generate_report.py weekly \
+              --date "${{ steps.date.outputs.report_date }}" || true
+          fi
+
+      - name: Generate monthly report (1st of month or manual)
+        if: inputs.type == 'monthly' || (inputs.type == '' && github.event_name == 'schedule')
+        run: |
+          DAY_OF_MONTH=$(date -u +%d)
+          if [ "$DAY_OF_MONTH" = "01" ] || [ "${{ inputs.type }}" = "monthly" ]; then
+            PYTHONPATH=src python scripts/generate_report.py monthly \
+              --date "${{ steps.date.outputs.report_date }}" || true
+          fi
+
+      - name: Commit and push reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -d reports ] && [ -n "$(git status reports/ --porcelain)" ]; then
+            git add reports/
+            git commit -m "docs: daily report ${{ steps.date.outputs.report_date }} [automated]"
+            git push
+          else
+            echo "No new reports to commit."
+          fi

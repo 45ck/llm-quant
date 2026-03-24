@@ -10,6 +10,15 @@ import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
+# Maps internal symbol names to their Yahoo Finance ticker equivalents.
+# Symbols not listed here are sent to Yahoo Finance as-is.
+YAHOO_SYMBOL_MAP: dict[str, str] = {
+    "VIX": "^VIX",
+}
+
+# Reverse map: Yahoo ticker -> internal symbol (for tagging stored rows).
+_YAHOO_TO_INTERNAL: dict[str, str] = {v: k for k, v in YAHOO_SYMBOL_MAP.items()}
+
 
 def fetch_ohlcv(
     symbols: list[str],
@@ -58,9 +67,12 @@ def fetch_ohlcv(
     end_date = datetime.now(tz=UTC).date()
     start_date = end_date - timedelta(days=lookback_days)
 
+    # Translate internal symbols to Yahoo Finance tickers
+    yahoo_symbols = [YAHOO_SYMBOL_MAP.get(s, s) for s in symbols]
+
     logger.info(
         "Fetching OHLCV for %d symbols from %s to %s (timeout=%ds)",
-        len(symbols),
+        len(yahoo_symbols),
         start_date,
         end_date,
         timeout,
@@ -68,7 +80,7 @@ def fetch_ohlcv(
 
     try:
         raw = yf.download(
-            tickers=symbols,
+            tickers=yahoo_symbols,
             start=str(start_date),
             end=str(end_date),
             group_by="ticker",
@@ -81,40 +93,42 @@ def fetch_ohlcv(
         return pl.DataFrame(schema=empty_schema)
 
     if raw is None or raw.empty:
-        logger.warning("yfinance returned no data for %s", symbols)
+        logger.warning("yfinance returned no data for %s", yahoo_symbols)
         return pl.DataFrame(schema=empty_schema)
 
     frames: list[pl.DataFrame] = []
 
     # Single-symbol download: columns are flat (Open, High, …)
-    if len(symbols) == 1:
-        symbol = symbols[0]
+    if len(yahoo_symbols) == 1:
+        yahoo_sym = yahoo_symbols[0]
+        internal_sym = _YAHOO_TO_INTERNAL.get(yahoo_sym, yahoo_sym)
         try:
-            df = _pandas_to_polars(raw, symbol)
+            df = _pandas_to_polars(raw, internal_sym)
             if df is not None and len(df) > 0:
                 frames.append(df)
             else:
-                logger.warning("No rows returned for %s", symbol)
+                logger.warning("No rows returned for %s", internal_sym)
         except Exception:
-            logger.exception("Failed to process data for %s", symbol)
+            logger.exception("Failed to process data for %s", internal_sym)
     else:
         # Multi-symbol download: top-level columns are (ticker, field) MultiIndex
-        for symbol in symbols:
+        for yahoo_sym in yahoo_symbols:
+            internal_sym = _YAHOO_TO_INTERNAL.get(yahoo_sym, yahoo_sym)
             try:
-                if symbol not in raw.columns.get_level_values(0):
-                    logger.warning("Symbol %s not found in downloaded data", symbol)
+                if yahoo_sym not in raw.columns.get_level_values(0):
+                    logger.warning("Symbol %s not found in downloaded data", yahoo_sym)
                     continue
-                subset = raw[symbol].copy()
+                subset = raw[yahoo_sym].copy()
                 # Drop rows that are entirely NaN (symbol had no data on that date)
                 subset = subset.dropna(how="all")
                 if subset.empty:
-                    logger.warning("No rows returned for %s", symbol)
+                    logger.warning("No rows returned for %s", internal_sym)
                     continue
-                df = _pandas_to_polars(subset, symbol)
+                df = _pandas_to_polars(subset, internal_sym)
                 if df is not None and len(df) > 0:
                     frames.append(df)
             except Exception:
-                logger.exception("Failed to process data for %s", symbol)
+                logger.exception("Failed to process data for %s", internal_sym)
 
     if not frames:
         logger.warning("No valid data after processing — returning empty DataFrame")
