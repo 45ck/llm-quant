@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import duckdb
 
@@ -66,7 +66,7 @@ def sync_universe_to_db(
         logger.warning("No asset entries found in universe config — nothing to sync")
         return 0
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     count = 0
 
     for asset in assets:

@@ -1,0 +1,8 @@
+# typos configuration — https://github.com/crate-ci/typos
+[default]
+locale = "en-us"
+
+[default.extend-words]
+# Add project-specific terms that typos should not flag as errors.
+# Format: "wrong-spelling" = "correct-or-allowed-spelling"
+# Example: "referer" = "referer"

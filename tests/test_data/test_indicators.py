@@ -1,8 +1,8 @@
 """Tests for technical indicator computation."""
 
-import polars as pl
-import pytest
 from datetime import date, timedelta
+
+import polars as pl
 
 from llm_quant.data.indicators import compute_indicators
 

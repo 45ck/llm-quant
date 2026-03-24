@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
 from pathlib import Path
 
 import anthropic
@@ -12,7 +11,7 @@ import duckdb
 from llm_quant.brain.models import MarketContext, TradingDecision
 from llm_quant.brain.parser import parse_trading_decision
 from llm_quant.brain.prompts import load_system_prompt, render_decision_prompt
-from llm_quant.config import AppConfig, CONFIG_DIR
+from llm_quant.config import CONFIG_DIR, AppConfig
 from llm_quant.db.schema import get_connection
 
 logger = logging.getLogger(__name__)

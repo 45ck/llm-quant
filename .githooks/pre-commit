@@ -1,0 +1,9 @@
+#!/bin/sh
+# noslop pre-commit: fast gates (format, lint)
+set -e
+
+if command -v noslop >/dev/null 2>&1; then
+  noslop check --tier=fast
+else
+  black --check . && ruff check .
+fi

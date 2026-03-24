@@ -1,0 +1,16 @@
+#!/bin/sh
+# noslop commit-msg: enforce Conventional Commits, block skip-ci tricks
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+if echo "$MSG" | grep -qiE '\[skip ci\]|skip-checks|--no-verify'; then
+  echo "noslop: commit message contains a CI-bypass pattern." >&2
+  exit 1
+fi
+
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?(!)?: .{1,100}$'
+if ! echo "$MSG" | grep -qE "$PATTERN"; then
+  echo "noslop: commit message does not follow Conventional Commits." >&2
+  echo "  Expected: type(scope): description" >&2
+  exit 1
+fi

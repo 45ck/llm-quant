@@ -129,7 +129,7 @@ def fetch_ohlcv(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _pandas_to_polars(pandas_df: "object", symbol: str) -> pl.DataFrame | None:
+def _pandas_to_polars(pandas_df: object, symbol: str) -> pl.DataFrame | None:
     """Convert a single-symbol pandas OHLCV DataFrame to Polars.
 
     Handles column-name normalisation (Yahoo may capitalise differently)

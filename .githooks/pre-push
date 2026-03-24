@@ -1,0 +1,4 @@
+#!/bin/sh
+# noslop pre-push: run tests before pushing
+set -e
+python -m pytest tests/ -q

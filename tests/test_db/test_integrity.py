@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-import pytest
-
 from llm_quant.db.integrity import (
     GENESIS_HASH,
     backfill_hashes,
@@ -13,7 +11,6 @@ from llm_quant.db.integrity import (
     get_latest_hash,
     verify_chain,
 )
-
 
 # ── helpers ──────────────────────────────────────────────────────────
 

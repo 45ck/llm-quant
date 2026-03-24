@@ -1,15 +1,13 @@
 """CLI entry point for llm-quant paper trading system."""
 
 import logging
-import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
+from rich.table import Table
 
 app = typer.Typer(
     name="pq",
@@ -47,8 +45,8 @@ def init():
     config = _get_config()
     db_path = _get_db_path(config)
 
-    from llm_quant.db.schema import init_schema
     from llm_quant.data.universe import sync_universe_to_db
+    from llm_quant.db.schema import init_schema
 
     conn = init_schema(db_path)
     count = sync_universe_to_db(conn, config)
@@ -65,11 +63,11 @@ def fetch():
     config = _get_config()
     db_path = _get_db_path(config)
 
-    from llm_quant.db.schema import get_connection
-    from llm_quant.data.universe import get_tradeable_symbols
     from llm_quant.data.fetcher import fetch_ohlcv
-    from llm_quant.data.store import upsert_market_data
     from llm_quant.data.indicators import compute_indicators
+    from llm_quant.data.store import upsert_market_data
+    from llm_quant.data.universe import get_tradeable_symbols
+    from llm_quant.db.schema import get_connection
 
     symbols = get_tradeable_symbols(config)
     console.print(f"Fetching data for {len(symbols)} symbols...")
@@ -106,17 +104,17 @@ def run(
     config = _get_config()
     db_path = _get_db_path(config)
 
-    from llm_quant.db.schema import get_connection
-    from llm_quant.data.universe import get_tradeable_symbols
-    from llm_quant.data.fetcher import fetch_ohlcv
-    from llm_quant.data.store import upsert_market_data, get_market_data
-    from llm_quant.data.indicators import compute_indicators
     from llm_quant.brain.context import build_market_context
     from llm_quant.brain.engine import SignalEngine
-    from llm_quant.trading.portfolio import Portfolio
+    from llm_quant.data.fetcher import fetch_ohlcv
+    from llm_quant.data.indicators import compute_indicators
+    from llm_quant.data.store import upsert_market_data
+    from llm_quant.data.universe import get_tradeable_symbols
+    from llm_quant.db.schema import get_connection
+    from llm_quant.risk.manager import RiskManager
     from llm_quant.trading.executor import execute_signals
     from llm_quant.trading.ledger import log_trades, save_portfolio_snapshot
-    from llm_quant.risk.manager import RiskManager
+    from llm_quant.trading.portfolio import Portfolio
 
     conn = get_connection(db_path)
     today = date.today()
@@ -138,7 +136,6 @@ def run(
 
     # Get latest prices for portfolio
     all_symbols = symbols
-    import polars as pl
     latest = conn.execute(
         """
         SELECT symbol, close as price FROM market_data_daily
@@ -203,7 +200,6 @@ def run(
 
 def _display_decision(decision):
     """Pretty-print a TradingDecision."""
-    from llm_quant.brain.models import Action
 
     regime_colors = {"risk_on": "green", "risk_off": "red", "transition": "yellow"}
     color = regime_colors.get(decision.market_regime.value, "white")
@@ -249,8 +245,8 @@ def status():
     db_path = _get_db_path(config)
 
     from llm_quant.db.schema import get_connection
-    from llm_quant.trading.portfolio import Portfolio
     from llm_quant.trading.performance import compute_performance
+    from llm_quant.trading.portfolio import Portfolio
 
     conn = get_connection(db_path)
     portfolio = Portfolio.from_db(conn, config.general.initial_capital)
@@ -378,8 +374,8 @@ def verify():
     config = _get_config()
     db_path = _get_db_path(config)
 
-    from llm_quant.db.schema import get_connection
     from llm_quant.db.integrity import verify_chain
+    from llm_quant.db.schema import get_connection
 
     conn = get_connection(db_path)
     ok, last_id, message = verify_chain(conn)

@@ -4,9 +4,8 @@ from datetime import date
 
 import pytest
 
-from llm_quant.brain.parser import parse_trading_decision
 from llm_quant.brain.models import Action, Conviction, MarketRegime
-
+from llm_quant.brain.parser import parse_trading_decision
 
 VALID_RESPONSE = """{
     "date": "2026-03-24",

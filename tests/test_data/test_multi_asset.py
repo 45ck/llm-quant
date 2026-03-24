@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from llm_quant.config import AssetEntry, ETFEntry, UniverseConfig, RiskLimits
+from llm_quant.config import AssetEntry, ETFEntry, RiskLimits, UniverseConfig
 
 
 class TestAssetEntry:
@@ -86,7 +84,11 @@ class TestGetTradeableSymbols:
         assert "EURUSD=X" in symbols
 
     def test_excludes_non_tradeable(self):
-        from llm_quant.config import AppConfig, GeneralConfig, LLMConfig, DataConfig, RiskLimits, UniverseConfig, AssetEntry
+        from llm_quant.config import (
+            AppConfig,
+            AssetEntry,
+            UniverseConfig,
+        )
         from llm_quant.data.universe import get_tradeable_symbols
         config = AppConfig(
             universe=UniverseConfig(

@@ -8,8 +8,7 @@ and is persisted to DuckDB via the ledger module.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import date
+from dataclasses import dataclass
 
 import duckdb
 
@@ -188,7 +187,7 @@ class Portfolio:
         cls,
         conn: duckdb.DuckDBPyConnection,
         initial_capital: float,
-    ) -> "Portfolio":
+    ) -> Portfolio:
         """Restore portfolio from the latest snapshot stored in DuckDB.
 
         If no snapshot exists the method returns a *fresh* portfolio with the

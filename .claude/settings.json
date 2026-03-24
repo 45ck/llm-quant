@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(*--no-verify*)",
+      "Bash(*--force*)",
+      "Bash(git push -f*)",
+      "Edit(.githooks/**)",
+      "Edit(.github/workflows/**)",
+      "Edit(.claude/settings.json)",
+      "Edit(.claude/hooks/**)"
+    ]
+  }
+}

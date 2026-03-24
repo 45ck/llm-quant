@@ -1,0 +1,20 @@
+#!/bin/sh
+# noslop check script for Python
+export PATH="$HOME/.local/bin:$PATH"
+TIER="${NOSLOP_TIER:-${1:-fast}}"
+
+case "$TIER" in
+  fast)
+    ruff format --check . && ruff check .
+    ;;
+  slow)
+    pytest
+    ;;
+  ci)
+    ruff format --check . && ruff check . && pytest
+    ;;
+  *)
+    echo "Unknown tier: $TIER — use: fast, slow, or ci" >&2
+    exit 1
+    ;;
+esac

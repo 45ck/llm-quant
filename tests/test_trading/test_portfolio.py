@@ -1,6 +1,5 @@
 """Tests for portfolio state management."""
 
-import pytest
 
 from llm_quant.trading.portfolio import Portfolio, Position
 

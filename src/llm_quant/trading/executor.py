@@ -229,10 +229,9 @@ def _execute_sell(
     # Remove position if fully liquidated
     if existing.shares <= 0:
         del portfolio.positions[signal.symbol]
-    else:
-        # Update stop-loss if signal provides one
-        if signal.stop_loss > 0.0:
-            existing.stop_loss = signal.stop_loss
+    # Update stop-loss if signal provides one
+    elif signal.stop_loss > 0.0:
+        existing.stop_loss = signal.stop_loss
 
     return ExecutedTrade(
         symbol=signal.symbol,
@@ -279,7 +278,7 @@ def _make_position(
     shares: float,
     price: float,
     stop_loss: float,
-) -> "Position":
+) -> Position:
     """Create a new ``Position`` dataclass.
 
     Import is deferred to the function body to avoid circular imports

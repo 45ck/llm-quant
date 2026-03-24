@@ -35,6 +35,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.6.0",
+    "mypy>=1.11.0",
 ]
 dashboard = [
     "streamlit>=1.38.0",
@@ -51,6 +52,53 @@ packages = ["src/llm_quant"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+# ── noslop quality gates ──────────────────────────────────────────────
+
 [tool.ruff]
+line-length = 88
 target-version = "py312"
-line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "D",      # docstring rules — enable when the project matures
+  "ANN",    # type annotation rules — use mypy for this
+  "COM812", # trailing comma (conflicts with formatter)
+  "ISC001", # implicit string concat (conflicts with formatter)
+  "S101",   # assert — used intentionally in production for invariants
+  "PLC0415",# deferred imports — CLI pattern to speed up startup
+  "PLR2004",# magic values — acceptable in financial domain (percentages, thresholds)
+  "RUF001", # ambiguous unicode — false positives on currency symbols
+  "RUF002", # ambiguous unicode in docstrings
+  "RUF003", # ambiguous unicode in comments
+  "EM102",  # f-string in exception — readability over stack traces
+  "TRY003", # raise vanilla args — over-abstraction for a small codebase
+  "S608",   # SQL injection — false positive on parameterized queries with placeholders
+  "FBT001", # boolean positional args — acceptable for simple flags
+  "FBT003", # boolean positional value in call
+  "S311",   # non-crypto random — used for non-security purposes
+  "TC001",  # typing-only imports — adds complexity for little benefit here
+  "TC002",  # typing-only third-party imports
+  "TC003",  # typing-only stdlib imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+  "S101",   # asserts are the whole point of tests
+  "PLR2004",# magic values in test assertions are fine
+  "PT018",  # composite assertions — acceptable in tests
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 4
+max-branches = 12
+max-statements = 50
+max-returns = 4
+max-bool-expr = 4
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true

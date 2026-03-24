@@ -1,0 +1,24 @@
+name: guardrails
+
+on:
+  pull_request:
+    paths:
+      - '.githooks/**'
+      - '.github/workflows/**'
+      - '.claude/settings.json'
+      - '.claude/hooks/**'
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block unreviewed hook/CI changes
+        run: |
+          if ! gh pr view "${{ github.event.pull_request.number }}" --json labels \
+            --jq '.labels[].name' | grep -q 'noslop-approved'; then
+            echo "::error::Protected noslop files modified. Add 'noslop-approved' label."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
