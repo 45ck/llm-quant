@@ -35,22 +35,24 @@
     "2.1": {
       "title": "FOMC Sentiment as Leading Regime Signal",
       "domain": "Alternative Data & NLP",
-      "priority": "P3",
-      "status": "pending",
+      "priority": "P4",
+      "status": "deferred",
       "file": "research/prompts/2.1-fomc-sentiment-regime-signal.md",
       "started_at": null,
       "completed_at": null,
-      "results_dir": null
+      "results_dir": null,
+      "note": "Deferred: TSMOM already captures post-FOMC momentum. Calendar effects are marginal."
     },
     "2.2": {
       "title": "Reddit/StockTwits Contrarian Signal",
       "domain": "Alternative Data & NLP",
-      "priority": "P3",
-      "status": "pending",
+      "priority": "P4",
+      "status": "dropped",
       "file": "research/prompts/2.2-reddit-contrarian-signal.md",
       "started_at": null,
       "completed_at": null,
-      "results_dir": null
+      "results_dir": null,
+      "note": "Dropped: Crowding signals operate on 6-24mo horizons. Social sentiment at daily frequency is noise."
     },
     "2.3": {
       "title": "CFTC COT Positioning for Commodities",
@@ -95,32 +97,35 @@
     "4.1": {
       "title": "Contrastive Regime Embeddings",
       "domain": "Machine Learning & Deep Learning",
-      "priority": "P3",
-      "status": "pending",
+      "priority": "P4",
+      "status": "deferred",
       "file": "research/prompts/4.1-contrastive-regime-embeddings.md",
       "started_at": null,
       "completed_at": null,
-      "results_dir": null
+      "results_dir": null,
+      "note": "Deferred: Statistical Jump Models may outperform HMMs (Shu & Mulvey 2024). Revisit after 2-state HMM validated."
     },
     "4.2": {
       "title": "Sparse Autoencoder Factor Discovery",
       "domain": "Machine Learning & Deep Learning",
-      "priority": "P3",
-      "status": "pending",
+      "priority": "P4",
+      "status": "dropped",
       "file": "research/prompts/4.2-sparse-autoencoder-factors.md",
       "started_at": null,
       "completed_at": null,
-      "results_dir": null
+      "results_dir": null,
+      "note": "Dropped: Simplicity beats complexity in OOS performance. Overfitting risk extreme at $100k scale."
     },
     "4.3": {
       "title": "RAG for Analogical Market Reasoning",
       "domain": "Machine Learning & Deep Learning",
-      "priority": "P2",
-      "status": "pending",
+      "priority": "P4",
+      "status": "dropped",
       "file": "research/prompts/4.3-rag-analogical-reasoning.md",
       "started_at": null,
       "completed_at": null,
-      "results_dir": null
+      "results_dir": null,
+      "note": "Dropped: With 3-5 major crises in 20 years, RL/ML amplifies overfitting. Bailey et al. (2016) threshold applies."
     },
     "5.1": {
       "title": "4-Factor Regime Model (VIX + Yield + Credit + Dollar)",
