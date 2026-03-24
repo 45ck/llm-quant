@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "last_updated": "2026-03-24",
+  "prompts": {
+    "1.1": {
+      "title": "Optimal Order Timing for EOD Signals",
+      "domain": "Market Microstructure & Execution",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/1.1-optimal-order-timing.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "1.2": {
+      "title": "ATR vs True Execution Risk by Regime",
+      "domain": "Market Microstructure & Execution",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/1.2-atr-vs-execution-risk.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "1.3": {
+      "title": "Signal Decay for 24h Markets (Crypto/Forex)",
+      "domain": "Market Microstructure & Execution",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/1.3-signal-decay-24h-markets.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "2.1": {
+      "title": "FOMC Sentiment as Leading Regime Signal",
+      "domain": "Alternative Data & NLP",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/2.1-fomc-sentiment-regime-signal.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "2.2": {
+      "title": "Reddit/StockTwits Contrarian Signal",
+      "domain": "Alternative Data & NLP",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/2.2-reddit-contrarian-signal.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "2.3": {
+      "title": "CFTC COT Positioning for Commodities",
+      "domain": "Alternative Data & NLP",
+      "priority": "P1",
+      "status": "pending",
+      "file": "research/prompts/2.3-cot-positioning-commodities.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "3.1": {
+      "title": "Dynamic Correlation Risk Limits",
+      "domain": "Risk Management & Portfolio Construction",
+      "priority": "P0",
+      "status": "pending",
+      "file": "research/prompts/3.1-dynamic-correlation-limits.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "3.2": {
+      "title": "ATR-Based Risk Budgeting",
+      "domain": "Risk Management & Portfolio Construction",
+      "priority": "P2",
+      "status": "pending",
+      "file": "research/prompts/3.2-atr-risk-budgeting.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "3.3": {
+      "title": "Portfolio-Level CVaR Constraints",
+      "domain": "Risk Management & Portfolio Construction",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/3.3-portfolio-cvar-constraints.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "4.1": {
+      "title": "Contrastive Regime Embeddings",
+      "domain": "Machine Learning & Deep Learning",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/4.1-contrastive-regime-embeddings.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "4.2": {
+      "title": "Sparse Autoencoder Factor Discovery",
+      "domain": "Machine Learning & Deep Learning",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/4.2-sparse-autoencoder-factors.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "4.3": {
+      "title": "RAG for Analogical Market Reasoning",
+      "domain": "Machine Learning & Deep Learning",
+      "priority": "P2",
+      "status": "pending",
+      "file": "research/prompts/4.3-rag-analogical-reasoning.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "5.1": {
+      "title": "4-Factor Regime Model (VIX + Yield + Credit + Dollar)",
+      "domain": "Macro Strategy & Regime Detection",
+      "priority": "P1",
+      "status": "pending",
+      "file": "research/prompts/5.1-multifactor-regime-hmm.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "5.2": {
+      "title": "Cross-Asset Momentum with Crash Detection",
+      "domain": "Macro Strategy & Regime Detection",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/5.2-cross-asset-momentum-crash.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    },
+    "5.3": {
+      "title": "Inflation Regime x Risk Regime (2x2 Matrix)",
+      "domain": "Macro Strategy & Regime Detection",
+      "priority": "P3",
+      "status": "pending",
+      "file": "research/prompts/5.3-commodity-supercycle-inflation.md",
+      "started_at": null,
+      "completed_at": null,
+      "results_dir": null
+    }
+  }
+}
