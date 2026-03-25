@@ -98,17 +98,20 @@ def compute_sharpe(returns: list[float], annualize: bool = True) -> float:
 
 
 def compute_sortino(returns: list[float], annualize: bool = True) -> float:
-    """Compute Sortino ratio (excess return / downside deviation)."""
+    """Compute Sortino ratio (excess return / downside deviation).
+
+    Downside deviation = sqrt(mean(min(r_i, 0)^2)) over ALL observations,
+    not just the negative ones (standard Sortino formulation).
+    """
     if len(returns) < 2:
         return 0.0
     arr = np.array(returns)
     mean_ret = float(np.mean(arr))
-    downside = arr[arr < 0]
-    if len(downside) == 0:
-        return float("inf") if mean_ret > 0 else 0.0
-    downside_std = float(np.std(downside, ddof=1))
+    # Full-sample downside deviation: sqrt(mean(min(r, 0)^2))
+    downside_sq = np.minimum(arr, 0.0) ** 2
+    downside_std = float(np.sqrt(np.mean(downside_sq)))
     if downside_std == 0:
-        return 0.0
+        return float("inf") if mean_ret > 0 else 0.0
     sortino = mean_ret / downside_std
     if annualize:
         sortino *= math.sqrt(TRADING_DAYS_PER_YEAR)
@@ -207,7 +210,10 @@ def compute_psr(
     sr = sharpe_per_period
     sr_star = benchmark_sharpe_per_period
 
-    denominator_sq = 1.0 - skewness * sr + (kurtosis - 1.0) / 4.0 * sr**2
+    # Bailey & Lopez de Prado (2014): V(SR) = (1 - γ₃·SR + (γ₄-1)/4·SR²)/(n-1)
+    # where γ₄ = regular kurtosis. Since scipy returns excess kurtosis (normal=0),
+    # γ₄_regular = excess + 3, so (γ₄_regular - 1)/4 = (excess + 2)/4
+    denominator_sq = 1.0 - skewness * sr + (kurtosis + 2.0) / 4.0 * sr**2
     if denominator_sq <= 0:
         return 0.0
 

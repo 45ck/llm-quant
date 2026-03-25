@@ -198,16 +198,28 @@ class Portfolio:
         given ``initial_capital``.
         """
         # Find the most recent snapshot
-        row = conn.execute(
-            """
-            SELECT snapshot_id, nav, cash
-            FROM portfolio_snapshots
-            WHERE pod_id = ?
-            ORDER BY date DESC, snapshot_id DESC
-            LIMIT 1
-            """,
-            [pod_id],
-        ).fetchone()
+        # Check if pod_id column exists in schema
+        cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+        if "pod_id" in cols:
+            row = conn.execute(
+                """
+                SELECT snapshot_id, nav, cash
+                FROM portfolio_snapshots
+                WHERE pod_id = ?
+                ORDER BY date DESC, snapshot_id DESC
+                LIMIT 1
+                """,
+                [pod_id],
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """
+                SELECT snapshot_id, nav, cash
+                FROM portfolio_snapshots
+                ORDER BY date DESC, snapshot_id DESC
+                LIMIT 1
+                """,
+            ).fetchone()
 
         if row is None:
             logger.info(

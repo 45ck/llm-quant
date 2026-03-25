@@ -40,7 +40,7 @@ if slug == 'NONE':
         print('No strategies found in data/strategies/')
     exit(0)
 
-sdir = strategy_dir(slug)
+sdir = strategy_dir(Path('data'), slug)
 state = get_lifecycle_state(sdir)
 print(f'Strategy: {slug}')
 print(f'Lifecycle state: {state.value}')

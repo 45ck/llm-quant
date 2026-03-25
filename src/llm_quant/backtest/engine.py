@@ -311,6 +311,8 @@ class BacktestEngine:
         nav_series: list[float] = [self.initial_capital]
         pending_signals: list[tuple[date, list[TradeSignal]]] = []
         rebalance_counter = 0
+        # O(1) date-to-index lookup for fill-delay processing
+        date_index_map = {d: idx for idx, d in enumerate(trading_dates)}
 
         for i, current_date in enumerate(trading_dates):
             # 4a. Get today's prices
@@ -337,8 +339,12 @@ class BacktestEngine:
                     current_date, causal_indicators, portfolio, today_prices
                 )
 
-            # Combine stop signals with strategy signals
-            all_signals = stop_signals + strategy_signals
+            # Deduplicate: stop-loss takes priority over strategy for same symbol
+            stop_symbols = {s.symbol for s in stop_signals}
+            deduped_strategy = [
+                s for s in strategy_signals if s.symbol not in stop_symbols
+            ]
+            all_signals = stop_signals + deduped_strategy
 
             # 4e. Risk filtering
             if self.risk_checks_enabled and self.risk_manager and all_signals:
@@ -347,11 +353,14 @@ class BacktestEngine:
                 )
                 all_signals = approved
 
-            # Handle fill delay
-            if fill_delay == 0:
-                # Execute immediately at today's close
+            # Split: stop-losses execute immediately, strategy signals follow fill delay
+            immediate_signals = [s for s in all_signals if s.symbol in stop_symbols]
+            delayed_signals = [s for s in all_signals if s.symbol not in stop_symbols]
+
+            # Execute stop-losses immediately at today's close (no fill delay)
+            if immediate_signals:
                 day_trades = self._execute_signals(
-                    all_signals,
+                    immediate_signals,
                     portfolio,
                     today_prices,
                     current_date,
@@ -361,18 +370,31 @@ class BacktestEngine:
                     vol_stats,
                 )
                 trades.extend(day_trades)
+
+            # Handle fill delay for strategy signals
+            if fill_delay == 0:
+                if delayed_signals:
+                    day_trades = self._execute_signals(
+                        delayed_signals,
+                        portfolio,
+                        today_prices,
+                        current_date,
+                        cost_model,
+                        cost_multiplier,
+                        volume_stats,
+                        vol_stats,
+                    )
+                    trades.extend(day_trades)
             else:
                 # Queue for next day execution
-                if all_signals:
-                    pending_signals.append((current_date, all_signals))
+                if delayed_signals:
+                    pending_signals.append((current_date, delayed_signals))
 
                 # Execute pending signals from fill_delay days ago
+                # Use date-to-index map for O(1) lookup
                 new_pending = []
                 for signal_date, signals in pending_signals:
-                    if signal_date in trading_dates:
-                        signal_idx = trading_dates.index(signal_date)
-                    else:
-                        signal_idx = -1
+                    signal_idx = date_index_map.get(signal_date, -1)
                     if signal_idx >= 0 and i - signal_idx >= fill_delay:
                         # Execute at today's open
                         fill_prices = self._get_open_prices_for_date(

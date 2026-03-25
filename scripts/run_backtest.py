@@ -87,7 +87,9 @@ def main() -> None:
     if not args.no_spec_check:
         try:
             spec = ensure_frozen_spec(strat_dir)
-            strategy_name = spec.get("strategy_type", strategy_name)
+            # Only use spec strategy_type if --strategy was not explicitly provided
+            if args.strategy is None:
+                strategy_name = spec.get("strategy_type", strategy_name)
             logger.info("Loaded frozen research spec for %s", args.slug)
         except (FileNotFoundError, ValueError):
             logger.exception("Spec check failed")
@@ -96,13 +98,26 @@ def main() -> None:
         logger.warning("Skipping spec check — results are exploratory only")
 
     # Build strategy config from spec
+    params = spec.get("parameters", {})
     config = StrategyConfig(
         name=strategy_name,
-        rebalance_frequency_days=spec.get("rebalance_frequency_days", 5),
-        max_positions=spec.get("max_positions", 10),
-        target_position_weight=spec.get("target_position_weight", 0.05),
-        stop_loss_pct=spec.get("stop_loss_pct", 0.05),
-        parameters=spec.get("parameters", {}),
+        rebalance_frequency_days=params.get(
+            "rebalance_frequency_days",
+            spec.get("rebalance_frequency_days", 5),
+        ),
+        max_positions=params.get(
+            "top_n_momentum",
+            spec.get("max_positions", 10),
+        ),
+        target_position_weight=params.get(
+            "target_position_weight",
+            spec.get("target_position_weight", 0.05),
+        ),
+        stop_loss_pct=params.get(
+            "stop_loss_pct",
+            spec.get("stop_loss_pct", 0.05),
+        ),
+        parameters=params,
     )
 
     strategy = create_strategy(strategy_name, config)

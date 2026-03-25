@@ -276,14 +276,14 @@ def run_cpcv(
 
             for tg in sorted(test_groups):
                 test_start = tg * group_size
-                min(test_start + group_size, T)
+                test_end = min(test_start + group_size, T)
 
                 # If this train group is right before a test group
-                if g == tg - 1:
+                if end > test_start - purge_days and end <= test_end:
                     purged_end = max(start, end - purge_days)
 
                 # If this train group is right after a test group
-                if g == tg + 1:
+                if start >= test_start and start < test_end + embargo_size:
                     purged_start = min(end, start + embargo_size)
 
             train_indices.extend(range(purged_start, purged_end))

@@ -75,6 +75,27 @@ class TestLifecycle:
             save_artifact(d / "research-spec.yaml", {"strategy_type": "sma"})
             assert get_lifecycle_state(d) == LifecycleState.RESEARCH_SPEC
 
+    def test_get_lifecycle_state_robustness_not_trapped_at_backtest(self):
+        """Robustness state should NOT be masked by experiments/ directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            save_artifact(d / "mandate.yaml", {"name": "test"})
+            save_artifact(d / "research-spec.yaml", {"frozen": True})
+            save_artifact(d / "robustness.yaml", {"overall_passed": True})
+            # Also create experiments dir (the bug: this used to preempt)
+            (d / "experiments").mkdir()
+            (d / "experiments" / "exp1.yaml").write_text("test")
+            assert get_lifecycle_state(d) == LifecycleState.ROBUSTNESS
+
+    def test_get_lifecycle_state_backtest_from_registry(self):
+        """Experiment registry file should trigger BACKTEST state."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            save_artifact(d / "mandate.yaml", {"name": "test"})
+            save_artifact(d / "research-spec.yaml", {"frozen": True})
+            (d / "experiment-registry.jsonl").write_text('{"id":"test"}\n')
+            assert get_lifecycle_state(d) == LifecycleState.BACKTEST
+
 
 # ---------------------------------------------------------------------------
 # Test: Frozen spec
@@ -152,6 +173,10 @@ class TestDataGrade:
 
     def test_invalid_grade(self):
         assert check_data_grade("x", "b") is False
+
+    def test_invalid_minimum(self):
+        """Invalid minimum should return False, not crash."""
+        assert check_data_grade("a", "x") is False
 
 
 # ---------------------------------------------------------------------------

@@ -55,7 +55,7 @@ class LifecycleError(Exception):
 
 
 class FrozenSpecError(Exception):
-    """Raised when a frozen research spec is modified."""
+    """Raised when a frozen research spec is required but not available."""
 
 
 def validate_transition(current: LifecycleState, target: LifecycleState) -> None:
@@ -110,24 +110,38 @@ def strategy_dir(base_dir: Path, slug: str) -> Path:
 
 
 def get_lifecycle_state(strat_dir: Path) -> LifecycleState:
-    """Determine the current lifecycle state from existing artifacts."""
-    # Ordered checks: most advanced state first
-    file_state_map: list[tuple[str, LifecycleState]] = [
+    """Determine the current lifecycle state from existing artifacts.
+
+    Checks most-advanced state first. BACKTEST is directory-based (no single
+    file marker), so it's checked between ROBUSTNESS and RESEARCH_SPEC.
+    """
+    # States above BACKTEST — check file markers (most advanced first)
+    upper_states: list[tuple[str, LifecycleState]] = [
         ("promotion-decision.yaml", LifecycleState.PROMOTION),
-        ("paper-track-record.yaml", LifecycleState.PAPER_TRADING),
-        ("robustness-result.yaml", LifecycleState.ROBUSTNESS),
+        ("paper-trading.yaml", LifecycleState.PAPER_TRADING),
+        ("robustness.yaml", LifecycleState.ROBUSTNESS),
+    ]
+    for filename, state in upper_states:
+        if (strat_dir / filename).exists():
+            return state
+
+    # BACKTEST: experiment registry or experiment artifacts exist
+    exp_dir = strat_dir / "experiments"
+    registry = strat_dir / "experiment-registry.jsonl"
+    if registry.exists() or (exp_dir.is_dir() and any(exp_dir.iterdir())):
+        return LifecycleState.BACKTEST
+
+    # States below BACKTEST — check file markers
+    lower_states: list[tuple[str, LifecycleState]] = [
         ("research-spec.yaml", LifecycleState.RESEARCH_SPEC),
         ("data-contract.yaml", LifecycleState.DATA_CONTRACT),
         ("hypothesis.yaml", LifecycleState.HYPOTHESIS),
         ("mandate.yaml", LifecycleState.MANDATE),
     ]
-    # Special case: backtest state requires experiment artifacts
-    exp_dir = strat_dir / "experiments"
-    if exp_dir.is_dir() and any(exp_dir.iterdir()):
-        return LifecycleState.BACKTEST
-    for filename, state in file_state_map:
+    for filename, state in lower_states:
         if (strat_dir / filename).exists():
             return state
+
     return LifecycleState.IDEA
 
 
@@ -154,12 +168,22 @@ def ensure_frozen_spec(strat_dir: Path) -> dict[str, Any]:
 
 
 def freeze_spec(strat_dir: Path) -> str:
-    """Mark research-spec.yaml as frozen and record the hash."""
+    """Mark research-spec.yaml as frozen and record the hash.
+
+    The frozen_hash covers all spec content EXCEPT the frozen_hash field
+    itself (to avoid the self-referential hash problem). Verification
+    should strip frozen_hash before re-hashing.
+    """
     spec_path = strat_dir / "research-spec.yaml"
     spec = load_artifact(spec_path)
+    if spec.get("frozen"):
+        return spec.get("frozen_hash", "")
     spec["frozen"] = True
     spec["frozen_at"] = datetime.now(tz=UTC).isoformat()
-    content_hash = save_artifact(spec_path, spec)
+    # Hash content WITHOUT frozen_hash to avoid self-reference
+    hashable = {k: v for k, v in spec.items() if k != "frozen_hash"}
+    content = yaml.dump(hashable, default_flow_style=False, sort_keys=False)
+    content_hash = hash_content(content)
     spec["frozen_hash"] = content_hash
     save_artifact(spec_path, spec)
     logger.info("Froze research spec: %s", content_hash[:12])
@@ -176,6 +200,8 @@ DATA_GRADES = ["a", "b", "c", "d"]  # best to worst
 def check_data_grade(grade: str, minimum: str = "b") -> bool:
     """Return True if *grade* meets or exceeds *minimum*."""
     if grade.lower() not in DATA_GRADES:
+        return False
+    if minimum.lower() not in DATA_GRADES:
         return False
     return DATA_GRADES.index(grade.lower()) <= DATA_GRADES.index(minimum.lower())
 
