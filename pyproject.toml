@@ -28,6 +28,9 @@ dependencies = [
     "pydantic>=2.9.0",
     "tomli>=2.0.0;python_version<'3.11'",
     "jinja2>=3.1.0",
+    "scipy>=1.12.0",
+    "pyyaml>=6.0.0",
+    "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]
@@ -88,10 +91,37 @@ ignore = [
   "PLR2004", # magic values in test assertions are fine
   "PT018",   # composite assertions — acceptable in tests
   "PLR0913", # test helpers may have many args for flexibility
+  "ARG002",  # test stubs may not use all ABC args
+  "SLF001",  # tests need to access private members
+  "ERA001",  # section dividers in test files are useful
+  "PLR0133", # constant comparisons in tests are intentional assertions
+  "PLC0206", # dict iteration patterns fine in tests
+  "PERF401", # performance not critical in tests
 ]
 "scripts/**/*.py" = [
   "INP001",  # scripts are standalone, not packages
   "T201",    # scripts use print() for user-facing output
+]
+"src/llm_quant/backtest/engine.py" = [
+  "PLR0913", # engine.run() needs many params by design
+  "PLR0912", # backtest loop has many branches by nature
+  "C901",    # backtest loop is inherently complex
+  "PLR0915", # backtest loop has many statements
+]
+"src/llm_quant/backtest/strategies.py" = [
+  "PLR0912", # regime strategy has many conditional branches
+  "C901",    # regime strategy is inherently complex
+  "ARG002",  # ABC contract requires all params even if unused
+]
+"src/llm_quant/backtest/strategy.py" = [
+  "ARG002",  # reference impl may not use all ABC params
+]
+"src/llm_quant/backtest/robustness.py" = [
+  "N806",    # T, N, S are standard mathematical notation (PBO/CPCV)
+  "PLR0913", # run_robustness_gate needs all gate inputs
+]
+"src/llm_quant/backtest/metrics.py" = [
+  "FBT002",  # annualize=True is a clear named boolean
 ]
 "src/llm_quant/db/integrity.py" = [
   "PLR0913", # compute_trade_hash needs all trade fields for hash input
