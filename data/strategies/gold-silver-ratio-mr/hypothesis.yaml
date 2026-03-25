@@ -1,0 +1,27 @@
+# Hypothesis: gold-silver-ratio-mr
+strategy_slug: "gold-silver-ratio-mr"
+statement: >
+  The GLD/SLV price ratio exhibits mean-reverting behavior detectable via
+  20-day Bollinger Bands at 2-sigma. When ratio exceeds the upper band,
+  buying SLV (the underperformer) achieves positive risk-adjusted returns
+  with Sharpe > 0.50 and max drawdown < 15% over the 5-year test period.
+mechanism: >
+  Gold and silver are structurally correlated precious metals sharing common
+  macro drivers: inflation expectations, real interest rates, USD strength,
+  and risk-off demand. Short-term ratio dislocations are driven by industrial
+  demand shocks to silver (electronics, solar), gold-specific jewelry/central
+  bank flows, or temporary liquidity differentials. These dislocations tend to
+  revert as the structural relationship reasserts. The gold/silver ratio has a
+  long-run mean documented in financial literature; extreme deviations (>2 sigma
+  on 20d Bollinger) mark statistically unusual divergences with high reversion
+  probability. Unlike crypto pairs (D7), gold/silver positions carry lower
+  directional volatility and tighter bid-ask spreads, making the signal more
+  cost-effective to trade.
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too rare)"
+  - "CPCV OOS Sharpe non-positive"
+  - "Perturbation stability < 60%"
+conviction: "medium-high"
+created_at: "2026-03-26"

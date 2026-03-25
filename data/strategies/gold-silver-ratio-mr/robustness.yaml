@@ -1,0 +1,114 @@
+# Robustness Analysis: gold-silver-ratio-mr
+# Generated: 2026-03-26
+
+strategy_slug: "gold-silver-ratio-mr"
+trial_family: "pairs_ratio_metals"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 1
+gates_failed: 3
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.7905
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment b4de7113 (trial #1 in pairs_ratio_metals family).
+      DSR=0.7905 is substantially below 0.95 threshold. Indicates low statistical
+      confidence in the Sharpe estimate -- high probability the result is noise.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.3297
+    std_oos_sharpe: 0.6297
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.3297 is positive (passes > 0 threshold).
+      However, high std (0.6297) indicates significant period-to-period variance.
+      CPCV is the only gate that passes.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    notes: >
+      2/5 perturbations stable (40% < 60% threshold).
+      Notable: wider windows (bb_window=25, bb_std=2.5) produce significantly
+      BETTER results, suggesting the base parameters may be under-optimized
+      and raise data-snooping concerns if parameters were selected on this data.
+    details:
+      - name: "bb_window=15"
+        sharpe: 0.5416
+        pct_change: +39.1
+        stable: false
+      - name: "bb_window=25"
+        sharpe: 0.7389
+        pct_change: +89.8
+        stable: false
+      - name: "bb_std=1.5"
+        sharpe: 0.4231
+        pct_change: +8.7
+        stable: true
+      - name: "bb_std=2.5"
+        sharpe: 1.0371
+        pct_change: +166.4
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: 0.3762
+        pct_change: -3.4
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.3718
+  sharpe_1_5x: 0.3220
+  sharpe_2x: 0.2710
+  sharpe_3x: 0.1730
+  max_dd_1x: 24.83
+  notes: >
+    Cost sensitivity from experiment b4de7113. Strategy is moderately cost-sensitive
+    (94 trades/5yr) -- Sharpe degrades ~53% from 1x to 3x costs. At realistic 2x
+    cost assumption, Sharpe falls to 0.271. High turnover for a pairs strategy.
+
+max_drawdown_check:
+  value: 24.83
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 24.83% exceeds the 15% metals mandate threshold.
+    Drawdown duration is 932 days (> 3 years), indicating a persistent underwater
+    period. The strategy goes long silver or gold without hedging the other side,
+    so it carries full directional exposure to whichever metal it holds.
+    During gold/silver bear markets (2022), these single-leg positions create
+    unacceptable losses.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: DSR=0.7905 < 0.95. MaxDD=24.83% > 15% metals budget. Perturbation
+  stability 2/5 (40% < 60% threshold). 3 of 4 gates failed.
+  While CPCV OOS Sharpe is positive (0.33), the overall risk profile is
+  incompatible with mandate constraints. The strategy massively underperforms
+  the 50/50 GLD/SLV benchmark (23.1% vs 178.2% over 5 years), meaning buy-and-hold
+  metals is far superior. Single-leg positions create unhedged directional exposure;
+  a paired hedge (long underperformer / short outperformer) would neutralize the
+  directional risk and isolate the ratio signal. Alternatively, wider Bollinger
+  parameters (bb_window=25, bb_std=2.5) show substantially improved characteristics
+  and could warrant a separate trial, but that would require a new lifecycle.
+
+created_at: "2026-03-26"

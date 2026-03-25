@@ -1,0 +1,34 @@
+# Data Contract: gold-silver-ratio-mr
+strategy_slug: "gold-silver-ratio-mr"
+sources:
+  - symbol: "GLD"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "SPDR Gold Shares ETF. Deep liquidity, clean data. $50B+ AUM."
+  - symbol: "SLV"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "iShares Silver Trust ETF. High liquidity, clean data. $10B+ AUM."
+computed_signals:
+  - name: "gld_slv_ratio"
+    formula: "GLD_close / SLV_close"
+    causal: true
+  - name: "ratio_bb_upper"
+    formula: "rolling_mean(ratio, 20) + 2 * rolling_std(ratio, 20)"
+    causal: true
+  - name: "ratio_bb_lower"
+    formula: "rolling_mean(ratio, 20) - 2 * rolling_std(ratio, 20)"
+    causal: true
+  - name: "ratio_z_score"
+    formula: "(ratio - rolling_mean(ratio, 20)) / rolling_std(ratio, 20)"
+    causal: true
+validation:
+  min_data_points: 800
+  max_missing_pct: 0.02
+  quality_grade: "A"
+  notes: "Both ETFs trade on NYSE Arca, same calendar -- no cross-market gap issues."
+created_at: "2026-03-26"
