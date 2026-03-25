@@ -1,0 +1,32 @@
+# Hypothesis: copper-gold-ratio-mr
+strategy_slug: "copper-gold-ratio-mr"
+statement: >
+  The CPER/GLD price ratio exhibits mean-reverting behavior at 20-day Bollinger
+  Band extremes (2 sigma). Extreme ratio dislocations revert within 20 days,
+  producing positive risk-adjusted returns with Sharpe > 0.50 and max drawdown
+  < 15% over the 5-year test period.
+mechanism: >
+  Copper and gold share common commodity supply-chain factors (mining costs,
+  USD sensitivity, commodity cycle exposure) while diverging on demand drivers:
+  copper is an industrial metal driven by economic activity (GDP, construction,
+  electronics), while gold is a monetary/safe-haven asset driven by fear,
+  inflation expectations, and real rates. These divergent demand channels create
+  short-term ratio dislocations when industrial or monetary narratives dominate.
+  However, both are physical commodities with finite supply and shared macro
+  sensitivity, creating a structural mean-reverting relationship in the ratio.
+  The copper/gold ratio is widely tracked as a macro indicator (Jeff Gundlach),
+  suggesting market participants actively monitor and trade around extreme levels.
+  Bollinger Band extremes at 2 sigma identify statistically unusual dislocations
+  with elevated mean-reversion probability.
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too rare)"
+  - "CPCV OOS Sharpe non-positive"
+  - "Perturbation stability < 60%"
+  - "CPER insufficient data or quality grade C -- close with DATA_ISSUE"
+conviction: "medium"
+data_note: >
+  CPER (US Copper Index ETF) has 5+ years of history on Yahoo Finance.
+  Quality grade B (lower AUM than GLD/SLV, spread slightly wider).
+created_at: "2026-03-26"

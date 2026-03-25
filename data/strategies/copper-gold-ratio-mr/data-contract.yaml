@@ -1,0 +1,40 @@
+# Data Contract: copper-gold-ratio-mr
+strategy_slug: "copper-gold-ratio-mr"
+sources:
+  - symbol: "CPER"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "B"
+    notes: >
+      US Copper Index ETF (USCF). Tracks Bloomberg Copper Sub-Index.
+      Smaller AUM (~$150M) vs GLD, slightly wider spreads (~10-15bps).
+      1,276 days of data available (2021-02-25 to 2026-03-25). Sufficient
+      for 5-year backtest. No significant data gaps. Quality grade B (not A)
+      due to lower liquidity vs major gold/silver ETFs.
+  - symbol: "GLD"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "SPDR Gold Shares ETF. Deep liquidity, clean data. $50B+ AUM."
+computed_signals:
+  - name: "cper_gld_ratio"
+    formula: "CPER_close / GLD_close"
+    causal: true
+  - name: "ratio_bb_upper"
+    formula: "rolling_mean(ratio, 20) + 2 * rolling_std(ratio, 20)"
+    causal: true
+  - name: "ratio_bb_lower"
+    formula: "rolling_mean(ratio, 20) - 2 * rolling_std(ratio, 20)"
+    causal: true
+  - name: "ratio_z_score"
+    formula: "(ratio - rolling_mean(ratio, 20)) / rolling_std(ratio, 20)"
+    causal: true
+validation:
+  min_data_points: 800
+  max_missing_pct: 0.03
+  quality_grade: "B+"
+  notes: "Both ETFs trade on NYSE Arca, same calendar. CPER's lower liquidity is the
+    primary data quality concern -- reflected in B quality grade."
+created_at: "2026-03-26"

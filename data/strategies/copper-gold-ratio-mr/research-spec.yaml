@@ -1,0 +1,42 @@
+# Research Spec: copper-gold-ratio-mr
+strategy_slug: "copper-gold-ratio-mr"
+strategy_type: "pairs_ratio"
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+parameters:
+  symbol_a: "CPER"
+  symbol_b: "GLD"
+  bb_window: 20
+  bb_std: 2.0
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 4.0
+  slippage_volatility_factor: 0.15
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  bb_window: "20d Bollinger Band. Standard period, not optimized."
+  bb_std: "2.0 sigma. Standard threshold, not optimized."
+  rebalance_frequency_days: "Daily check for signal -- pairs ratio reverts quickly."
+  target_weight: "90% in signal asset, 10% cash buffer."
+  spread_bps: "10bps (vs 8bps for gold/silver) to reflect CPER's lower liquidity."
+warmup_days: 30
+backtest_spec:
+  symbols: ["CPER", "GLD"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+benchmark:
+  symbols:
+    CPER: 0.50
+    GLD: 0.50
+family: "pairs_ratio_copper_gold"
+family_trial_number: 1
+family_prior_trials: 0
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

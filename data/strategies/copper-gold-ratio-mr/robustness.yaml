@@ -1,0 +1,124 @@
+# Robustness Analysis: copper-gold-ratio-mr
+# Generated: 2026-03-26
+
+strategy_slug: "copper-gold-ratio-mr"
+trial_family: "pairs_ratio_copper_gold"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 1
+gates_failed: 3
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.7975
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment 2a242eb2 (trial #1 in pairs_ratio_copper_gold family).
+      DSR=0.7975 is substantially below 0.95 threshold. Low statistical confidence
+      in the Sharpe estimate -- high probability the result is noise.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.6822
+    std_oos_sharpe: 0.5934
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.6822 is positive and notably higher than the registered
+      base Sharpe (0.376). This is the strongest gate result across O2/O5.
+      High std (0.5934) indicates significant fold-to-fold variance, but positive
+      mean is encouraging. CPCV is the only gate that passes.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    notes: >
+      2/5 perturbations stable (40% < 60% threshold).
+      Consistent with O2: wider Bollinger parameters (bb_window=25, bb_std=2.5)
+      produce substantially BETTER results. This pattern across both metal pairs
+      strategies suggests that 20-day/2-sigma are suboptimal parameters and
+      the base parameters were not chosen to maximize performance on this specific
+      data. However, this also means performance is highly parameter-sensitive.
+    details:
+      - name: "bb_window=15"
+        sharpe: 0.6237
+        pct_change: +36.7
+        stable: false
+      - name: "bb_window=25"
+        sharpe: 0.7114
+        pct_change: +55.9
+        stable: false
+      - name: "bb_std=1.5"
+        sharpe: 0.5894
+        pct_change: +29.1
+        stable: true
+      - name: "bb_std=2.5"
+        sharpe: 0.9100
+        pct_change: +99.4
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: 0.4386
+        pct_change: -3.9
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.3760
+  sharpe_1_5x: 0.2740
+  sharpe_2x: 0.1720
+  sharpe_3x: -0.0280
+  max_dd_1x: 23.07
+  notes: >
+    Cost sensitivity from experiment 2a242eb2. Strategy is highly cost-sensitive
+    (108 trades/5yr -- more than O2 due to faster copper/gold ratio dynamics).
+    At realistic 2x cost assumption, Sharpe falls to 0.172. At 3x costs, strategy
+    goes negative (-0.028). High turnover combined with CPER's wider spreads creates
+    serious cost drag. CPER quality grade B (lower liquidity) amplifies this risk.
+
+max_drawdown_check:
+  value: 23.07
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 23.07% exceeds the 15% metals mandate threshold.
+    Drawdown duration is 919 days (2.5+ years). At 3x costs, MaxDD worsens to 30.83%.
+    Single-leg long positions in either CPER or GLD create unhedged directional
+    exposure. CPER's industrial commodity character means it can fall sharply
+    during economic downturns (2022 recession fears), creating extended drawdown.
+
+data_quality_note: >
+  CPER quality grade B (lower AUM ~$150M, wider spreads ~10-15bps). Sufficient for
+  backtesting but operational concerns for real money deployment. The cost model
+  uses 10bps spread vs 8bps for gold/silver to reflect this.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: DSR=0.7975 < 0.95. MaxDD=23.07% > 15% metals budget. Perturbation
+  stability 2/5 (40% < 60% threshold). 3 of 4 gates failed.
+  CPCV OOS Sharpe=0.68 is positive and the strongest signal across the three
+  hypotheses processed today, but DSR and MaxDD failures are disqualifying.
+  Strategy massively underperforms 50/50 CPER/GLD benchmark (18.8% vs 91.4%).
+  High cost sensitivity (Sharpe goes negative at 3x costs) is a structural concern
+  given CPER's lower liquidity. The consistent pattern across O2 and O5 -- where
+  wider Bollinger parameters produce better results -- suggests these single-leg
+  pairs_ratio strategies may benefit from wider entry thresholds (bb_std=2.5) or
+  paired hedging. A future trial with paired long/short or wider thresholds is
+  warranted, but requires a new lifecycle start.
+
+created_at: "2026-03-26"
