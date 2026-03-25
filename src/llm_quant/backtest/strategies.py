@@ -14,6 +14,16 @@ from datetime import date
 import polars as pl
 
 from llm_quant.backtest.strategy import SMACrossoverStrategy, Strategy, StrategyConfig
+from llm_quant.backtest.strategy_alt_data import AltDataSignalsStrategy
+from llm_quant.backtest.strategy_behavioral import BehavioralStructuralStrategy
+from llm_quant.backtest.strategy_calendar import CalendarAnomaliesStrategy
+from llm_quant.backtest.strategy_cross_asset import CrossAssetLeadLagStrategy
+from llm_quant.backtest.strategy_crypto import CryptoMicrostructureStrategy
+from llm_quant.backtest.strategy_fixed_income import FixedIncomeMacroStrategy
+from llm_quant.backtest.strategy_llm_alpha import LLMAlphaStrategy
+from llm_quant.backtest.strategy_momentum_evolution import MomentumEvolutionStrategy
+from llm_quant.backtest.strategy_regime_timing import RegimeTimingStrategy
+from llm_quant.backtest.strategy_risk_premium import RiskPremiumStrategy
 from llm_quant.brain.models import Action, Conviction, TradeSignal
 from llm_quant.trading.portfolio import Portfolio
 
@@ -812,6 +822,7 @@ class MultiFactorStrategy(Strategy):
 # ---------------------------------------------------------------------------
 
 STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
+    # Original strategies
     "sma_crossover": SMACrossoverStrategy,
     "rsi_mean_reversion": RSIMeanReversionStrategy,
     "momentum": MomentumStrategy,
@@ -819,6 +830,17 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "regime_momentum": RegimeMomentumStrategy,
     "trend_following": TrendFollowingStrategy,
     "multi_factor": MultiFactorStrategy,
+    # Research lifecycle strategies (10 domains)
+    "regime_timing": RegimeTimingStrategy,
+    "calendar_anomalies": CalendarAnomaliesStrategy,
+    "momentum_evolution": MomentumEvolutionStrategy,
+    "behavioral_structural": BehavioralStructuralStrategy,
+    "fixed_income_macro": FixedIncomeMacroStrategy,
+    "risk_premium": RiskPremiumStrategy,
+    "crypto_microstructure": CryptoMicrostructureStrategy,
+    "cross_asset_lead_lag": CrossAssetLeadLagStrategy,
+    "alt_data_signals": AltDataSignalsStrategy,
+    "llm_alpha": LLMAlphaStrategy,
 }
 
 
