@@ -861,6 +861,127 @@ class MultiFactorStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Correlation Regime Strategy (A8: SPY-TLT correlation flip signal)
+# ---------------------------------------------------------------------------
+
+
+class CorrelationRegimeStrategy(Strategy):
+    """SPY-TLT rolling correlation regime strategy (stateless).
+
+    Holds SPY when the N-day rolling correlation between SPY and TLT daily
+    returns is >= exit_threshold (normal regime). Exits to cash when
+    correlation drops below exit_threshold (stress regime). Stateless:
+    regime is inferred from current correlation value + portfolio state.
+
+    Parameters (via StrategyConfig.parameters):
+      corr_window (int, default 10): Rolling window for correlation.
+      corr_exit_threshold (float, default 0.0): Exit SPY when corr < this.
+      corr_entry_threshold (float, default 0.0): Enter SPY when corr >= this.
+      spy_weight_risk_on (float, default 0.95): Target SPY weight in normal regime.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        corr_window: int = int(params.get("corr_window", 10))
+        exit_thresh: float = float(params.get("corr_exit_threshold", 0.0))
+        entry_thresh: float = float(params.get("corr_entry_threshold", 0.0))
+        risk_on_weight: float = float(params.get("spy_weight_risk_on", 0.95))
+
+        # ── Compute rolling correlation for SPY and TLT ──────────────────────
+        spy_data = (
+            indicators_df.filter(pl.col("symbol") == "SPY")
+            .sort("date")
+            .tail(corr_window + 2)
+        )
+        tlt_data = (
+            indicators_df.filter(pl.col("symbol") == "TLT")
+            .sort("date")
+            .tail(corr_window + 2)
+        )
+
+        if len(spy_data) < corr_window + 1 or len(tlt_data) < corr_window + 1:
+            return []
+
+        spy_prices = spy_data["close"].to_list()
+        tlt_prices = tlt_data["close"].to_list()
+        min_len = min(len(spy_prices), len(tlt_prices))
+
+        # Compute daily returns
+        spy_rets = [spy_prices[i] / spy_prices[i - 1] - 1.0 for i in range(1, min_len)]
+        tlt_rets = [tlt_prices[i] / tlt_prices[i - 1] - 1.0 for i in range(1, min_len)]
+
+        if len(spy_rets) < corr_window:
+            return []
+
+        def _corr(xs: list[float], ys: list[float]) -> float:
+            n = len(xs)
+            if n < 2:
+                return 0.0
+            mx = sum(xs) / n
+            my = sum(ys) / n
+            cov = sum((xs[i] - mx) * (ys[i] - my) for i in range(n))
+            sx = (sum((x - mx) ** 2 for x in xs)) ** 0.5
+            sy = (sum((y - my) ** 2 for y in ys)) ** 0.5
+            if sx == 0 or sy == 0:
+                return 0.0
+            return cov / (sx * sy)
+
+        corr_now = _corr(spy_rets[-corr_window:], tlt_rets[-corr_window:])
+
+        spy_price = prices.get("SPY")
+        if spy_price is None or spy_price <= 0:
+            return []
+
+        has_spy = "SPY" in portfolio.positions
+
+        # ── Stress regime: correlation too high (positive) → exit ─────────────
+        if corr_now > exit_thresh and has_spy:
+            logger.info(
+                "CorrelationRegime: EXIT on %s (corr=%.3f > threshold=%.3f)",
+                as_of_date,
+                corr_now,
+                exit_thresh,
+            )
+            return [
+                TradeSignal(
+                    symbol="SPY",
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"Correlation stress: {corr_now:.3f} > {exit_thresh}",
+                )
+            ]
+
+        # ── Normal regime: correlation low/negative → hold/enter SPY ─────────
+        if corr_now <= entry_thresh and not has_spy:
+            logger.info(
+                "CorrelationRegime: ENTER on %s (corr=%.3f <= threshold=%.3f)",
+                as_of_date,
+                corr_now,
+                entry_thresh,
+            )
+            return [
+                TradeSignal(
+                    symbol="SPY",
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=risk_on_weight,
+                    stop_loss=spy_price * 0.95,
+                    reasoning=f"Correlation normal: {corr_now:.3f} <= {entry_thresh}",
+                )
+            ]
+
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -872,6 +993,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "regime_momentum": RegimeMomentumStrategy,
     "trend_following": TrendFollowingStrategy,
     "multi_factor": MultiFactorStrategy,
+    "correlation_regime": CorrelationRegimeStrategy,
 }
 
 
