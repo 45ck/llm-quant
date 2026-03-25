@@ -982,6 +982,410 @@ class CorrelationRegimeStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Correlation Surprise Strategy
+# ---------------------------------------------------------------------------
+
+
+class CorrelationSurpriseStrategy(Strategy):
+    """SPY-TLT delta-correlation regime strategy (M7).
+
+    Defensive when the N-day rolling correlation between SPY and TLT *changes*
+    by more than delta_threshold in delta_window days. Rapid correlation shifts
+    signal regime change / elevated systemic risk.
+
+    Parameters (via StrategyConfig.parameters):
+      corr_window (int, default 10): Rolling window for correlation.
+      delta_window (int, default 5): Days over which to measure delta.
+      delta_threshold (float, default 0.3): Exit when delta > this.
+      spy_weight_risk_on (float, default 0.95): Target SPY weight in normal regime.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        corr_window: int = int(params.get("corr_window", 10))
+        delta_window: int = int(params.get("delta_window", 5))
+        delta_threshold: float = float(params.get("delta_threshold", 0.3))
+        risk_on_weight: float = float(params.get("spy_weight_risk_on", 0.95))
+
+        lookback = corr_window + delta_window + 2
+        spy_data = (
+            indicators_df.filter(pl.col("symbol") == "SPY").sort("date").tail(lookback)
+        )
+        tlt_data = (
+            indicators_df.filter(pl.col("symbol") == "TLT").sort("date").tail(lookback)
+        )
+
+        if len(spy_data) < lookback - 1 or len(tlt_data) < lookback - 1:
+            return []
+
+        spy_prices = spy_data["close"].to_list()
+        tlt_prices = tlt_data["close"].to_list()
+        min_len = min(len(spy_prices), len(tlt_prices))
+
+        spy_rets = [spy_prices[i] / spy_prices[i - 1] - 1.0 for i in range(1, min_len)]
+        tlt_rets = [tlt_prices[i] / tlt_prices[i - 1] - 1.0 for i in range(1, min_len)]
+
+        if len(spy_rets) < corr_window + delta_window:
+            return []
+
+        def _corr(xs: list[float], ys: list[float]) -> float:
+            n = len(xs)
+            if n < 2:
+                return 0.0
+            mx = sum(xs) / n
+            my = sum(ys) / n
+            cov = sum((xs[i] - mx) * (ys[i] - my) for i in range(n))
+            sx = (sum((x - mx) ** 2 for x in xs)) ** 0.5
+            sy = (sum((y - my) ** 2 for y in ys)) ** 0.5
+            if sx == 0 or sy == 0:
+                return 0.0
+            return cov / (sx * sy)
+
+        corr_now = _corr(spy_rets[-corr_window:], tlt_rets[-corr_window:])
+        corr_past = _corr(
+            spy_rets[-(corr_window + delta_window) : -delta_window],
+            tlt_rets[-(corr_window + delta_window) : -delta_window],
+        )
+        corr_delta = corr_now - corr_past
+
+        spy_price = prices.get("SPY")
+        if spy_price is None or spy_price <= 0:
+            return []
+
+        has_spy = "SPY" in portfolio.positions
+
+        if corr_delta > delta_threshold and has_spy:
+            logger.info(
+                "CorrelationSurprise: EXIT on %s (delta=%.3f > %.3f)",
+                as_of_date,
+                corr_delta,
+                delta_threshold,
+            )
+            return [
+                TradeSignal(
+                    symbol="SPY",
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=(
+                        f"Correlation surprise: delta={corr_delta:.3f}"
+                        f" > {delta_threshold}"
+                    ),
+                )
+            ]
+
+        if corr_delta <= 0.0 and not has_spy:
+            logger.info(
+                "CorrelationSurprise: ENTER on %s (delta=%.3f <= 0)",
+                as_of_date,
+                corr_delta,
+            )
+            return [
+                TradeSignal(
+                    symbol="SPY",
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=risk_on_weight,
+                    stop_loss=spy_price * 0.95,
+                    reasoning=f"Correlation stable: delta={corr_delta:.3f} <= 0",
+                )
+            ]
+
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Calendar Event Strategy
+# ---------------------------------------------------------------------------
+
+# FOMC meeting dates 2021-2026 (day of meeting; entry = 1-3 days before)
+_FOMC_DATES: frozenset[date] = frozenset(
+    date(int(y), int(m), int(d))
+    for y, m, d in [
+        (2021, 1, 27),
+        (2021, 3, 17),
+        (2021, 4, 28),
+        (2021, 6, 16),
+        (2021, 7, 28),
+        (2021, 9, 22),
+        (2021, 11, 3),
+        (2021, 12, 15),
+        (2022, 1, 26),
+        (2022, 3, 16),
+        (2022, 5, 4),
+        (2022, 6, 15),
+        (2022, 7, 27),
+        (2022, 9, 21),
+        (2022, 11, 2),
+        (2022, 12, 14),
+        (2023, 2, 1),
+        (2023, 3, 22),
+        (2023, 5, 3),
+        (2023, 6, 14),
+        (2023, 7, 26),
+        (2023, 9, 20),
+        (2023, 11, 1),
+        (2023, 12, 13),
+        (2024, 1, 31),
+        (2024, 3, 20),
+        (2024, 5, 1),
+        (2024, 6, 12),
+        (2024, 7, 31),
+        (2024, 9, 18),
+        (2024, 11, 7),
+        (2024, 12, 18),
+        (2025, 1, 29),
+        (2025, 3, 19),
+        (2025, 5, 7),
+        (2025, 6, 18),
+        (2025, 7, 30),
+        (2025, 9, 17),
+        (2025, 11, 5),
+        (2025, 12, 17),
+        (2026, 1, 28),
+        (2026, 3, 18),
+        (2026, 4, 29),
+    ]
+)
+
+
+def _is_pre_fomc(d: date, pre_days: int = 3) -> bool:
+    """True if d falls within pre_days before an FOMC meeting."""
+    from datetime import timedelta
+
+    for offset in range(1, pre_days + 1):
+        if d + timedelta(days=offset) in _FOMC_DATES:
+            return True
+    return False
+
+
+def _is_month_end_window(d: date, end_days: int = 1, start_days: int = 1) -> bool:
+    """True if d is within end_days of month end or start_days of month start."""
+    import calendar
+
+    last_day = calendar.monthrange(d.year, d.month)[1]
+    if d.day >= last_day - end_days:
+        return True
+    return d.day <= start_days
+
+
+class CalendarEventStrategy(Strategy):
+    """Entry around predictable calendar events (month-end / pre-FOMC).
+
+    Modes:
+      - "month_end": Hold SPY during last N days of month + first N days of next.
+      - "pre_fomc": Hold TLT in the 3 days before each FOMC meeting date.
+
+    Parameters (via StrategyConfig.parameters):
+      mode (str, default "month_end"): "month_end" or "pre_fomc".
+      target_symbol (str): Asset to trade ("SPY" for month_end, "TLT" for pre_fomc).
+      pre_days (int, default 3): Days before event to enter.
+      target_weight (float, default 0.95): Position weight during event window.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        mode: str = str(params.get("mode", "month_end"))
+        pre_days: int = int(params.get("pre_days", 3))
+        tgt_weight: float = float(params.get("target_weight", 0.95))
+
+        if mode == "pre_fomc":
+            symbol = str(params.get("target_symbol", "TLT"))
+            in_window = _is_pre_fomc(as_of_date, pre_days=pre_days)
+        else:  # month_end
+            symbol = str(params.get("target_symbol", "SPY"))
+            end_days = int(params.get("end_days", 1))
+            start_days = int(params.get("start_days", 1))
+            in_window = _is_month_end_window(as_of_date, end_days, start_days)
+
+        price = prices.get(symbol)
+        if price is None or price <= 0:
+            return []
+
+        has_pos = symbol in portfolio.positions
+
+        if in_window and not has_pos:
+            logger.info("CalendarEvent[%s]: ENTER %s on %s", mode, symbol, as_of_date)
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price * 0.97,
+                    reasoning=f"Calendar event window ({mode}): enter {symbol}",
+                )
+            ]
+
+        if not in_window and has_pos:
+            logger.info("CalendarEvent[%s]: EXIT %s on %s", mode, symbol, as_of_date)
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"Calendar event window closed ({mode}): exit {symbol}",
+                )
+            ]
+
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Pairs Ratio Mean-Reversion Strategy
+# ---------------------------------------------------------------------------
+
+
+class PairsRatioStrategy(Strategy):
+    """Bollinger Band mean-reversion on the ratio of two assets (D7 / O-series).
+
+    Computes ratio = price_a / price_b and fits Bollinger Bands. Trades mean
+    reversion: when ratio is stretched above upper band, buy the underperformer
+    (symbol_b); when below lower band, buy the outperformer (symbol_a).
+    Exits when ratio returns within 0.5 sigma of the mean.
+
+    Parameters (via StrategyConfig.parameters):
+      symbol_a (str): Numerator asset (default "ETH-USD").
+      symbol_b (str): Denominator asset (default "BTC-USD").
+      bb_window (int, default 20): Bollinger Band lookback.
+      bb_std (float, default 2.0): Band width in standard deviations.
+      target_weight (float, default 0.90): Position weight when in trade.
+    """
+
+    def generate_signals(  # noqa: PLR0911
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        symbol_a: str = str(params.get("symbol_a", "ETH-USD"))
+        symbol_b: str = str(params.get("symbol_b", "BTC-USD"))
+        bb_window: int = int(params.get("bb_window", 20))
+        bb_std: float = float(params.get("bb_std", 2.0))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        a_data = (
+            indicators_df.filter(pl.col("symbol") == symbol_a)
+            .sort("date")
+            .tail(bb_window + 2)
+        )
+        b_data = (
+            indicators_df.filter(pl.col("symbol") == symbol_b)
+            .sort("date")
+            .tail(bb_window + 2)
+        )
+
+        min_len = min(len(a_data), len(b_data))
+        if min_len < bb_window:
+            return []
+
+        a_prices = a_data["close"].to_list()[-min_len:]
+        b_prices = b_data["close"].to_list()[-min_len:]
+
+        ratios = [a_prices[i] / b_prices[i] for i in range(min_len) if b_prices[i] > 0]
+        if len(ratios) < bb_window:
+            return []
+
+        window_ratios = ratios[-bb_window:]
+        mean_r = sum(window_ratios) / bb_window
+        std_r = (sum((r - mean_r) ** 2 for r in window_ratios) / bb_window) ** 0.5
+        if std_r == 0:
+            return []
+
+        current_ratio = ratios[-1]
+        z_score = (current_ratio - mean_r) / std_r
+        upper = mean_r + bb_std * std_r
+        lower = mean_r - bb_std * std_r
+
+        has_a = symbol_a in portfolio.positions
+        has_b = symbol_b in portfolio.positions
+
+        price_a = prices.get(symbol_a, 0)
+        price_b = prices.get(symbol_b, 0)
+
+        # Ratio stretched up: symbol_a expensive relative to symbol_b → buy symbol_b
+        if current_ratio > upper and not has_b and not has_a:
+            if price_b <= 0:
+                return []
+            logger.info(
+                "PairsRatio: BUY %s on %s (ratio=%.4f > upper=%.4f, z=%.2f)",
+                symbol_b,
+                as_of_date,
+                current_ratio,
+                upper,
+                z_score,
+            )
+            return [
+                TradeSignal(
+                    symbol=symbol_b,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price_b * 0.90,
+                    reasoning=f"Ratio stretched up: z={z_score:.2f}, buy {symbol_b}",
+                )
+            ]
+
+        # Ratio stretched down: symbol_a cheap relative to symbol_b → buy symbol_a
+        if current_ratio < lower and not has_a and not has_b:
+            if price_a <= 0:
+                return []
+            logger.info(
+                "PairsRatio: BUY %s on %s (ratio=%.4f < lower=%.4f, z=%.2f)",
+                symbol_a,
+                as_of_date,
+                current_ratio,
+                lower,
+                z_score,
+            )
+            return [
+                TradeSignal(
+                    symbol=symbol_a,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price_a * 0.90,
+                    reasoning=f"Ratio stretched down: z={z_score:.2f}, buy {symbol_a}",
+                )
+            ]
+
+        # Mean reversion exit: ratio returns to within 0.5 sigma of mean
+        exit_z = 0.5
+        if abs(z_score) < exit_z and (has_a or has_b):
+            return [
+                TradeSignal(
+                    symbol=sym,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"Pairs ratio reverted: z={z_score:.2f}",
+                )
+                for sym in [symbol_a, symbol_b]
+                if sym in portfolio.positions
+            ]
+
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -994,6 +1398,9 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "trend_following": TrendFollowingStrategy,
     "multi_factor": MultiFactorStrategy,
     "correlation_regime": CorrelationRegimeStrategy,
+    "correlation_surprise": CorrelationSurpriseStrategy,
+    "calendar_event": CalendarEventStrategy,
+    "pairs_ratio": PairsRatioStrategy,
 }
 
 
