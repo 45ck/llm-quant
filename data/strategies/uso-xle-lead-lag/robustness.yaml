@@ -1,0 +1,104 @@
+# Robustness Analysis: uso-xle-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "uso-xle-lead-lag"
+trial_family: "lead_lag_uso_xle"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.9535
+    threshold: ">= 0.95"
+    result: "PASS"
+    notes: >
+      DSR from experiment 3a16e44c (trial #1 in family).
+      With N=1 family trial, DSR is interpretable as statistical confidence
+      in the Sharpe estimate. 0.9535 exceeds the 0.95 threshold.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.6875
+    std_oos_sharpe: 0.4597
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.6875 is positive but below mandate target of 0.80.
+      Std (0.4597) indicates significant variance across folds. The strategy
+      performance is period-dependent, likely tied to oil volatility regimes.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lag_days=1"
+        sharpe: 0.2533
+        pct_change: -64.5
+        stable: false
+      - name: "lag_days=3"
+        sharpe: -0.0086
+        pct_change: -101.2
+        stable: false
+      - name: "entry_threshold=0.005"
+        sharpe: 0.8982
+        pct_change: +26.0
+        stable: true
+      - name: "entry_threshold=0.02"
+        sharpe: 0.4784
+        pct_change: -32.9
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: 0.6667
+        pct_change: -6.5
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.827
+  sharpe_1_5x: 0.734
+  sharpe_2x: 0.632
+  sharpe_3x: 0.447
+  max_dd_1x: 15.78
+  notes: >
+    At 1x cost MaxDD already breaches the 15% mandate constraint at 15.78%.
+    At 1.5x and above, MaxDD deteriorates to 18-24% range. Strategy is
+    both cost-sensitive in Sharpe and DD terms.
+
+max_drawdown_check:
+  value: 15.78
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 15.78% at 1x cost exceeds the 15% mandate constraint.
+    At higher cost multipliers DrawDown worsens to 18-24%. The USO-XLE
+    strategy is exposed to oil sector concentrated drawdown during energy
+    bear markets (2022-2023 oil reversal, 2025 energy selloff) without
+    sufficient diversification to contain drawdown within mandate limits.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: MaxDD=15.78% > 15% mandate constraint. Perturbation instability:
+  only 2/5 variants stable (40% < 60% threshold). Strategy is critically
+  sensitive to lag_days parameter -- lag_days=3 produces negative Sharpe (-0.009),
+  suggesting the 2-day lag is not a robust relationship but rather a data-fit.
+  Oil-to-energy-sector signal is regime-dependent and does not survive parameter
+  perturbation. Both the MaxDD gate and perturbation gate fail.
+
+created_at: "2026-03-26"

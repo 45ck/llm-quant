@@ -1,0 +1,26 @@
+# Hypothesis: uso-xle-lead-lag
+strategy_slug: "uso-xle-lead-lag"
+statement: >
+  USO (crude oil ETF) leads XLE (energy sector ETF) by approximately 2 trading
+  days. When USO posts a 3-day return >= 1% (measured 2 days ago), XLE
+  produces a positive follow-through return over the next 2 days with
+  sufficient frequency to generate Sharpe > 0.80 after transaction costs
+  over a 5-year test period with max drawdown < 15%.
+mechanism: >
+  Crude oil is the primary cost driver and revenue determinant for integrated
+  energy companies. When oil prices rise sharply, earnings revisions for energy
+  sector constituents (XOM, CVX, SLB, etc.) follow with a lag as analysts
+  update models, institutional investors increase energy sector allocations,
+  and passive funds rebalance. The 2-day lag reflects the typical time for
+  energy sector ETF flows to respond to spot crude price movements. USO tracks
+  WTI futures and responds to immediate supply/demand shocks, while XLE equity
+  holders react after confirming the oil move is persistent, creating a
+  structural information transmission lag.
+falsification_criteria:
+  - "Sharpe < 0.80 after transaction costs over 5-year test period"
+  - "Max drawdown > 15%"
+  - "Fewer than 20 complete round trips (signal too rare)"
+  - "CPCV OOS mean Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium"
+created_at: "2026-03-26"
