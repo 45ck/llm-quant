@@ -1,0 +1,42 @@
+strategy_slug: turn-of-month-spy
+strategy_type: calendar_event
+frozen: true
+frozen_at: '2026-03-26T00:00:00Z'
+frozen_by: claude-opus-4-6
+frozen_hash: db8b983691bf11d7e70175350f9d0c06d1499e29d2aa1fd23f417234ca5358cb
+modification_lock: 'This spec is FROZEN. Parameter changes require a new spec version.
+
+  '
+parameters:
+  mode: month_end
+  target_symbol: SPY
+  end_days: 1
+  start_days: 1
+  target_weight: 0.95
+  rebalance_frequency_days: 1
+parameter_rationale:
+  mode: '"month_end": triggers on last day of month + first day of next month.
+
+    '
+  end_days: '1 = last trading day of month only. Conservative -- avoid extending into
+    week before month-end which has mixed evidence.
+
+    '
+  start_days: '1 = first trading day of new month. Symmetric with end_days.
+
+    '
+backtest_spec:
+  symbols:
+  - SPY
+  years: 5
+  initial_capital: 100000
+  warmup_days: 5
+  cost_model:
+    spread_bps: 5
+    commission_per_trade: 1.0
+    slippage_bps: 2
+family: calendar_event
+family_trial_number: 1
+family_prior_trials: 0
+created_at: '2026-03-26'
+updated_at: '2026-03-26'

@@ -1,0 +1,45 @@
+# Research Spec: correlation-surprise-regime
+# FROZEN before backtest execution
+strategy_slug: "correlation-surprise-regime"
+strategy_type: "correlation_surprise"
+
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+parameters:
+  corr_window: 10
+  delta_window: 5
+  delta_threshold: 0.3
+  spy_weight_risk_on: 0.95
+  rebalance_frequency_days: 1
+
+parameter_rationale:
+  corr_window: >
+    10 days = 2 weeks. Same as A8 base; captures medium-term correlation.
+  delta_window: >
+    5 days = 1 trading week. Measures weekly change in correlation regime.
+    Motivated by hypothesis: rapid shifts within 1 week signal systemic stress.
+  delta_threshold: >
+    0.3 = large correlation shift. Chosen from hypothesis statement; not
+    optimized. 0.3 is ~75th percentile of |weekly delta-corr| historically.
+
+backtest_spec:
+  symbols: ["SPY", "TLT"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+  cost_model:
+    spread_bps: 5
+    commission_per_trade: 1.0
+    slippage_bps: 2
+
+family: "correlation_regime"
+family_trial_number: 3
+family_prior_trials: 2
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

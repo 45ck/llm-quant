@@ -1,0 +1,86 @@
+# Robustness Analysis: risk-parity-correlation-regime
+# Generated: 2026-03-26
+
+strategy_slug: "risk-parity-correlation-regime"
+trial_family: "correlation_regime"
+trial_count: 2  # Second experiment in correlation_regime family (after spy-tlt-correlation-regime)
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 3
+gates_failed: 1
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8645
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment 595c8c71 (trial #1, family trial #2).
+      With N=2 family trials in correlation_regime family, DSR remains
+      below 0.95 threshold. Sharpe of 0.53 (backtest) / 0.68 (robustness run)
+      is marginal, and DSR reflects low statistical confidence in the estimate.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 3 distinct strategy variants for meaningful computation.
+      With 2 family trials (A8 + K7), PBO is structurally limited.
+
+  cpcv:
+    mean_oos_sharpe: 0.6559
+    std_oos_sharpe: 0.4047
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.6559 is positive with moderate dispersion (std 0.40).
+      Signal exists out-of-sample but is noisy.
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "corr_window=15"
+        sharpe: 0.7209
+        pct_change: 6.2
+        stable: true
+      - name: "corr_window=25"
+        sharpe: 0.4546
+        pct_change: -33.0
+        stable: false
+      - name: "exit_thresh=0.05"
+        sharpe: 0.5847
+        pct_change: -13.8
+        stable: true
+      - name: "exit_thresh=-0.05"
+        sharpe: 0.9291
+        pct_change: 36.9
+        stable: false
+      - name: "spy_weight=0.70"
+        sharpe: 0.6503
+        pct_change: -4.2
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.5290
+  max_dd_1x: 10.10
+  notes: "Full cost sensitivity in experiment 595c8c71"
+
+max_drawdown_check:
+  value: 10.10
+  threshold: "< 15.0"
+  result: "PASS"
+
+overall_passed: false
+rejection_reason: "DSR=0.8645 < 0.95 threshold. Strategy shows positive OOS signal (CPCV=0.66) and acceptable drawdown (10.1%), but insufficient statistical confidence in Sharpe estimate."
+
+created_at: "2026-03-26"

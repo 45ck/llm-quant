@@ -1,0 +1,19 @@
+# Hypothesis: turn-of-month-spy
+strategy_slug: "turn-of-month-spy"
+statement: >
+  Holding SPY only on the last calendar day of each month and the first
+  calendar day of the following month (approximately 2 trading days per
+  month = ~24 days/year) captures >40% of SPY annual return while being
+  invested only ~10% of the time, producing Sharpe ratio > 0.50.
+mechanism: >
+  Month-end effect driven by: (1) institutional pension/401k contributions
+  deployed on the last/first business day; (2) portfolio window dressing by
+  fund managers; (3) index rebalancing flows. These create a predictable
+  demand imbalance concentrated at month boundaries.
+falsification_criteria:
+  - "Strategy Sharpe < 0.50"
+  - "Turn-of-month days do not capture >30% of annual return (weak effect)"
+  - "Max drawdown > 15%"
+  - "CPCV OOS Sharpe non-positive (no signal OOS)"
+conviction: "medium"
+created_at: "2026-03-26"

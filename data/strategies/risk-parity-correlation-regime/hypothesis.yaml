@@ -1,0 +1,19 @@
+# Hypothesis: risk-parity-correlation-regime
+strategy_slug: "risk-parity-correlation-regime"
+statement: >
+  When SPY-TLT 20-day rolling correlation is non-positive (normal inverse
+  relationship), holding SPY at 60% weight outperforms static 60/40. When
+  correlation turns positive (stress regime), exiting SPY to cash reduces
+  drawdown without sacrificing annual return, producing Sharpe >0.9.
+mechanism: >
+  In normal markets, SPY and TLT are negatively correlated -- TLT hedges
+  SPY drawdowns. When correlation turns positive, both assets fall together
+  (flight-to-liquidity scenario), eliminating diversification benefit. The
+  strategy exits before the correlation-positive period causes maximum damage.
+falsification_criteria:
+  - "Sharpe < 0.50 (fails to beat passive 60/40 Sharpe ~0.72)"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 regime transitions (signal too rare to be useful)"
+  - "CPCV OOS Sharpe non-positive (no OOS signal)"
+conviction: "medium"
+created_at: "2026-03-26"

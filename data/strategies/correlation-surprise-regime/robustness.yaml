@@ -1,0 +1,96 @@
+# Robustness Analysis: correlation-surprise-regime
+# Generated: 2026-03-26
+
+strategy_slug: "correlation-surprise-regime"
+trial_family: "correlation_regime"
+trial_count: 3  # Third experiment in correlation_regime family (after A8 variants)
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8833
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment trial #1 in this slug (trial #3 in correlation_regime
+      family). Below 0.95 threshold. With small N family trials, DSR is
+      structurally hard to pass -- reflects limited statistical confidence
+      in the Sharpe estimate.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants with daily returns.
+      Structural limitation: PBO cannot pass with N=1 experiment in this slug.
+
+  cpcv:
+    mean_oos_sharpe: 0.8686
+    std_oos_sharpe: 0.3448
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.8686 is solidly positive with moderate dispersion.
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "delta_thresh=0.2"
+        sharpe: 0.7192
+        pct_change: -1.0
+        stable: true
+      - name: "delta_thresh=0.4"
+        sharpe: 0.7237
+        pct_change: -0.4
+        stable: true
+      - name: "corr_window=8"
+        sharpe: 0.3928
+        pct_change: -45.9
+        stable: false
+      - name: "corr_window=15"
+        sharpe: 0.3016
+        pct_change: -58.5
+        stable: false
+      - name: "delta_window=3"
+        sharpe: 0.7620
+        pct_change: 4.9
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.595
+  sharpe_1_5x: 0.584
+  sharpe_2x: 0.534
+  sharpe_3x: 0.438
+  max_dd_1x: 15.45
+  notes: >
+    Sharpe degrades modestly under cost stress (0.595 -> 0.438 at 3x).
+    Strategy is cost-insensitive due to moderate turnover.
+
+max_drawdown_check:
+  value: 15.45
+  threshold: "< 15.0"
+  result: "FAIL"
+
+overall_passed: false
+rejection_reason: >
+  DSR=0.8833 < 0.95 threshold; Max DD=15.5% > 15% constraint.
+  Perturbation analysis reveals sensitivity to corr_window parameter
+  (corr_window=8 and 15 both degrade Sharpe >40%). Delta threshold
+  is stable but the core correlation window is fragile.
+  CPCV OOS Sharpe positive (0.87) suggests some genuine signal,
+  but insufficient statistical confidence for promotion.
+
+created_at: "2026-03-26"

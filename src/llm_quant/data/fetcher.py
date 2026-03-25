@@ -20,7 +20,7 @@ YAHOO_SYMBOL_MAP: dict[str, str] = {
 _YAHOO_TO_INTERNAL: dict[str, str] = {v: k for k, v in YAHOO_SYMBOL_MAP.items()}
 
 
-def fetch_ohlcv(
+def fetch_ohlcv(  # noqa: C901
     symbols: list[str],
     lookback_days: int = 252,
     timeout: int = 30,
@@ -99,12 +99,24 @@ def fetch_ohlcv(
 
     frames: list[pl.DataFrame] = []
 
-    # Single-symbol download: columns are flat (Open, High, …)
+    # Single-symbol download: columns may be flat (Open, High, …) or
+    # MultiIndex (ticker, field) depending on yfinance version / group_by.
     if len(yahoo_symbols) == 1:
         yahoo_sym = yahoo_symbols[0]
         internal_sym = _YAHOO_TO_INTERNAL.get(yahoo_sym, yahoo_sym)
         try:
-            df = _pandas_to_polars(raw, internal_sym)
+            import pandas as pd
+
+            subset = raw
+            # If yfinance returned MultiIndex columns, drop the ticker level
+            if isinstance(raw.columns, pd.MultiIndex):
+                subset = (
+                    raw[yahoo_sym].copy()
+                    if yahoo_sym in raw.columns.get_level_values(0)
+                    else raw
+                )
+                subset = subset.dropna(how="all")
+            df = _pandas_to_polars(subset, internal_sym)
             if df is not None and len(df) > 0:
                 frames.append(df)
             else:

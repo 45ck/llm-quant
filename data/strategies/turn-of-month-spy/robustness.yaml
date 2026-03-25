@@ -1,0 +1,93 @@
+# Robustness Analysis: turn-of-month-spy
+# Generated: 2026-03-26
+
+strategy_slug: "turn-of-month-spy"
+trial_family: "calendar_event"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.4133
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from valid experiment (trial #1 in family).
+      With N=1 family trial, DSR reflects low statistical confidence
+      in the (negative) Sharpe estimate. Well below 0.95 threshold.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid
+      experiment in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.1638
+    std_oos_sharpe: 0.8359
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 2-day purge on base experiment.
+      Mean OOS Sharpe of 0.1638 is barely positive but with very high
+      variance (std=0.84), indicating unreliable signal across folds.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "end_days=2"
+        sharpe: -0.4281
+        pct_change: -410.3
+        stable: false
+      - name: "end_days=0"
+        sharpe: -0.0523
+        pct_change: 37.7
+        stable: false
+      - name: "start_days=2"
+        sharpe: -0.0773
+        pct_change: 7.9
+        stable: true
+      - name: "start_days=0"
+        sharpe: -0.2816
+        pct_change: -235.7
+        stable: false
+      - name: "weight=0.80"
+        sharpe: -0.0820
+        pct_change: 2.2
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: -0.107
+  sharpe_1_5x: -0.198
+  sharpe_2x: -0.289
+  sharpe_3x: -0.469
+  max_dd_1x: 14.95
+  notes: "Strategy unprofitable at all cost levels. Negative Sharpe worsens with costs."
+
+max_drawdown_check:
+  value: 14.95
+  threshold: "< 15.0"
+  result: "PASS"
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: Strategy produces negative returns (Sharpe=-0.107, return=-3.35%).
+  DSR=0.4133 << 0.95 threshold. Only 2/5 perturbations stable (40% < 60%).
+  The turn-of-month effect does not produce exploitable alpha in SPY over
+  2022-2026. Hypothesis falsified: the calendar window loses money after
+  transaction costs, dramatically underperforming SPY buy-and-hold (+42.93%).
+
+created_at: "2026-03-26"

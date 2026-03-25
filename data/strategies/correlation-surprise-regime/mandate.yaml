@@ -1,0 +1,17 @@
+# Mandate: correlation-surprise-regime
+strategy_slug: "correlation-surprise-regime"
+objective: >
+  Detect rapid correlation regime shifts (delta-correlation > 0.3 in 5 days)
+  between SPY and TLT as an early warning of systemic stress. Exit SPY to cash
+  when signal triggers; re-enter when correlation stabilizes.
+benchmark: "60/40 SPY/TLT"
+benchmark_weights:
+  SPY: 0.60
+  TLT: 0.40
+universe: ["SPY", "TLT"]
+constraints:
+  max_drawdown: 0.15
+  min_sharpe: 0.40
+  min_trades: 5
+capital: 100000
+created_at: "2026-03-26"

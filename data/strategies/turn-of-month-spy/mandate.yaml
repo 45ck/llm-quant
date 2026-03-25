@@ -1,0 +1,17 @@
+# Mandate: turn-of-month-spy
+strategy_slug: "turn-of-month-spy"
+objective: >
+  Capture the turn-of-month effect in SPY by holding only during the last
+  trading day of each month and the first trading day of the next month.
+  Hypothesis: these 2 days per month capture >40% of annual SPY return,
+  producing superior Sharpe vs buy-and-hold with dramatically lower exposure.
+benchmark: "SPY buy-and-hold"
+benchmark_weights:
+  SPY: 1.0
+universe: ["SPY"]
+constraints:
+  max_drawdown: 0.15
+  min_sharpe: 0.50
+  min_trades: 20
+capital: 100000
+created_at: "2026-03-26"

@@ -1,0 +1,18 @@
+# Data Contract: turn-of-month-spy
+strategy_slug: "turn-of-month-spy"
+sources:
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+computed_signals:
+  - name: "is_month_end_window"
+    formula: "d.day >= last_day_of_month - 1 OR d.day <= 1"
+    causal: true
+    notes: "Calendar-based; no look-ahead possible"
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"

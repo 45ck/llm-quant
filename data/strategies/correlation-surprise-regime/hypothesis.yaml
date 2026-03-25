@@ -1,0 +1,19 @@
+# Hypothesis: correlation-surprise-regime
+strategy_slug: "correlation-surprise-regime"
+statement: >
+  When the 5-day change in the 10-day rolling SPY-TLT correlation exceeds +0.3
+  (correlation surprise), SPY experiences drawdown >2% within the next 10 days
+  with precision >70%. Implementing this as a defensive exit signal reduces
+  portfolio drawdown while preserving Sharpe ratio.
+mechanism: >
+  Rapid positive correlation shifts between equities and bonds signal a
+  flight-to-liquidity event where both asset classes are sold simultaneously.
+  This correlation surprise precedes peak drawdown by ~3-7 days, providing
+  a tradeable early-exit signal before the worst of the move.
+falsification_criteria:
+  - "Signal precision < 55% on 10d forward drawdown >2%"
+  - "Strategy Sharpe < 0.40"
+  - "Max drawdown > 15% (worse than passive)"
+  - "CPCV OOS Sharpe non-positive"
+conviction: "medium"
+created_at: "2026-03-26"

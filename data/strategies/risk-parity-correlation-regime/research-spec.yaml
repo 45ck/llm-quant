@@ -1,0 +1,47 @@
+# Research Spec: risk-parity-correlation-regime
+# FROZEN before backtest execution
+strategy_slug: "risk-parity-correlation-regime"
+strategy_type: "correlation_regime"
+
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Any parameter change requires a new spec version.
+
+parameters:
+  corr_window: 20
+  corr_exit_threshold: 0.0
+  corr_entry_threshold: 0.0
+  spy_weight_risk_on: 0.60
+  rebalance_frequency_days: 1
+
+parameter_rationale:
+  corr_window: >
+    20 days = 4 trading weeks. Longer than A8 (10d) to reduce noise.
+    Risk parity rebalancing should respond to sustained regime changes,
+    not short-term correlation noise.
+  spy_weight_risk_on: >
+    0.60 = approximate equity weight in vol-parity 60/40 portfolio.
+    Using fixed 60% rather than dynamic vol-parity to isolate signal effect.
+  corr_exit_threshold: >
+    0.0 (zero boundary). Exit when correlation turns positive = diversification
+    benefit disappears.
+
+backtest_spec:
+  symbols: ["SPY", "TLT"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+  cost_model:
+    spread_bps: 5
+    commission_per_trade: 1.0
+    slippage_bps: 2
+
+family: "correlation_regime"
+family_trial_number: 2
+family_prior_trials: 1
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

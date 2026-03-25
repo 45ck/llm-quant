@@ -1,0 +1,23 @@
+# Data Contract: risk-parity-correlation-regime
+strategy_slug: "risk-parity-correlation-regime"
+sources:
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+  - symbol: "TLT"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+computed_signals:
+  - name: "rolling_corr_20d"
+    formula: "pearson_correlation(spy_returns, tlt_returns, window=20)"
+    causal: true
+    lookback: 20
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"
