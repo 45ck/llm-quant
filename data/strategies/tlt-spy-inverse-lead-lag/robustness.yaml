@@ -1,0 +1,115 @@
+# Robustness Analysis: tlt-spy-inverse-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "tlt-spy-inverse-lead-lag"
+trial_family: "lead_lag_tlt_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.3412
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment f7b1147b (trial #1 in family).
+      DSR=0.3412 is far below the 0.95 threshold. The strategy generates
+      negative Sharpe (-0.200) -- there is essentially no statistical
+      confidence that the observed returns exceed those of a random strategy
+      with similar volatility. Decisive rejection.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: -0.1462
+    std_oos_sharpe: 0.4528
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -0.1462 is negative -- the strategy consistently
+      destroys value out-of-sample. The inverse TLT-to-SPY lead-lag
+      relationship is not borne out by the data at the 3-day lag.
+
+  perturbation:
+    n_stable: 4
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    notes: >
+      4/5 perturbations are within 30% of base Sharpe. However, this is
+      stability around a negative Sharpe base -- the strategy consistently
+      loses money across parameter variants. Perturbation PASS is technically
+      correct but misleading: the strategy is robustly bad, not robustly good.
+    details:
+      - name: "lag_days=2"
+        sharpe: -0.2298
+        pct_change: -22.0
+        stable: true
+      - name: "lag_days=4"
+        sharpe: -0.1379
+        pct_change: +26.8
+        stable: true
+      - name: "entry_threshold=0.004"
+        sharpe: -0.3060
+        pct_change: -62.5
+        stable: false
+      - name: "entry_threshold=0.016"
+        sharpe: -0.2409
+        pct_change: -27.9
+        stable: true
+      - name: "target_weight=0.70"
+        sharpe: -0.1884
+        pct_change: -0.0
+        stable: true
+
+max_drawdown_check:
+  value: 22.84
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 22.84% substantially exceeds the 15% equity threshold.
+    The strategy is in a persistent drawdown for the entire 5-year period
+    (DD duration 1033 days), indicating the inverse TLT signal has been
+    directionally wrong for most of the 2022-2026 period. The 2022 rate
+    hike cycle caused simultaneous TLT and SPY declines, breaking the
+    assumed inverse relationship.
+
+cost_sensitivity:
+  sharpe_1x: -0.200
+  max_dd_1x: 22.84
+  notes: >
+    Strategy loses money at base costs. Degrades sharply with higher costs:
+    Sharpe=-0.321 at 1.5x, -0.443 at 2x, -0.683 at 3x. No viable cost
+    scenario exists.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: 3 of 4 gates failed (perturbation technically passes but is
+  stability around negative Sharpe, which is meaningless).
+  DSR=0.3412 << 0.95. CPCV OOS Sharpe=-0.146 (negative). MaxDD=22.84% >> 15%.
+  The inverse TLT-leads-SPY hypothesis fails on the 2022-2026 data because
+  the 2022 rate shock caused simultaneous bond and equity selloffs, violating
+  the assumed risk-on/risk-off inverse relationship. When the Fed rapidly
+  hiked rates, TLT fell sharply (-30%) and SPY also fell sharply (-20%),
+  meaning the "TLT down -> SPY up" component of the inverse signal was
+  systematically wrong during the most volatile period. The macro regime
+  fundamentally broke the mechanism. The hypothesis may be regime-conditional
+  (works in easing cycles, fails in aggressive hiking cycles) -- a refined
+  version incorporating yield curve regime filters could be explored.
+
+created_at: "2026-03-26"
