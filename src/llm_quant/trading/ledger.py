@@ -64,27 +64,50 @@ def log_trades(
 
         # DuckDB DEFAULT fills created_at, so we fetch the timestamp
         # after a dummy-free insert by computing it ourselves.
-        conn.execute(
-            """
-            INSERT INTO trades (
-                trade_id, date, pod_id, symbol, action, shares, price,
-                notional, conviction, reasoning, llm_decision_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
-                trade_id,
-                trade_date,
-                pod_id,
-                trade.symbol,
-                trade.action,
-                trade.shares,
-                trade.price,
-                trade.notional,
-                trade.conviction,
-                trade.reasoning,
-                decision_id,
-            ],
-        )
+        trade_cols = [c[0] for c in conn.execute("DESCRIBE trades").fetchall()]
+        if "pod_id" in trade_cols:
+            conn.execute(
+                """
+                INSERT INTO trades (
+                    trade_id, date, pod_id, symbol, action, shares, price,
+                    notional, conviction, reasoning, llm_decision_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    trade_id,
+                    trade_date,
+                    pod_id,
+                    trade.symbol,
+                    trade.action,
+                    trade.shares,
+                    trade.price,
+                    trade.notional,
+                    trade.conviction,
+                    trade.reasoning,
+                    decision_id,
+                ],
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO trades (
+                    trade_id, date, symbol, action, shares, price,
+                    notional, conviction, reasoning, llm_decision_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    trade_id,
+                    trade_date,
+                    trade.symbol,
+                    trade.action,
+                    trade.shares,
+                    trade.price,
+                    trade.notional,
+                    trade.conviction,
+                    trade.reasoning,
+                    decision_id,
+                ],
+            )
 
         # Retrieve the server-generated created_at, then compute hash
         created_row = conn.execute(
@@ -173,26 +196,48 @@ def save_portfolio_snapshot(
 
     nav = portfolio.nav
 
-    conn.execute(
-        """
-        INSERT INTO portfolio_snapshots (
-            snapshot_id, date, pod_id, nav, cash,
-            gross_exposure, net_exposure,
-            total_pnl, daily_pnl
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        [
-            snapshot_id,
-            trade_date,
-            pod_id,
-            nav,
-            portfolio.cash,
-            portfolio.gross_exposure,
-            portfolio.net_exposure,
-            portfolio.total_pnl,
-            daily_pnl,
-        ],
-    )
+    snap_cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+    if "pod_id" in snap_cols:
+        conn.execute(
+            """
+            INSERT INTO portfolio_snapshots (
+                snapshot_id, date, pod_id, nav, cash,
+                gross_exposure, net_exposure,
+                total_pnl, daily_pnl
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                snapshot_id,
+                trade_date,
+                pod_id,
+                nav,
+                portfolio.cash,
+                portfolio.gross_exposure,
+                portfolio.net_exposure,
+                portfolio.total_pnl,
+                daily_pnl,
+            ],
+        )
+    else:
+        conn.execute(
+            """
+            INSERT INTO portfolio_snapshots (
+                snapshot_id, date, nav, cash,
+                gross_exposure, net_exposure,
+                total_pnl, daily_pnl
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                snapshot_id,
+                trade_date,
+                nav,
+                portfolio.cash,
+                portfolio.gross_exposure,
+                portfolio.net_exposure,
+                portfolio.total_pnl,
+                daily_pnl,
+            ],
+        )
 
     # Persist individual positions
     for pos in portfolio.positions.values():
