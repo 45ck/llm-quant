@@ -404,6 +404,267 @@ class TestBenchmark:
 # ---------------------------------------------------------------------------
 
 
+class TestEngineEdgeCases:
+    """Edge case tests for BacktestEngine."""
+
+    def test_empty_data_returns_early(self):
+        """Engine with zero-row prices_df should return gracefully, not crash."""
+        empty_prices = pl.DataFrame(
+            {
+                "symbol": [],
+                "date": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": [],
+                "adj_close": [],
+            },
+            schema={
+                "symbol": pl.Utf8,
+                "date": pl.Date,
+                "open": pl.Float64,
+                "high": pl.Float64,
+                "low": pl.Float64,
+                "close": pl.Float64,
+                "volume": pl.Int64,
+                "adj_close": pl.Float64,
+            },
+        )
+        empty_indicators = pl.DataFrame(
+            {
+                "symbol": [],
+                "date": [],
+                "close": [],
+            },
+            schema={
+                "symbol": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+            },
+        )
+
+        config = StrategyConfig(name="test")
+        strategy = NeverTradeStrategy(config)
+        engine = BacktestEngine(strategy=strategy, initial_capital=100_000.0)
+
+        result = engine.run(
+            prices_df=empty_prices,
+            indicators_df=empty_indicators,
+            slug="test",
+            warmup_days=50,
+            trial_count=1,
+        )
+
+        assert len(result.trades) == 0
+        assert len(result.data_warnings) > 0  # should warn about insufficient data
+
+    def test_single_day_data(self):
+        """Prices with only 1 day (less than warmup) should not crash."""
+        rows = [
+            {
+                "symbol": "SPY",
+                "date": date(2020, 1, 6),
+                "open": 100.0,
+                "high": 101.0,
+                "low": 99.0,
+                "close": 100.0,
+                "volume": 1_000_000,
+                "adj_close": 100.0,
+            }
+        ]
+        prices = pl.DataFrame(rows).with_columns(
+            pl.col("date").cast(pl.Date),
+            pl.col("volume").cast(pl.Int64),
+        )
+        indicators = pl.DataFrame(
+            {
+                "symbol": ["SPY"],
+                "date": [date(2020, 1, 6)],
+                "close": [100.0],
+            }
+        ).with_columns(pl.col("date").cast(pl.Date))
+
+        config = StrategyConfig(name="test")
+        strategy = NeverTradeStrategy(config)
+        engine = BacktestEngine(strategy=strategy, initial_capital=100_000.0)
+
+        result = engine.run(
+            prices_df=prices,
+            indicators_df=indicators,
+            slug="test",
+            warmup_days=50,
+            trial_count=1,
+        )
+
+        assert len(result.trades) == 0
+        assert len(result.data_warnings) > 0
+
+    def test_zero_volume_falls_back_to_flat_slippage(self):
+        """CostModel with daily_volume=0 should use flat_slippage_bps."""
+        cm = CostModel(
+            spread_bps=5.0,
+            slippage_volatility_factor=0.5,
+            flat_slippage_bps=3.0,
+        )
+        cost = cm.compute_cost(
+            notional=10_000.0,
+            shares=100,
+            daily_volume=0,
+            daily_volatility=0.02,
+        )
+        # daily_volume=0 => falls to flat slippage path
+        expected = 10_000.0 * 5.0 / 10_000.0 + 10_000.0 * 3.0 / 10_000.0
+        assert abs(cost - expected) < 0.01, (
+            f"Expected flat slippage fallback ({expected}), got {cost}"
+        )
+
+    def test_cost_model_zero_shares(self):
+        """CostModel with shares=0 should return 0 cost (notional=0)."""
+        cm = CostModel(spread_bps=5.0, flat_slippage_bps=2.0)
+        cost = cm.compute_cost(
+            notional=0.0,
+            shares=0,
+            daily_volume=1_000_000,
+            daily_volatility=0.02,
+        )
+        assert cost == 0.0
+
+    def test_fill_delay_changes_fill_price(self):
+        """fill_delay=0 fills at close; fill_delay=1 fills at next-day open.
+        Create data where open != previous close to demonstrate the difference."""
+        # Build custom data where each day's open is 1% below close
+        # (gap-down open). This ensures fill_delay=1 (next open) differs
+        # from fill_delay=0 (same-day close).
+        rows = []
+        base_date = date(2020, 1, 6)
+        price = 100.0
+        for i in range(400):
+            d = base_date + timedelta(days=i)
+            if d.weekday() >= 5:
+                continue
+            open_ = price * 0.99  # open is 1% below close level
+            close = price
+            high = price * 1.01
+            low = price * 0.98
+            rows.append(
+                {
+                    "symbol": "SPY",
+                    "date": d,
+                    "open": open_,
+                    "high": high,
+                    "low": low,
+                    "close": close,
+                    "volume": 1_000_000,
+                    "adj_close": close,
+                }
+            )
+            price = close * 1.002  # slight upward trend
+
+        prices = pl.DataFrame(rows).with_columns(
+            pl.col("date").cast(pl.Date),
+            pl.col("volume").cast(pl.Int64),
+        )
+        indicators = compute_indicators(prices)
+
+        config = StrategyConfig(
+            name="test",
+            rebalance_frequency_days=1,
+            target_position_weight=0.05,
+            stop_loss_pct=0.10,
+        )
+
+        # Run with fill_delay=0
+        strategy0 = AlwaysBuyStrategy(config)
+        engine0 = BacktestEngine(strategy=strategy0, initial_capital=100_000.0)
+        result0 = engine0.run(
+            prices_df=prices,
+            indicators_df=indicators,
+            slug="test",
+            fill_delay=0,
+            warmup_days=50,
+            trial_count=1,
+        )
+
+        # Run with fill_delay=1
+        strategy1 = AlwaysBuyStrategy(config)
+        engine1 = BacktestEngine(strategy=strategy1, initial_capital=100_000.0)
+        result1 = engine1.run(
+            prices_df=prices,
+            indicators_df=indicators,
+            slug="test",
+            fill_delay=1,
+            warmup_days=50,
+            trial_count=1,
+        )
+
+        # Both should have trades
+        assert len(result0.trades) > 0, "fill_delay=0 should produce trades"
+        assert len(result1.trades) > 0, "fill_delay=1 should produce trades"
+
+        # fill_delay=0 fills at close; fill_delay=1 fills at next day's open.
+        # Since open != close in our data, these must differ.
+        price0 = result0.trades[0].price
+        price1 = result1.trades[0].price
+        assert price0 != price1, (
+            f"Fill prices should differ: delay=0 got {price0}, delay=1 got {price1}"
+        )
+
+    def test_nav_series_no_gaps_on_empty_price_day(self):
+        """If one trading day has no prices, NAV series should carry forward
+        with no gaps (D5 fix)."""
+        rows = []
+        base_date = date(2020, 1, 6)
+        for i in range(300):
+            d = base_date + timedelta(days=i)
+            if d.weekday() >= 5:
+                continue
+            # Skip one day entirely (day 100 in the date sequence)
+            if i == 100:
+                continue
+            rows.append(
+                {
+                    "symbol": "SPY",
+                    "date": d,
+                    "open": 100.0,
+                    "high": 101.0,
+                    "low": 99.0,
+                    "close": 100.0,
+                    "volume": 1_000_000,
+                    "adj_close": 100.0,
+                }
+            )
+
+        prices = pl.DataFrame(rows).with_columns(
+            pl.col("date").cast(pl.Date),
+            pl.col("volume").cast(pl.Int64),
+        )
+        indicators = compute_indicators(prices)
+
+        config = StrategyConfig(name="test")
+        strategy = NeverTradeStrategy(config)
+        engine = BacktestEngine(strategy=strategy, initial_capital=100_000.0)
+
+        result = engine.run(
+            prices_df=prices,
+            indicators_df=indicators,
+            slug="test",
+            warmup_days=50,
+            trial_count=1,
+        )
+
+        # NAV series should have initial + one entry per trading date
+        n_trading_dates = len(
+            sorted(prices.select("date").unique().to_series().to_list())
+        )
+        if n_trading_dates > 50:
+            # nav_series = [initial] + one per post-warmup trading date
+            expected_len = (n_trading_dates - 50) + 1
+            assert len(result.nav_series) == expected_len, (
+                f"NAV series length {len(result.nav_series)} != expected {expected_len}"
+            )
+
+
 class TestEngineIntegration:
     """Integration tests for the full engine loop."""
 

@@ -170,7 +170,7 @@ class SMACrossoverStrategy(Strategy):
             curr_slow = curr_row[sma_slow_col]
             prev_fast = prev_row[sma_fast_col]
             prev_slow = prev_row[sma_slow_col]
-            rsi = curr_row.get("rsi_14", 50.0)
+            rsi = curr_row["rsi_14"]
             close = curr_row["close"]
 
             if prev_fast is None or prev_slow is None:

@@ -149,12 +149,9 @@ def compute_pbo(
         end = start + block_size
         block_data = matrix[start:end, :]
         for n in range(N):
-            rets = block_data[:, n]
-            std = np.std(rets, ddof=1)
-            if std > 0:
-                block_sharpes[s, n] = np.mean(rets) / std
-            else:
-                block_sharpes[s, n] = 0.0
+            block_sharpes[s, n] = compute_sharpe(
+                block_data[:, n].tolist(), annualize=False
+            )
 
     # Generate all C(S, S/2) combinations
     half = S // 2

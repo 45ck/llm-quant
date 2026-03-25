@@ -128,7 +128,11 @@ def get_lifecycle_state(strat_dir: Path) -> LifecycleState:
     # BACKTEST: experiment registry or experiment artifacts exist
     exp_dir = strat_dir / "experiments"
     registry = strat_dir / "experiment-registry.jsonl"
-    if registry.exists() or (exp_dir.is_dir() and any(exp_dir.iterdir())):
+    artifact_suffixes = {".yaml", ".json", ".jsonl"}
+    has_artifacts = exp_dir.is_dir() and any(
+        f for f in exp_dir.iterdir() if f.suffix in artifact_suffixes
+    )
+    if registry.exists() or has_artifacts:
         return LifecycleState.BACKTEST
 
     # States below BACKTEST — check file markers
@@ -243,22 +247,31 @@ class ExperimentRegistry:
             for raw_line in f:
                 stripped = raw_line.strip()
                 if stripped:
-                    entries.append(json.loads(stripped))
+                    try:
+                        entries.append(json.loads(stripped))
+                    except json.JSONDecodeError:
+                        logger.warning(
+                            "Skipping malformed registry line: %s",
+                            stripped[:100],
+                        )
         return entries
 
     def append(self, entry: dict[str, Any]) -> int:
         """Append a new experiment entry. Returns the new trial count."""
-        entry["trial_number"] = self.trial_count + 1
-        entry["recorded_at"] = datetime.now(tz=UTC).isoformat()
+        record = {
+            **entry,
+            "trial_number": self.trial_count + 1,
+            "recorded_at": datetime.now(tz=UTC).isoformat(),
+        }
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, default=str) + "\n")
+            f.write(json.dumps(record, default=str) + "\n")
         logger.info(
             "Recorded experiment #%d for %s",
-            entry["trial_number"],
+            record["trial_number"],
             self.strat_dir.name,
         )
-        return entry["trial_number"]
+        return record["trial_number"]
 
     def get_returns_matrix(self) -> list[list[float]]:
         """Load daily return series from all experiments for PBO computation.

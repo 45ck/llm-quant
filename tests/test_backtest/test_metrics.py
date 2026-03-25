@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 from llm_quant.backtest.metrics import (
@@ -199,6 +201,108 @@ class TestBasicMetrics:
         assert metrics.total_trades == 3
         assert metrics.trial_count == 5
         assert 0 < metrics.win_rate <= 1
+
+
+# ---------------------------------------------------------------------------
+# Test: Metrics edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestMetricsEdgeCases:
+    """Edge case tests for metrics computation."""
+
+    def test_benchmark_total_return_exceeds_price_return(self):
+        """adj_close > close (dividends) => total return >= price return."""
+        from datetime import date, timedelta
+
+        import polars as pl
+
+        from llm_quant.backtest.metrics import compute_benchmark_returns
+
+        rows = []
+        base_date = date(2020, 1, 6)
+        for i in range(100):
+            d = base_date + timedelta(days=i)
+            if d.weekday() >= 5:
+                continue
+            close = 100.0 + i * 0.1
+            adj_close = close * 1.03  # 3% dividend adjustment
+            rows.append(
+                {
+                    "symbol": "SPY",
+                    "date": d,
+                    "open": close,
+                    "high": close * 1.01,
+                    "low": close * 0.99,
+                    "close": close,
+                    "volume": 1_000_000,
+                    "adj_close": adj_close,
+                }
+            )
+
+        prices = pl.DataFrame(rows).with_columns(
+            pl.col("date").cast(pl.Date),
+            pl.col("volume").cast(pl.Int64),
+        )
+
+        tr_returns = compute_benchmark_returns(
+            prices, {"SPY": 1.0}, rebalance_frequency_days=21, use_adj_close=True
+        )
+        pr_returns = compute_benchmark_returns(
+            prices, {"SPY": 1.0}, rebalance_frequency_days=21, use_adj_close=False
+        )
+
+        assert tr_returns and pr_returns, "Both return series must be non-empty"
+
+        tr_total = float(np.prod([1 + r for r in tr_returns])) - 1.0
+        pr_total = float(np.prod([1 + r for r in pr_returns])) - 1.0
+
+        # With a constant multiplier, daily pct changes are nearly identical.
+        # But the total return from adj_close should be >= price return
+        # because the adj_close series itself has a higher level (capturing dividends).
+        assert tr_total >= pr_total - 1e-10, (
+            f"Total return ({tr_total:.6f}) should >= price return ({pr_total:.6f})"
+        )
+
+    def test_compute_sharpe_zero_std(self):
+        """All-zero returns (exact zero std) should return 0.0, not inf/crash."""
+        returns = [0.0] * 100
+        sr = compute_sharpe(returns)
+        assert sr == 0.0, f"Expected 0.0 for zero-std returns, got {sr}"
+
+    def test_compute_sortino_all_positive(self):
+        """All-positive returns (zero downside) should return inf, not crash."""
+        returns = [0.01, 0.02, 0.005, 0.015, 0.008] * 50
+        sortino = compute_sortino(returns)
+        assert sortino == float("inf") or sortino > 100, (
+            f"Expected inf or very large value for all-positive returns, got {sortino}"
+        )
+
+    def test_compute_all_metrics_with_nan(self):
+        """NAV series containing NaN values should be filtered with a warning."""
+        rng = np.random.default_rng(42)
+        nav = [100_000.0]
+        for _ in range(252):
+            nav.append(nav[-1] * (1 + rng.normal(0.0003, 0.01)))
+
+        # Inject some NaN values
+        nav[10] = float("nan")
+        nav[50] = float("nan")
+        nav[100] = float("nan")
+
+        metrics = compute_all_metrics(
+            nav,
+            trades=[{"pnl": 100}],
+            trial_count=1,
+        )
+
+        assert isinstance(metrics, BacktestMetrics)
+        # The NaN guard should have produced a warning
+        nan_warnings = [w for w in metrics.warnings if "NaN" in w]
+        assert len(nan_warnings) > 0, "Should warn about dropped NaN values"
+        # Metrics should still be valid (no NaN leaks)
+        assert not math.isnan(metrics.sharpe_ratio), "Sharpe should not be NaN"
+        assert not math.isnan(metrics.total_return), "Total return should not be NaN"
 
 
 # ---------------------------------------------------------------------------

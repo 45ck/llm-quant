@@ -289,27 +289,58 @@ class TestArtifactIO:
 
 
 class TestPromotionGate:
-    """Verify promotion gate checks thresholds."""
+    """Verify promotion gate checks actual lifecycle and artifact logic."""
 
-    def test_all_pass(self):
-        """All thresholds met → overall=pass."""
-        thresholds = {
-            "dsr_minimum": 0.95,
-            "pbo_maximum": 0.10,
-            "data_grade_minimum": "b",
-        }
-        # DSR passes
-        assert thresholds["dsr_minimum"] <= 0.97
-        # PBO passes
-        assert thresholds["pbo_maximum"] >= 0.05
-        # Data grade passes
-        assert check_data_grade("a", thresholds["data_grade_minimum"])
+    def test_promotion_requires_all_artifacts(self):
+        """Mandate-only dir should be MANDATE, not PROMOTION. Adding all
+        artifacts up to robustness should advance the state correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            # Start with only mandate
+            save_artifact(d / "mandate.yaml", {"name": "test"})
+            assert get_lifecycle_state(d) == LifecycleState.MANDATE
 
-    def test_dsr_failure_blocks(self):
-        """DSR below threshold → blocked."""
-        assert 0.80 < 0.95  # fails
-        # In the real gate, this would block promotion
+            # Add hypothesis
+            save_artifact(d / "hypothesis.yaml", {"statement": "test"})
+            assert get_lifecycle_state(d) == LifecycleState.HYPOTHESIS
 
-    def test_data_grade_c_blocks(self):
-        """Grade C with minimum B → blocked."""
-        assert not check_data_grade("c", "b")
+            # Add data contract
+            save_artifact(d / "data-contract.yaml", {"symbols": ["SPY"]})
+            assert get_lifecycle_state(d) == LifecycleState.DATA_CONTRACT
+
+            # Add research spec
+            save_artifact(d / "research-spec.yaml", {"strategy_type": "sma"})
+            assert get_lifecycle_state(d) == LifecycleState.RESEARCH_SPEC
+
+            # Still not at PROMOTION — missing backtest + robustness
+            assert get_lifecycle_state(d) != LifecycleState.PROMOTION
+
+            # Add robustness
+            save_artifact(d / "robustness.yaml", {"overall_passed": True})
+            assert get_lifecycle_state(d) == LifecycleState.ROBUSTNESS
+
+            # Still not at PROMOTION — missing paper-trading + promotion-decision
+            assert get_lifecycle_state(d) != LifecycleState.PROMOTION
+
+    def test_data_grade_gates_promotion(self):
+        """Data grade C with minimum B blocks; grade A passes."""
+        assert check_data_grade("c", "b") is False
+        assert check_data_grade("a", "b") is True
+
+        # Also test via a data-contract artifact with grade "c"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            save_artifact(d / "data-contract.yaml", {"grade": "c", "symbols": ["SPY"]})
+            contract = load_artifact(d / "data-contract.yaml")
+            assert check_data_grade(contract["grade"], "b") is False
+
+    def test_frozen_spec_required_for_backtest(self):
+        """Unfrozen research-spec should raise FrozenSpecError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            save_artifact(
+                d / "research-spec.yaml",
+                {"strategy_type": "sma", "frozen": False},
+            )
+            with pytest.raises(FrozenSpecError):
+                ensure_frozen_spec(d)

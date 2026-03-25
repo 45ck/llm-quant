@@ -11,6 +11,14 @@ from llm_quant.backtest.robustness import RobustnessResult
 
 logger = logging.getLogger(__name__)
 
+GATE_DISPLAY = {
+    "dsr_passed": ("DSR (Deflated Sharpe)", ">= 0.95"),
+    "pbo_passed": ("PBO (Prob. Backtest Overfit)", "<= 0.10"),
+    "cost_2x_passed": ("2x Cost Survival", "Profitable"),
+    "cpcv_passed": ("CPCV Mean OOS Sharpe", "> 0"),
+    "parameter_stability_passed": ("Parameter Stability", "> 50%"),
+}
+
 
 def _fmt_metric(value: Any, fmt: str = ".3f") -> str:
     """Format a metric value safely, handling None/inf/nan."""
@@ -80,7 +88,7 @@ def generate_backtest_report(result: BacktestResult) -> str:
 
     # Benchmark comparison (from base run)
     base_metrics = result.metrics.get("1.0x")
-    if base_metrics and base_metrics.benchmark_return != 0:
+    if base_metrics and base_metrics.benchmark_return is not None:
         lines.append("## Benchmark Comparison")
         lines.append("")
         lines.append("| Metric | Strategy | Benchmark |")
@@ -140,34 +148,24 @@ def generate_robustness_report(result: RobustnessResult) -> str:
     lines.append("| Gate | Value | Threshold | Status |")
     lines.append("| --- | --- | --- | --- |")
 
+    gate_values = {
+        "dsr_passed": lambda: _fmt_metric(result.dsr, ".4f"),
+        "pbo_passed": lambda: _fmt_metric(result.pbo.pbo, ".4f"),
+        "cost_2x_passed": lambda: "Yes" if result.cost_2x_survives else "No",
+        "cpcv_passed": lambda: _fmt_metric(result.cpcv.mean_oos_sharpe, ".4f"),
+        "parameter_stability_passed": lambda: _fmt_metric(
+            result.parameter_stability, ".1%"
+        ),
+    }
+
     for gate, passed in result.gate_details.items():
         status_str = "PASS" if passed else "FAIL"
-        if "dsr" in gate:
-            lines.append(
-                f"| DSR | {_fmt_metric(result.dsr, '.4f')} | >= 0.95 | {status_str} |"
-            )
-        elif "pbo" in gate:
-            lines.append(
-                f"| PBO | {_fmt_metric(result.pbo.pbo, '.4f')} "
-                f"| <= 0.10 | {status_str} |"
-            )
-        elif "cpcv" in gate:
-            lines.append(
-                f"| CPCV Mean OOS Sharpe | "
-                f"{_fmt_metric(result.cpcv.mean_oos_sharpe, '.4f')} "
-                f"| > 0 | {status_str} |"
-            )
-        elif "2x" in gate:
-            lines.append(
-                f"| 2x Cost Survival | {'Yes' if result.cost_2x_survives else 'No'} "
-                f"| Profitable | {status_str} |"
-            )
-        elif "parameter" in gate:
-            lines.append(
-                f"| Parameter Stability | "
-                f"{_fmt_metric(result.parameter_stability, '.1%')} "
-                f"| > 50% | {status_str} |"
-            )
+        if gate in GATE_DISPLAY:
+            display_name, threshold = GATE_DISPLAY[gate]
+            value = gate_values[gate]()
+            lines.append(f"| {display_name} | {value} | {threshold} | {status_str} |")
+        else:
+            lines.append(f"| {gate} | - | - | {status_str} |")
 
     lines.append("")
 

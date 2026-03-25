@@ -215,6 +215,16 @@ def compute_psr(
     # γ₄_regular = excess + 3, so (γ₄_regular - 1)/4 = (excess + 2)/4
     denominator_sq = 1.0 - skewness * sr + (kurtosis + 2.0) / 4.0 * sr**2
     if denominator_sq <= 0:
+        logger.warning(
+            "PSR denominator_sq=%.4f <= 0: pathological return distribution "
+            "(negative variance of SR estimator). Returning PSR=0.0. "
+            "SR=%.4f, skew=%.4f, excess_kurt=%.4f, n=%d",
+            denominator_sq,
+            sr,
+            skewness,
+            kurtosis,
+            n,
+        )
         return 0.0
 
     z = (sr - sr_star) * math.sqrt(n - 1) / math.sqrt(denominator_sq)
@@ -321,7 +331,11 @@ def compute_benchmark_returns(
     if len(dates) < 2:
         return []
 
-    # Build a price matrix: one column per symbol
+    # Pre-build lookup: {(date, symbol): price} — O(m) instead of O(n*k*m) filtering
+    price_lookup: dict[tuple, float | None] = {}
+    for row in prices_df.select(["date", "symbol", price_col]).iter_rows(named=True):
+        price_lookup[(row["date"], row["symbol"])] = row[price_col]
+
     benchmark_symbols = list(weights.keys())
     daily_returns: list[float] = []
 
@@ -338,18 +352,8 @@ def compute_benchmark_returns(
         total_weight = 0.0
 
         for symbol in benchmark_symbols:
-            sym_data = prices_df.filter(pl.col("symbol") == symbol)
-
-            prev_rows = sym_data.filter(pl.col("date") == prev_date)
-            curr_rows = sym_data.filter(pl.col("date") == curr_date)
-
-            if len(prev_rows) == 0 or len(curr_rows) == 0:
-                new_weights[symbol] = current_weights.get(symbol, 0.0)
-                total_weight += new_weights[symbol]
-                continue
-
-            prev_price = prev_rows.select(price_col).item()
-            curr_price = curr_rows.select(price_col).item()
+            prev_price = price_lookup.get((prev_date, symbol))
+            curr_price = price_lookup.get((curr_date, symbol))
 
             if prev_price is None or curr_price is None or prev_price == 0:
                 new_weights[symbol] = current_weights.get(symbol, 0.0)
@@ -442,7 +446,10 @@ def compute_all_metrics(
     # Returns
     daily_rets = compute_returns(nav_series)
     metrics.daily_returns = daily_rets
-    metrics.total_return = nav_series[-1] / nav_series[0] - 1.0
+    if nav_series[0] == 0:
+        metrics.total_return = 0.0
+    else:
+        metrics.total_return = nav_series[-1] / nav_series[0] - 1.0
 
     trading_days = len(daily_rets)
     metrics.annualized_return = compute_annualized_return(

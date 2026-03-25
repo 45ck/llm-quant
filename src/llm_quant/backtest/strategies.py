@@ -19,6 +19,26 @@ from llm_quant.trading.portfolio import Portfolio
 logger = logging.getLogger(__name__)
 
 
+def _compute_momentum_scores(
+    indicators_df: pl.DataFrame,
+    symbols: list[str],
+    lookback: int,
+) -> list[tuple[str, float]]:
+    """Compute trailing-return momentum scores for given symbols."""
+    scores: list[tuple[str, float]] = []
+    for symbol in symbols:
+        sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+        if len(sym_data) < lookback:
+            continue
+        recent = sym_data.tail(lookback)
+        first_close = recent.row(0, named=True)["close"]
+        last_close = recent.row(-1, named=True)["close"]
+        if first_close > 0:
+            scores.append((symbol, last_close / first_close - 1.0))
+    scores.sort(key=lambda x: x[1], reverse=True)
+    return scores
+
+
 # ---------------------------------------------------------------------------
 # RSI Mean Reversion
 # ---------------------------------------------------------------------------
@@ -108,23 +128,7 @@ class MomentumStrategy(Strategy):
         top_n = params.get("top_n", 5)
 
         symbols = indicators_df.select("symbol").unique().to_series().to_list()
-        momentum_scores: list[tuple[str, float]] = []
-
-        for symbol in symbols:
-            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
-            if len(sym_data) < lookback:
-                continue
-
-            recent = sym_data.tail(lookback)
-            first_close = recent.row(0, named=True)["close"]
-            last_close = recent.row(-1, named=True)["close"]
-
-            if first_close > 0:
-                ret = last_close / first_close - 1.0
-                momentum_scores.append((symbol, ret))
-
-        # Rank by momentum
-        momentum_scores.sort(key=lambda x: x[1], reverse=True)
+        momentum_scores = _compute_momentum_scores(indicators_df, symbols, lookback)
         top_symbols = {s for s, _ in momentum_scores[:top_n]}
         scored_symbols = {s for s, _ in momentum_scores}
 
@@ -285,7 +289,7 @@ class RegimeMomentumStrategy(Strategy):
                     regime = "risk_off"
         return regime
 
-    def _compute_momentum_scores(
+    def _compute_regime_momentum_scores(
         self,
         indicators_df: pl.DataFrame,
         lookback: int,
@@ -296,16 +300,7 @@ class RegimeMomentumStrategy(Strategy):
             for s in indicators_df.select("symbol").unique().to_series().to_list()
             if s != "VIX"
         ]
-        scores: list[tuple[str, float]] = []
-        for symbol in symbols:
-            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
-            if len(sym_data) < lookback:
-                continue
-            recent = sym_data.tail(lookback)
-            first_close = recent.row(0, named=True)["close"]
-            last_close = recent.row(-1, named=True)["close"]
-            if first_close > 0:
-                scores.append((symbol, last_close / first_close - 1.0))
+        scores = _compute_momentum_scores(indicators_df, symbols, lookback)
 
         # Filter out symbols trading below their 200-day SMA
         if "sma_200" in indicators_df.columns:
@@ -320,7 +315,6 @@ class RegimeMomentumStrategy(Strategy):
                     filtered.append((symbol, ret))
             scores = filtered
 
-        scores.sort(key=lambda x: x[1], reverse=True)
         return scores
 
     def generate_signals(
@@ -362,7 +356,7 @@ class RegimeMomentumStrategy(Strategy):
             max_pos = self.config.max_positions
 
         target_weight = self.config.target_position_weight * weight_mult
-        scores = self._compute_momentum_scores(indicators_df, lookback)
+        scores = self._compute_regime_momentum_scores(indicators_df, lookback)
 
         # In risk-off, prefer defensive symbols
         if regime == "risk_off":
