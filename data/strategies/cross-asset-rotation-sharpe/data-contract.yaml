@@ -1,0 +1,43 @@
+# Data Contract: cross-asset-rotation-sharpe
+strategy_slug: "cross-asset-rotation-sharpe"
+sources:
+  - symbol: "TLT"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "iShares 20+ Year Treasury Bond ETF. Deep liquidity, clean data."
+  - symbol: "GLD"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "SPDR Gold Shares ETF. Deep liquidity, clean data."
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "SPDR S&P 500 ETF. Benchmark asset. Deep liquidity, clean data."
+  - symbol: "BTC-USD"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "B+"
+    notes: "Bitcoin spot from Yahoo Finance. Trades 24/7; Yahoo aligns to daily bars.
+      Occasional weekend gaps. High volatility — BTC inclusion increases rotation
+      turnover and drawdown risk."
+computed_signals:
+  - name: "rolling_sharpe_60d_{symbol}"
+    formula: "rolling_mean(returns, 60) / rolling_std(returns, 60) * sqrt(252)"
+    causal: true
+    notes: "Computed per symbol. Used to rank assets for rotation."
+  - name: "top_asset"
+    formula: "argmax(rolling_sharpe_60d across symbols)"
+    causal: true
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.03
+  quality_grade: "A-"
+  notes: "BTC-USD reduces overall grade from A to A-."
+created_at: "2026-03-26"

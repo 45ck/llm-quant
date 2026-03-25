@@ -1,0 +1,25 @@
+# Hypothesis: cross-asset-rotation-sharpe
+strategy_slug: "cross-asset-rotation-sharpe"
+statement: >
+  Monthly rotation into the highest 60-day Sharpe-ratio asset across four major
+  asset classes (US equities SPY, long bonds TLT, gold GLD, crypto BTC-USD)
+  outperforms the 60/40 SPY/TLT benchmark on a risk-adjusted basis, achieving
+  Sharpe > 0.50 with max drawdown < 20% over a 5-year test period.
+mechanism: >
+  Asset class performance is regime-dependent: equities outperform in risk-on
+  periods, bonds in risk-off, gold in stagflation/uncertainty, and crypto in
+  speculative liquidity environments. The 60-day Sharpe ratio captures both
+  return and volatility simultaneously, allowing the strategy to rotate away
+  from high-return but high-volatility assets (e.g., BTC in drawdowns) and
+  towards steadier performers. Monthly rebalancing reduces turnover while
+  remaining responsive to regime shifts. By concentrating capital in the
+  single best risk-adjusted performer, the strategy exploits cross-asset
+  momentum and regime persistence.
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 20%"
+  - "Fewer than 10 complete round trips (signal too rare)"
+  - "CPCV OOS Sharpe non-positive"
+  - "No meaningful outperformance over 60/40 benchmark"
+conviction: "medium"
+created_at: "2026-03-26"

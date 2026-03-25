@@ -1,0 +1,17 @@
+# Mandate: cross-asset-rotation-sharpe
+strategy_slug: "cross-asset-rotation-sharpe"
+objective: >
+  Generate alpha by dynamically rotating into the highest Sharpe-ratio asset
+  among TLT, GLD, SPY, and BTC-USD using a 60-day lookback. Hold the top-ranked
+  asset at 90% weight and rebalance monthly (every 20 trading days).
+benchmark: "60/40 SPY/TLT buy-and-hold"
+benchmark_weights:
+  SPY: 0.60
+  TLT: 0.40
+universe: ["TLT", "GLD", "SPY", "BTC-USD"]
+constraints:
+  max_drawdown: 0.20
+  min_sharpe: 0.50
+  min_trades: 10
+capital: 100000
+created_at: "2026-03-26"

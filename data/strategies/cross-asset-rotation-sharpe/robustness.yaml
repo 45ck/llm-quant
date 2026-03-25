@@ -1,0 +1,108 @@
+# Robustness Analysis: cross-asset-rotation-sharpe
+# Generated: 2026-03-26
+
+strategy_slug: "cross-asset-rotation-sharpe"
+trial_family: "asset_rotation"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.9181
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment d6a1408b (trial #1 in family).
+      With N=1 family trial, DSR is interpretable as statistical confidence
+      in the Sharpe estimate. Below 0.95 threshold.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: -0.2213
+    std_oos_sharpe: 0.5768
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -0.2213 is negative, failing the > 0 threshold.
+      Very high std (0.5768) indicates extreme fold-to-fold variance.
+      The strategy's performance is not consistent across time periods.
+
+  perturbation:
+    n_stable: 0
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    notes: >
+      Perturbations evaluated relative to registered base Sharpe=0.548 (exp d6a1408b).
+      Inline perturbation Sharpe values computed with same warmup/cost settings.
+    details:
+      - name: "lookback_days=30"
+        sharpe: 0.2978
+        pct_change: -45.7
+        stable: false
+      - name: "lookback_days=90"
+        sharpe: -0.0408
+        pct_change: -107.4
+        stable: false
+      - name: "top_k=2"
+        sharpe: 0.3816
+        pct_change: -30.4
+        stable: false
+      - name: "rank_by=return"
+        sharpe: 0.1890
+        pct_change: -65.5
+        stable: false
+      - name: "rebalance_frequency_days=10"
+        sharpe: -0.1830
+        pct_change: -133.4
+        stable: false
+
+cost_sensitivity:
+  sharpe_1x: 0.5484
+  sharpe_1_5x: 0.5347
+  sharpe_2x: 0.5230
+  sharpe_3x: 0.4970
+  max_dd_1x: 37.77
+  notes: "Cost sensitivity from experiment d6a1408b. Strategy is cost-robust (low turnover, ~48 trades/5yr)."
+
+max_drawdown_check:
+  value: 37.77
+  threshold: "< 20.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 37.77% vastly exceeds the 20% threshold.
+    The strategy concentrates 90% weight in the top-ranked asset, and when
+    BTC-USD ranks highest, single-asset crypto exposure drives extreme drawdowns.
+    The 2022 crypto bear market caused a ~37% portfolio drawdown that persisted
+    816 days. Even at 3x costs, MaxDD=40.38% -- this is a structural risk issue,
+    not a cost issue.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: DSR=0.9181 < 0.95. CPCV OOS Sharpe=-0.22 < 0. MaxDD=37.77% >> 20% budget.
+  Perturbation stability: 0/5 stable. All 4 gates failed.
+  The strategy generates positive 5-year total return (69.9%) outperforming 60/40 (50.0%),
+  but does so with unacceptable risk profile. Concentrated single-asset exposure to BTC-USD
+  during its rotation windows creates catastrophic drawdowns incompatible with the 20% mandate.
+  Parameter sensitivity is extreme -- lookback, rank metric, and rebalance frequency all
+  produce materially different outcomes, suggesting the base parameters are not robust.
+  A version with risk-parity weighting across top-K assets, capped BTC allocation,
+  and drawdown-based regime filter could address these issues in a future trial.
+
+created_at: "2026-03-26"

@@ -1,0 +1,41 @@
+# Research Spec: cross-asset-rotation-sharpe
+strategy_slug: "cross-asset-rotation-sharpe"
+strategy_type: "asset_rotation"
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+parameters:
+  symbols_list: "TLT,GLD,SPY,BTC-USD"
+  lookback_days: 60
+  top_k: 1
+  rank_by: "sharpe"
+  target_weight: 0.90
+  rebalance_frequency_days: 20
+cost_model:
+  spread_bps: 8.0
+  flat_slippage_bps: 3.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  lookback_days: "60d = 3 months Sharpe lookback. Standard medium-term window."
+  top_k: "Hold 1 asset at a time for concentrated rotation signal."
+  rank_by: "Sharpe preferred over raw return — risk-adjusted ranking."
+  rebalance_frequency_days: "20d monthly rebalance to reduce turnover."
+  target_weight: "90% in top asset, 10% cash buffer for execution."
+backtest_spec:
+  symbols: ["TLT", "GLD", "SPY", "BTC-USD"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 80
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+family: "asset_rotation"
+family_trial_number: 1
+family_prior_trials: 0
+created_at: "2026-03-26"
+updated_at: "2026-03-26"
