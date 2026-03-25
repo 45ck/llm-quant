@@ -1,0 +1,50 @@
+# Research Spec: hyg-spy-lead-lag
+strategy_slug: "hyg-spy-lead-lag"
+strategy_type: "lead_lag"
+
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+parameters:
+  leader_symbol: "HYG"
+  follower_symbol: "SPY"
+  lag_days: 1
+  signal_window: 3
+  entry_threshold: 0.005
+  exit_threshold: -0.003
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 2.0
+  slippage_volatility_factor: 0.1
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  lag_days: "From hypothesis. HY credit leads equity by 1-2 days. Using lag=1 (shorter end) as primary test. Not optimized."
+  signal_window: "3-day window captures short-term directional momentum in HYG without over-fitting to noise."
+  entry_threshold: "0.5% cumulative return threshold. Lower than H1 (XLF) because HY bonds are less volatile. Pre-specified."
+  exit_threshold: "Exit on -0.3% reversal. Tighter than H1 consistent with lower HYG volatility. Pre-specified."
+
+backtest_spec:
+  symbols: ["HYG", "SPY"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+
+benchmark:
+  symbols:
+    SPY: 1.00
+
+family: "lead_lag_hyg_spy"
+family_trial_number: 1
+family_prior_trials: 0
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

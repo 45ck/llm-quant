@@ -1,0 +1,37 @@
+# Hypothesis: hyg-spy-lead-lag
+strategy_slug: "hyg-spy-lead-lag"
+statement: >
+  HYG (iShares iBoxx $ High Yield Corporate Bond ETF) leads SPY (S&P 500 ETF)
+  by 1-2 trading days. A 3-day positive momentum signal in HYG predicts a
+  positive forward return in SPY at the 1-day lag, generating Sharpe > 0.50
+  over a 5-year test period with max drawdown < 15%.
+mechanism: >
+  High yield corporate bonds are priced by institutional credit investors who
+  are among the most sophisticated market participants. HY spreads compress
+  when these investors become more comfortable with default risk and economic
+  outlook -- a forward-looking signal that precedes broader equity repricing by
+  1-2 days. HYG therefore acts as a leading indicator of equity risk appetite.
+  The mechanism is: improving credit conditions reduce funding costs for
+  leveraged companies, improving their equity valuations, but the signal first
+  appears in HY bond prices before equity markets reprice. Conversely, HY
+  spread widening signals tightening credit and precedes equity selloffs. This
+  lead-lag relationship has a strong theoretical basis in credit market
+  microstructure and the information content of bond prices relative to stocks.
+universe: ["HYG", "SPY"]
+measurement: >
+  Leader: HYG (3-day cumulative return signal window).
+  Follower: SPY (position entered at lag_days=1 after HYG signal triggers).
+  Entry: HYG 3-day cumulative return > +0.5% (entry_threshold).
+  Exit: HYG 3-day cumulative return < -0.3% (exit_threshold).
+  Target position weight: 90% of capital.
+data_sources:
+  - "Yahoo Finance daily OHLCV for HYG"
+  - "Yahoo Finance daily OHLCV for SPY"
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too infrequent)"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium-high"
+created_at: "2026-03-26"

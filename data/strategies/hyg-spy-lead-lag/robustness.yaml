@@ -1,0 +1,107 @@
+# Robustness Analysis: hyg-spy-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "hyg-spy-lead-lag"
+trial_family: "lead_lag_hyg_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.9404
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment 20eeb315 (trial #1 in family).
+      DSR=0.9404 is marginally below the 0.95 threshold. The strategy
+      generates positive Sharpe (0.758) but the statistical confidence
+      is not quite sufficient. Close to passing -- DSR gap is 0.0096.
+      With more data or a longer history, this threshold would likely be met.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.9905
+    std_oos_sharpe: 0.7391
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.9905 is strongly positive -- strategy retains
+      predictive power out-of-sample. High std (0.7391) indicates meaningful
+      variance across folds, but the mean signal is robust. PASS.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lag_days=2"
+        sharpe: 0.5849
+        pct_change: -17.7
+        stable: true
+      - name: "lag_days=0"
+        sharpe: 0.3022
+        pct_change: -57.5
+        stable: false
+      - name: "entry_threshold=0.0025"
+        sharpe: 0.4938
+        pct_change: -30.5
+        stable: false
+      - name: "entry_threshold=0.01"
+        sharpe: 0.2395
+        pct_change: -66.3
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: 0.7091
+        pct_change: -0.2
+        stable: true
+
+max_drawdown_check:
+  value: 11.00
+  threshold: "< 15.0"
+  result: "PASS"
+  notes: >
+    Max drawdown of 11.00% is comfortably within the 15% equity threshold.
+    Even at 1.5x costs the drawdown reaches only 12.11%, and at 2x costs
+    13.29%. The strategy maintains acceptable drawdown profile across cost
+    scenarios. PASS.
+
+cost_sensitivity:
+  sharpe_1x: 0.758
+  max_dd_1x: 11.00
+  notes: >
+    Sharpe degrades from 0.758 at 1x to 0.666 at 1.5x and 0.570 at 2x costs.
+    Positive Sharpe maintained up to 2x costs. Strategy is profitable under
+    realistic transaction cost assumptions.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: 2 of 4 gates failed.
+  DSR=0.9404 narrowly misses 0.95 threshold (gap of 0.0096).
+  Perturbation: only 2/5 variants stable (40% < 60% threshold). The strategy
+  is highly sensitive to entry_threshold and lag parameter choice -- entry_threshold
+  of 0.01 (2x the base) cuts Sharpe by 66%, and lag_days=0 cuts it by 57%.
+  This parameter sensitivity suggests the signal is fragile and may reflect
+  in-sample optimization artifacts despite the pre-specified parameters.
+  CPCV OOS Sharpe (0.9905) and MaxDD (11.00%) both pass, indicating the core
+  credit-leads-equity hypothesis has some validity, but parameter robustness
+  is insufficient for promotion. A revised spec with wider parameter bounds or
+  signal smoothing to reduce threshold sensitivity could be explored.
+
+created_at: "2026-03-26"
