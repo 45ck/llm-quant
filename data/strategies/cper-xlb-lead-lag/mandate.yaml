@@ -1,0 +1,18 @@
+# Mandate: cper-xlb-lead-lag
+strategy_slug: "cper-xlb-lead-lag"
+objective: >
+  Generate alpha by exploiting the lead-lag relationship between CPER
+  (United States Copper Index Fund ETF) and XLB (Materials Select Sector
+  SPDR ETF). When CPER posts a strong 5-day return, enter a long position
+  in XLB expecting follow-through over the subsequent 5 trading days. Exit
+  when the copper signal deteriorates.
+benchmark: "SPY buy-and-hold"
+benchmark_weights:
+  SPY: 1.00
+universe: ["CPER", "XLB"]
+constraints:
+  max_drawdown: 0.15
+  min_sharpe: 0.80
+  min_trades: 20
+capital: 100000
+created_at: "2026-03-26"

@@ -1,0 +1,37 @@
+strategy_slug: "cper-xlb-lead-lag"
+strategy_type: "lead_lag"
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "This spec is FROZEN. Parameter changes require a new spec version."
+parameters:
+  leader_symbol: "CPER"
+  follower_symbol: "XLB"
+  lag_days: 5
+  signal_window: 5
+  entry_threshold: 0.015
+  exit_threshold: -0.008
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 2.0
+  slippage_volatility_factor: 0.1
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  lag_days: "Pre-specified from hypothesis. 5-day commodity-to-equity transmission lag. Not optimized."
+  signal_window: "Pre-specified. Matches lag_days for symmetric window capturing sustained copper move. Not tuned."
+  entry_threshold: "Pre-specified. 1.5% copper move required to signal. Not tuned on in-sample data."
+  exit_threshold: "Pre-specified. -0.8% copper deterioration exits position. Not tuned on in-sample data."
+backtest_spec:
+  symbols: ["CPER", "XLB"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+family: "lead_lag_cper_xlb"
+family_trial_number: 1
+family_prior_trials: 0
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

@@ -1,0 +1,107 @@
+# Robustness Analysis: cper-xlb-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "cper-xlb-lead-lag"
+trial_family: "lead_lag_cper_xlb"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.2356
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment ae846f07 (trial #1 in family).
+      DSR of 0.2356 indicates that the observed Sharpe of -0.350 has very
+      low statistical confidence. The strategy underperforms even a random
+      walk. With negative Sharpe the DSR interpretation is moot -- the
+      strategy is simply loss-making.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined. Moot given negative Sharpe.
+
+  cpcv:
+    mean_oos_sharpe: -0.1547
+    std_oos_sharpe: 0.5931
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -0.1547 is negative -- the strategy loses money
+      out-of-sample across all cross-validation folds on average. The
+      hypothesis of a copper-to-materials lead-lag relationship is not
+      supported by the data over the 5-year test period.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lag_days=4"
+        sharpe: -0.1501
+        pct_change: +5.3
+        stable: true
+      - name: "lag_days=6"
+        sharpe: 0.3474
+        pct_change: +319.1
+        stable: false
+      - name: "entry_threshold=0.0075"
+        sharpe: -0.2304
+        pct_change: -45.3
+        stable: false
+      - name: "entry_threshold=0.030"
+        sharpe: -0.2133
+        pct_change: -34.5
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: -0.1561
+        pct_change: +1.5
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: -0.350
+  sharpe_1_5x: -0.407
+  sharpe_2x: -0.476
+  sharpe_3x: -0.611
+  max_dd_1x: 25.78
+  notes: >
+    Strategy is loss-making at all cost levels. Negative Sharpe worsens
+    monotonically with costs. MaxDD of 25.78% at 1x far exceeds 15% mandate.
+
+max_drawdown_check:
+  value: 25.78
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 25.78% at 1x cost is nearly double the 15% mandate
+    constraint. The strategy enters XLB positions following copper rallies
+    but copper-to-materials signal has no predictive power in this period,
+    leading to persistent drawdown. Drawdown duration of 1047 days (nearly
+    the entire test period) indicates the strategy is structurally broken.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: All 4 gates fail. Sharpe=-0.350, DSR=0.2356, CPCV OOS=-0.1547,
+  MaxDD=25.78%, 2/5 perturbations stable. The copper-to-materials lead-lag
+  hypothesis is not supported by 5-year backtest data. CPER does not lead XLB
+  at the 5-day horizon in any economically meaningful way -- the strategy
+  loses money consistently across all cost levels and time periods. The
+  fundamental premise (Dr. Copper leads materials equities) may hold at
+  macro/quarterly timescales but not at the 5-day tactical horizon tested here.
+
+created_at: "2026-03-26"

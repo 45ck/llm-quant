@@ -1,0 +1,28 @@
+# Hypothesis: cper-xlb-lead-lag
+strategy_slug: "cper-xlb-lead-lag"
+statement: >
+  CPER (copper ETF) leads XLB (materials sector ETF) by approximately 5 trading
+  days. When CPER posts a 5-day return >= 1.5% (measured 5 days ago), XLB
+  produces a positive follow-through return over the next 5 days with
+  sufficient frequency to generate Sharpe > 0.80 after transaction costs
+  over a 5-year test period with max drawdown < 15%.
+mechanism: >
+  Copper is widely known as "Dr. Copper" -- a leading economic indicator due
+  to its pervasive industrial use (construction, electronics, EVs, infrastructure).
+  The Materials sector (XLB) is heavily weighted toward basic materials companies
+  (Freeport-McMoRan, Air Products, Nucor, etc.) whose earnings and stock prices
+  are driven by copper and metals demand. The 5-day lag reflects the time required
+  for: (1) commodity futures moves to translate to mining/materials equity
+  re-ratings; (2) equity analyst revisions following sustained commodity price
+  movements; (3) institutional rebalancing of commodity-linked equity exposures
+  after confirming a directional commodity trend. Unlike oil-to-energy (2-day),
+  the copper-to-materials link is slower due to more diversified XLB composition
+  (chemicals, construction materials, packaging).
+falsification_criteria:
+  - "Sharpe < 0.80 after transaction costs over 5-year test period"
+  - "Max drawdown > 15%"
+  - "Fewer than 20 complete round trips (signal too rare)"
+  - "CPCV OOS mean Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium-low"
+created_at: "2026-03-26"

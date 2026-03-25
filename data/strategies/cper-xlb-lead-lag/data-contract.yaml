@@ -1,0 +1,34 @@
+# Data Contract: cper-xlb-lead-lag
+strategy_slug: "cper-xlb-lead-lag"
+sources:
+  - symbol: "CPER"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: >
+      United States Copper Index Fund ETF. Daily OHLCV. Tracks copper futures index.
+      Lower volume than commodity majors but sufficient liquidity for signal use.
+  - symbol: "XLB"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "Materials Select Sector SPDR ETF. Daily OHLCV. Highest liquidity materials ETF."
+computed_signals:
+  - name: "cper_signal_return"
+    formula: "CPER_close[t - lag_days] / CPER_close[t - lag_days - signal_window] - 1"
+    causal: true
+    notes: "Leader return computed lag_days ago over signal_window days. Fully backward-looking."
+  - name: "entry_signal"
+    formula: "cper_signal_return >= entry_threshold (0.015)"
+    causal: true
+  - name: "exit_signal"
+    formula: "cper_signal_return <= exit_threshold (-0.008)"
+    causal: true
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.02
+  quality_grade: "A"
+  notes: "CPER has lower volume; verify no stale pricing or large bid-ask spreads."
+created_at: "2026-03-26"
