@@ -1,0 +1,21 @@
+# Hypothesis: eth-btc-ratio-mean-reversion
+strategy_slug: "eth-btc-ratio-mean-reversion"
+statement: >
+  The ETH/BTC price ratio exhibits mean-reverting behavior on a 20-day
+  Bollinger Band. When ratio exceeds the upper 2-sigma band, buying BTC
+  (underperformer) and when below lower band, buying ETH, achieves Sharpe >0.5
+  over the 5-year test period with max drawdown <20%.
+mechanism: >
+  ETH and BTC are structurally correlated (same macro drivers, shared
+  liquidity pools, correlated with risk appetite). Short-term ratio deviations
+  are driven by altcoin narrative cycles, Ethereum upgrade events, or BTC
+  halving anticipation -- all of which revert as the structural relationship
+  reasserts. The ratio is stationary in the long run, making Bollinger Band
+  mean-reversion a natural fit.
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 20% (crypto volatility budgeted higher)"
+  - "Fewer than 10 complete round trips (signal too rare)"
+  - "CPCV OOS Sharpe non-positive"
+conviction: "medium"
+created_at: "2026-03-26"

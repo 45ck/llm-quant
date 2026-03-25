@@ -1,0 +1,56 @@
+# Research Spec: eth-btc-ratio-mean-reversion
+# FROZEN before backtest execution
+strategy_slug: "eth-btc-ratio-mean-reversion"
+strategy_type: "pairs_ratio"
+
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+parameters:
+  symbol_a: "ETH-USD"
+  symbol_b: "BTC-USD"
+  bb_window: 20
+  bb_std: 2.0
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+
+cost_model:
+  spread_bps: 20.0
+  flat_slippage_bps: 10.0
+  slippage_volatility_factor: 0.5
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  bb_window: >
+    20 days = 4 trading weeks. Standard Bollinger Band period; not optimized.
+    Consistent with literature on mean-reversion in crypto ratios.
+  bb_std: >
+    2.0 = classic 2-sigma band. Not optimized. Standard signal threshold
+    for Bollinger Band strategies; captures ~95% of normal variation.
+  symbol_a: >
+    ETH-USD = Ethereum. Numerator of ratio; more volatile, narrative-driven.
+  symbol_b: >
+    BTC-USD = Bitcoin. Denominator; more stable, more liquidity.
+
+backtest_spec:
+  symbols: ["ETH-USD", "BTC-USD"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+  cost_model:
+    spread_bps: 20
+    commission_per_trade: 2.0
+    slippage_bps: 10
+    notes: "Higher costs for crypto: wider spreads, more slippage"
+
+family: "pairs_ratio"
+family_trial_number: 1
+family_prior_trials: 0
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

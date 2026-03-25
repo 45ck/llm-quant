@@ -1,0 +1,17 @@
+# Mandate: eth-btc-ratio-mean-reversion
+strategy_slug: "eth-btc-ratio-mean-reversion"
+objective: >
+  Generate alpha by trading mean-reversion of the ETH/BTC price ratio.
+  When ratio deviates >2 sigma from its 20-day mean, enter the underperformer.
+  Exit when ratio reverts to within 0.5 sigma of mean.
+benchmark: "50/50 ETH-USD/BTC-USD buy-and-hold"
+benchmark_weights:
+  ETH-USD: 0.50
+  BTC-USD: 0.50
+universe: ["ETH-USD", "BTC-USD"]
+constraints:
+  max_drawdown: 0.20
+  min_sharpe: 0.50
+  min_trades: 10
+capital: 100000
+created_at: "2026-03-26"

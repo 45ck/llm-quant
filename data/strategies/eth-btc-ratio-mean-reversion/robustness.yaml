@@ -1,0 +1,99 @@
+# Robustness Analysis: eth-btc-ratio-mean-reversion
+# Generated: 2026-03-26
+
+strategy_slug: "eth-btc-ratio-mean-reversion"
+trial_family: "pairs_ratio"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.9390
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment b80febe1 (trial #1 in family).
+      With N=1 family trial, DSR is interpretable as statistical confidence
+      in the Sharpe estimate. Below 0.95 threshold.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.6038
+    std_oos_sharpe: 0.5620
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.6038 is positive. High std (0.5620) indicates
+      significant variance across folds -- some periods perform well,
+      others poorly.
+
+  perturbation:
+    n_stable: 4
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "bb_window=15"
+        sharpe: 0.4199
+        pct_change: -24.3
+        stable: true
+      - name: "bb_window=25"
+        sharpe: 0.4284
+        pct_change: -22.8
+        stable: true
+      - name: "bb_std=1.5"
+        sharpe: 0.4592
+        pct_change: -17.2
+        stable: true
+      - name: "bb_std=2.5"
+        sharpe: 0.3507
+        pct_change: -36.8
+        stable: false
+      - name: "weight=0.70"
+        sharpe: 0.5167
+        pct_change: -6.8
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.6029
+  max_dd_1x: 42.25
+  notes: "Full cost sensitivity table in experiment b80febe1"
+
+max_drawdown_check:
+  value: 42.25
+  threshold: "< 20.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 42.25% vastly exceeds the 20% crypto-budgeted threshold.
+    The strategy takes full 90% weight positions in highly volatile crypto
+    assets. Drawdown driven by BTC/ETH spot price declines during 2022 crypto
+    winter, not by ratio mean-reversion failure per se. The ratio signal works
+    but single-asset directional exposure creates unacceptable drawdown.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: DSR=0.9390 < 0.95. MaxDD=42.25% >> 20% crypto budget.
+  While Sharpe (0.60) exceeds 0.50 target and CPCV is positive,
+  the drawdown profile is fundamentally incompatible with risk constraints.
+  The strategy correctly identifies ratio mean-reversion opportunities but
+  taking 90% weight in a single volatile crypto asset creates catastrophic
+  drawdown risk. A paired hedge (long underperformer / short outperformer)
+  would be needed to isolate the ratio signal from directional crypto exposure.
+
+created_at: "2026-03-26"
