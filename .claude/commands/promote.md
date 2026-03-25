@@ -23,13 +23,14 @@ Run the automated promotion gate. This checks all thresholds from the research l
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 from pathlib import Path
 from llm_quant.backtest.artifacts import (
     strategy_dir, get_lifecycle_state, ExperimentRegistry,
     check_data_grade, LifecycleState,
 )
 
-slug = '$ARGUMENTS'.strip() or 'NONE'
+slug = sys.argv[1].strip() if len(sys.argv) > 1 else 'NONE'
 if slug == 'NONE':
     # List available strategies
     base = Path('data/strategies')
@@ -105,7 +106,7 @@ if dc_path.exists():
 else:
     print('  Grade: UNKNOWN (no data-contract.yaml)')
 print()
-"
+" "$ARGUMENTS"
 ```
 
 ---
@@ -116,10 +117,11 @@ If a robustness gate has been run, check its results:
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 from pathlib import Path
 import json
 
-slug = '$ARGUMENTS'.strip() or 'NONE'
+slug = sys.argv[1].strip() if len(sys.argv) > 1 else 'NONE'
 if slug == 'NONE':
     exit(0)
 
@@ -187,7 +189,7 @@ if registry_path.exists():
 else:
     print('=== DSR / Statistical Gates ===')
     print('  No experiment registry found — run /backtest first')
-"
+" "$ARGUMENTS"
 ```
 
 ---
@@ -196,10 +198,11 @@ else:
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 import duckdb
 from datetime import date, timedelta
 
-slug = '$ARGUMENTS'.strip() or 'NONE'
+slug = sys.argv[1].strip() if len(sys.argv) > 1 else 'NONE'
 if slug == 'NONE':
     exit(0)
 
@@ -276,7 +279,7 @@ except Exception:
     print('  Unable to check incident record')
 
 db.close()
-"
+" "$ARGUMENTS"
 ```
 
 ---
@@ -325,8 +328,11 @@ Present the complete promotion checklist with all gate results:
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 import duckdb
 from datetime import datetime
+
+slug = sys.argv[1].strip() if len(sys.argv) > 1 else 'unknown'
 
 db = duckdb.connect('data/llm_quant.duckdb')
 
@@ -345,15 +351,15 @@ db.execute('''
     INSERT INTO strategy_changelog (change_type, description, outcome, details)
     VALUES (
         'promotion_review',
-        'Strategy promotion checklist executed for $ARGUMENTS',
+        'Strategy promotion checklist executed for ' || ?,
         'pending',
         'Review initiated on ' || CAST(CURRENT_TIMESTAMP AS VARCHAR)
     )
-''')
+''', [slug])
 
 print('Promotion review logged to strategy_changelog.')
 db.close()
-"
+" "$ARGUMENTS"
 ```
 
 ---

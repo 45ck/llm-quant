@@ -126,12 +126,14 @@ class MomentumStrategy(Strategy):
         # Rank by momentum
         momentum_scores.sort(key=lambda x: x[1], reverse=True)
         top_symbols = {s for s, _ in momentum_scores[:top_n]}
+        scored_symbols = {s for s, _ in momentum_scores}
 
         # Buy top-N that we don't hold
+        new_positions = 0
         for symbol, score in momentum_scores[:top_n]:
             if (
                 symbol in portfolio.positions
-                or len(portfolio.positions) >= self.config.max_positions
+                or len(portfolio.positions) + new_positions >= self.config.max_positions
             ):
                 continue
             close = prices.get(symbol, 0)
@@ -148,8 +150,9 @@ class MomentumStrategy(Strategy):
                     reasoning=(f"Momentum top-{top_n} ({score:.2%} over {lookback}d)"),
                 )
             )
+            new_positions += 1
 
-        # Close positions that fell out of top-N
+        # Close positions that fell out of top-N (only for symbols this strategy scored)
         signals.extend(
             TradeSignal(
                 symbol=symbol,
@@ -160,7 +163,7 @@ class MomentumStrategy(Strategy):
                 reasoning=f"Dropped from momentum top-{top_n}",
             )
             for symbol in portfolio.positions
-            if symbol not in top_symbols
+            if symbol not in top_symbols and symbol in scored_symbols
         )
 
         return signals
@@ -255,24 +258,15 @@ class RegimeMomentumStrategy(Strategy):
     Risk-off: reduce to defensive positions only
     """
 
-    def generate_signals(
+    def _detect_regime(
         self,
-        as_of_date: date,
         indicators_df: pl.DataFrame,
-        portfolio: Portfolio,
-        prices: dict[str, float],
-    ) -> list[TradeSignal]:
-        signals: list[TradeSignal] = []
-        params = self.config.parameters
-        vix_risk_off = params.get("vix_risk_off", 25)
-        vix_transition = params.get("vix_transition", 20)
-        lookback = params.get("lookback_days", 63)
-        top_n = params.get("top_n", 5)
-        defensive_symbols = set(params.get("defensive_symbols", ["TLT", "GLD", "IEF"]))
-
-        # Determine regime from VIX (if available)
-        vix_data = indicators_df.filter(pl.col("symbol") == "VIX").sort("date")
+        vix_risk_off: float,
+        vix_transition: float,
+    ) -> str:
+        """Classify market regime from VIX level and SPY vs SMA200."""
         regime = "risk_on"
+        vix_data = indicators_df.filter(pl.col("symbol") == "VIX").sort("date")
         if len(vix_data) > 0:
             vix_close = vix_data.tail(1).row(0, named=True)["close"]
             if vix_close >= vix_risk_off:
@@ -280,7 +274,6 @@ class RegimeMomentumStrategy(Strategy):
             elif vix_close >= vix_transition:
                 regime = "transition"
 
-        # Also check SPY SMA200 trend
         spy_data = indicators_df.filter(pl.col("symbol") == "SPY").sort("date")
         if len(spy_data) > 0 and "sma_200" in spy_data.columns:
             spy_row = spy_data.tail(1).row(0, named=True)
@@ -290,6 +283,72 @@ class RegimeMomentumStrategy(Strategy):
                     regime = "transition"
                 elif regime == "transition":
                     regime = "risk_off"
+        return regime
+
+    def _compute_momentum_scores(
+        self,
+        indicators_df: pl.DataFrame,
+        lookback: int,
+    ) -> list[tuple[str, float]]:
+        """Compute trailing-return momentum scores, filtered by SMA200."""
+        symbols = [
+            s
+            for s in indicators_df.select("symbol").unique().to_series().to_list()
+            if s != "VIX"
+        ]
+        scores: list[tuple[str, float]] = []
+        for symbol in symbols:
+            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+            if len(sym_data) < lookback:
+                continue
+            recent = sym_data.tail(lookback)
+            first_close = recent.row(0, named=True)["close"]
+            last_close = recent.row(-1, named=True)["close"]
+            if first_close > 0:
+                scores.append((symbol, last_close / first_close - 1.0))
+
+        # Filter out symbols trading below their 200-day SMA
+        if "sma_200" in indicators_df.columns:
+            filtered: list[tuple[str, float]] = []
+            for symbol, ret in scores:
+                sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+                if len(sym_data) == 0:
+                    continue
+                row = sym_data.tail(1).row(0, named=True)
+                sma200 = row.get("sma_200")
+                if sma200 is None or row["close"] >= sma200:
+                    filtered.append((symbol, ret))
+            scores = filtered
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        signals: list[TradeSignal] = []
+        params = self.config.parameters
+        vix_risk_off = params.get(
+            "vix_risk_off_threshold", params.get("vix_risk_off", 25)
+        )
+        vix_transition = params.get(
+            "vix_risk_on_threshold", params.get("vix_transition", 20)
+        )
+        lookback = params.get("momentum_lookback", params.get("lookback_days", 63))
+        top_n = params.get("top_n_momentum", params.get("top_n", 5))
+        stop_mult = params.get("stop_atr_multiplier", 2.0)
+        defensive_symbols = set(
+            params.get(
+                "defensive_symbols",
+                ["TLT", "IEF", "SHY", "GLD", "TIP", "XLP", "XLU", "XLV"],
+            )
+        )
+
+        regime = self._detect_regime(indicators_df, vix_risk_off, vix_transition)
 
         # Adjust allocation based on regime
         if regime == "risk_off":
@@ -303,26 +362,7 @@ class RegimeMomentumStrategy(Strategy):
             max_pos = self.config.max_positions
 
         target_weight = self.config.target_position_weight * weight_mult
-
-        # Compute momentum scores (excluding VIX)
-        symbols = [
-            s
-            for s in indicators_df.select("symbol").unique().to_series().to_list()
-            if s != "VIX"
-        ]
-        scores: list[tuple[str, float]] = []
-
-        for symbol in symbols:
-            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
-            if len(sym_data) < lookback:
-                continue
-            recent = sym_data.tail(lookback)
-            first_close = recent.row(0, named=True)["close"]
-            last_close = recent.row(-1, named=True)["close"]
-            if first_close > 0:
-                scores.append((symbol, last_close / first_close - 1.0))
-
-        scores.sort(key=lambda x: x[1], reverse=True)
+        scores = self._compute_momentum_scores(indicators_df, lookback)
 
         # In risk-off, prefer defensive symbols
         if regime == "risk_off":
@@ -333,14 +373,31 @@ class RegimeMomentumStrategy(Strategy):
             ranked = scores
 
         top_symbols = {s for s, _ in ranked[:top_n]}
+        scored_symbols = {s for s, _ in scores}
 
         # Generate buy signals
+        new_positions = 0
         for symbol, score in ranked[:top_n]:
-            if symbol not in portfolio.positions and len(portfolio.positions) < max_pos:
+            if (
+                symbol not in portfolio.positions
+                and len(portfolio.positions) + new_positions < max_pos
+            ):
                 close = prices.get(symbol, 0)
                 if close <= 0:
                     continue
-                stop_loss = close * (1.0 - self.config.stop_loss_pct)
+
+                # ATR-based stop-loss
+                sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+                atr_col = "atr_14"
+                if atr_col in sym_data.columns and len(sym_data) > 0:
+                    atr_val = sym_data.tail(1).row(0, named=True).get(atr_col)
+                    if atr_val and atr_val > 0:
+                        stop_loss = close - (stop_mult * atr_val)
+                    else:
+                        stop_loss = close * (1.0 - self.config.stop_loss_pct)
+                else:
+                    stop_loss = close * (1.0 - self.config.stop_loss_pct)
+
                 signals.append(
                     TradeSignal(
                         symbol=symbol,
@@ -354,8 +411,9 @@ class RegimeMomentumStrategy(Strategy):
                         ),
                     )
                 )
+                new_positions += 1
 
-        # Close positions not in top-N or exceeding regime limits
+        # Close positions not in top-N (only for symbols this strategy scored)
         signals.extend(
             TradeSignal(
                 symbol=symbol,
@@ -366,7 +424,7 @@ class RegimeMomentumStrategy(Strategy):
                 reasoning=f"Regime={regime}, dropped from top-{top_n}",
             )
             for symbol in portfolio.positions
-            if symbol not in top_symbols
+            if symbol not in top_symbols and symbol in scored_symbols
         )
 
         return signals

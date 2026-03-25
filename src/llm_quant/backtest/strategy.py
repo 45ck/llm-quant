@@ -133,19 +133,24 @@ class SMACrossoverStrategy(Strategy):
         sma_fast_col = f"sma_{sma_fast}"
         sma_slow_col = f"sma_{sma_slow}"
 
+        # Validate required SMA columns exist
+        required_cols = [sma_fast_col, sma_slow_col]
+        missing = [c for c in required_cols if c not in indicators_df.columns]
+        if missing:
+            available_sma = [c for c in indicators_df.columns if c.startswith("sma_")]
+            logger.warning(
+                "SMA columns %s not in data (available: %s). Check indicator config.",
+                missing,
+                available_sma,
+            )
+            return signals
+
         # Get unique symbols in the data
         symbols = indicators_df.select("symbol").unique().to_series().to_list()
 
         for symbol in symbols:
             sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
             if len(sym_data) < 2:
-                continue
-
-            # Check required columns exist
-            if (
-                sma_fast_col not in sym_data.columns
-                or sma_slow_col not in sym_data.columns
-            ):
                 continue
 
             # Get last two rows for crossover detection

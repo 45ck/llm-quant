@@ -16,9 +16,11 @@ from pathlib import Path
 from typing import Any
 
 import polars as pl
+import yaml
 
 from llm_quant.backtest.artifacts import (
     ExperimentRegistry,
+    hash_content,
     strategy_dir,
 )
 from llm_quant.backtest.metrics import (
@@ -96,7 +98,7 @@ class CostModel:
             and daily_volume > 0
             and daily_volatility is not None
             and daily_volatility > 0
-            and shares > 0
+            and abs(shares) > 0
         ):
             impact = (
                 self.slippage_volatility_factor
@@ -318,6 +320,19 @@ class BacktestEngine:
             # 4a. Get today's prices
             today_prices = self._get_prices_for_date(prices_df, current_date)
             if not today_prices:
+                # D5: carry forward previous NAV so nav_series stays aligned
+                nav_series.append(nav_series[-1])
+                snapshots.append(
+                    DailySnapshot(
+                        date=current_date,
+                        nav=nav_series[-1],
+                        cash=portfolio.cash,
+                        gross_exposure=portfolio.gross_exposure,
+                        net_exposure=portfolio.net_exposure,
+                        n_positions=len(portfolio.positions),
+                        trades_today=0,
+                    )
+                )
                 continue
 
             # 4b. Mark portfolio to market at today's close
@@ -460,6 +475,11 @@ class BacktestEngine:
         )
         metrics.warnings.extend(data_warnings)
 
+        # W5: compute spec_hash from strategy config
+        spec_hash = hash_content(
+            yaml.dump(self.strategy.config.to_dict(), sort_keys=True)
+        )
+
         return BacktestResult(
             experiment_id=experiment_id,
             strategy_name=self.strategy.config.name,
@@ -473,6 +493,7 @@ class BacktestEngine:
             nav_series=nav_series,
             daily_returns=metrics.daily_returns,
             cost_model=cost_model,
+            spec_hash=spec_hash,
             trial_number=trial_count,
             symbols_used=symbols_used,
             data_warnings=data_warnings,
@@ -786,10 +807,16 @@ class BacktestEngine:
         if total_dates == 0:
             return warnings
 
+        first_trade_date = trading_dates[0]
+        last_trade_date = trading_dates[-1]
         symbols = df.select("symbol").unique().to_series().to_list()
         for symbol in symbols:
             sym_dates = (
-                df.filter(pl.col("symbol") == symbol)
+                df.filter(
+                    (pl.col("symbol") == symbol)
+                    & (pl.col("date") >= first_trade_date)
+                    & (pl.col("date") <= last_trade_date)
+                )
                 .select("date")
                 .to_series()
                 .to_list()

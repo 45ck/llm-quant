@@ -43,6 +43,41 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 
+def _build_strategy_config(strategy_name: str, spec: dict) -> StrategyConfig:
+    """Build a StrategyConfig from frozen spec, mapping parameter names."""
+    params = spec.get("parameters", {})
+
+    # Map frozen-spec parameter names to what strategies expect
+    mapped_params = dict(params)
+    if "top_n_momentum" in params and "top_n" not in params:
+        mapped_params["top_n"] = params["top_n_momentum"]
+    if "momentum_lookback" in params and "lookback_days" not in params:
+        mapped_params["lookback_days"] = params["momentum_lookback"]
+    if "rebalance_frequency_days" in params and "rebalance_frequency" not in params:
+        mapped_params["rebalance_frequency"] = params["rebalance_frequency_days"]
+
+    return StrategyConfig(
+        name=strategy_name,
+        rebalance_frequency_days=params.get(
+            "rebalance_frequency_days",
+            spec.get("rebalance_frequency_days", 5),
+        ),
+        max_positions=params.get(
+            "top_n_momentum",
+            spec.get("max_positions", 10),
+        ),
+        target_position_weight=params.get(
+            "target_position_weight",
+            spec.get("target_position_weight", 0.05),
+        ),
+        stop_loss_pct=params.get(
+            "stop_loss_pct",
+            spec.get("stop_loss_pct", 0.05),
+        ),
+        parameters=mapped_params,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a backtest")
     parser.add_argument("--slug", required=True, help="Strategy slug")
@@ -97,28 +132,7 @@ def main() -> None:
     else:
         logger.warning("Skipping spec check — results are exploratory only")
 
-    # Build strategy config from spec
-    params = spec.get("parameters", {})
-    config = StrategyConfig(
-        name=strategy_name,
-        rebalance_frequency_days=params.get(
-            "rebalance_frequency_days",
-            spec.get("rebalance_frequency_days", 5),
-        ),
-        max_positions=params.get(
-            "top_n_momentum",
-            spec.get("max_positions", 10),
-        ),
-        target_position_weight=params.get(
-            "target_position_weight",
-            spec.get("target_position_weight", 0.05),
-        ),
-        stop_loss_pct=params.get(
-            "stop_loss_pct",
-            spec.get("stop_loss_pct", 0.05),
-        ),
-        parameters=params,
-    )
+    config = _build_strategy_config(strategy_name, spec)
 
     strategy = create_strategy(strategy_name, config)
     cost_model = CostModel.from_spec(spec)
@@ -186,37 +200,41 @@ def main() -> None:
     experiments_dir = strat_dir / "experiments"
     experiments_dir.mkdir(parents=True, exist_ok=True)
 
-    artifact = {
-        "experiment_id": result.experiment_id,
-        "trial_number": trial_number,
-        "strategy_name": result.strategy_name,
-        "start_date": str(result.start_date),
-        "end_date": str(result.end_date),
-        "initial_capital": result.initial_capital,
-        "symbols": result.symbols_used,
-        "spec_hash": spec.get("frozen_hash", ""),
-        "cost_model": {
-            "spread_bps": cost_model.spread_bps,
-            "slippage_volatility_factor": cost_model.slippage_volatility_factor,
-            "flat_slippage_bps": cost_model.flat_slippage_bps,
-        },
-        "metrics_1x": {
-            "total_return": base_metrics.total_return,
-            "annualized_return": base_metrics.annualized_return,
-            "sharpe_ratio": base_metrics.sharpe_ratio,
-            "sortino_ratio": base_metrics.sortino_ratio,
-            "calmar_ratio": base_metrics.calmar_ratio,
-            "max_drawdown": base_metrics.max_drawdown,
-            "dsr": base_metrics.dsr,
-            "psr": base_metrics.psr,
-            "total_trades": base_metrics.total_trades,
-            "win_rate": base_metrics.win_rate,
+    if base_metrics:
+        artifact = {
+            "experiment_id": result.experiment_id,
+            "trial_number": trial_number,
+            "strategy_name": result.strategy_name,
+            "start_date": str(result.start_date),
+            "end_date": str(result.end_date),
+            "initial_capital": result.initial_capital,
+            "symbols": result.symbols_used,
+            "spec_hash": spec.get("frozen_hash", ""),
+            "cost_model": {
+                "spread_bps": cost_model.spread_bps,
+                "slippage_volatility_factor": cost_model.slippage_volatility_factor,
+                "flat_slippage_bps": cost_model.flat_slippage_bps,
+            },
+            "metrics_1x": {
+                "total_return": base_metrics.total_return,
+                "annualized_return": base_metrics.annualized_return,
+                "sharpe_ratio": base_metrics.sharpe_ratio,
+                "sortino_ratio": base_metrics.sortino_ratio,
+                "calmar_ratio": base_metrics.calmar_ratio,
+                "max_drawdown": base_metrics.max_drawdown,
+                "dsr": base_metrics.dsr,
+                "psr": base_metrics.psr,
+                "total_trades": base_metrics.total_trades,
+                "win_rate": base_metrics.win_rate,
+            },
+            "daily_returns": result.daily_returns,
+            "data_warnings": result.data_warnings,
         }
-        if base_metrics
-        else {},
-        "daily_returns": result.daily_returns,
-        "data_warnings": result.data_warnings,
-    }
+    else:
+        artifact = {
+            "experiment_id": result.experiment_id,
+            "error": "No metrics computed",
+        }
 
     save_artifact(experiments_dir / f"{result.experiment_id}.yaml", artifact)
 

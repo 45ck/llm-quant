@@ -181,8 +181,8 @@ def compute_pbo(
         # Find IS-optimal strategy
         is_best = int(np.argmax(is_perf))
 
-        # Rank of IS-best in OOS
-        oos_rank = int(np.sum(oos_perf >= oos_perf[is_best]))
+        # Rank of IS-best in OOS (1-based; strict inequality avoids ties inflating rank)
+        oos_rank = int(np.sum(oos_perf > oos_perf[is_best])) + 1
         is_best_oos_ranks.append(oos_rank)
 
         # IS-best ranks below OOS median?
@@ -197,7 +197,7 @@ def compute_pbo(
         n_combinations=len(combos),
         n_strategies=N,
         is_best_oos_ranks=is_best_oos_ranks,
-        passed=pbo <= 0.10,
+        passed=False,  # caller decides threshold
     )
 
 
@@ -336,7 +336,8 @@ def generate_perturbations(
             up_params = dict(base_params)
             up_val = value * (1.0 + perturbation_pct)
             if isinstance(value, int):
-                up_val = max(1, round(up_val))
+                up_val = round(up_val)
+                up_val = max(1, up_val) if value > 0 else min(-1, up_val)
             up_params[key] = up_val
             perturbations.append((f"{key}+{perturbation_pct:.0%}", up_params))
 
@@ -344,7 +345,8 @@ def generate_perturbations(
             down_params = dict(base_params)
             down_val = value * (1.0 - perturbation_pct)
             if isinstance(value, int):
-                down_val = max(1, round(down_val))
+                down_val = round(down_val)
+                down_val = max(1, down_val) if value > 0 else min(-1, down_val)
             down_params[key] = down_val
             perturbations.append((f"{key}-{perturbation_pct:.0%}", down_params))
 
@@ -363,7 +365,7 @@ def run_robustness_gate(
     cost_2x_sharpe: float,
     perturbation_results: list[PerturbationResult],
     dsr_threshold: float = 0.95,
-    pbo_threshold: float = 0.10,  # noqa: ARG001
+    pbo_threshold: float = 0.10,
 ) -> RobustnessResult:
     """Run the complete robustness gate.
 
@@ -398,7 +400,7 @@ def run_robustness_gate(
     # 2. PBO gate
     if len(returns_matrix) >= 2:
         result.pbo = compute_pbo(returns_matrix)
-        result.pbo_passed = result.pbo.passed
+        result.pbo_passed = result.pbo.pbo <= pbo_threshold
     else:
         logger.warning("Insufficient experiments for PBO — need >= 2")
         result.pbo = PBOResult(pbo=1.0, n_strategies=len(returns_matrix))

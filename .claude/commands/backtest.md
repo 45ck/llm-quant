@@ -15,7 +15,7 @@ You are the portfolio manager. A backtest is an experiment that tests a frozen r
 Read the experiment registry and display recent experiments:
 
 ```bash
-cd E:/llm-quant && cat data/strategies/experiment-registry.jsonl 2>/dev/null | tail -20
+cd E:/llm-quant && for d in data/strategies/*/; do cat "${d}experiment-registry.jsonl" 2>/dev/null; done | tail -20
 ```
 
 If no registry exists:
@@ -72,9 +72,10 @@ Count existing experiments for this slug to compute the trial number (used for D
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
-import json, os
+import json, os, sys
 
-registry_path = 'data/strategies/experiment-registry.jsonl'
+slug = sys.argv[1] if len(sys.argv) > 1 else ''
+registry_path = f'data/strategies/{slug}/experiment-registry.jsonl'
 if not os.path.exists(registry_path):
     print('trial_number=1')
 else:
@@ -82,10 +83,10 @@ else:
     with open(registry_path) as f:
         for line in f:
             entry = json.loads(line.strip())
-            if entry.get('slug') == '$SLUG':
+            if entry.get('slug') == slug:
                 count += 1
     print(f'trial_number={count + 1}')
-"
+" "$SLUG"
 ```
 
 **Step 4: Run the backtest**
@@ -175,12 +176,14 @@ Append the result to the experiment registry (JSONL format, one entry per line, 
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
-import json, os
+import json, os, sys
 from datetime import date
+
+slug = sys.argv[1] if len(sys.argv) > 1 else ''
 
 entry = {
     'experiment_id': '{trial_number}',
-    'slug': '$SLUG',
+    'slug': slug,
     'spec_hash': '{hash}',
     'trial_number': {trial_number},
     'date': str(date.today()),
@@ -212,19 +215,19 @@ entry = {
     'status': 'completed'
 }
 
-registry_path = 'data/strategies/experiment-registry.jsonl'
+registry_path = f'data/strategies/{slug}/experiment-registry.jsonl'
 os.makedirs(os.path.dirname(registry_path), exist_ok=True)
 with open(registry_path, 'a') as f:
     f.write(json.dumps(entry) + '\n')
 
 print(f'Experiment recorded: trial #{entry[\"trial_number\"]} for {entry[\"slug\"]}')
-"
+" "$SLUG"
 ```
 
 **Step 7: Next steps**
 
 ```
-Experiment recorded to: data/strategies/experiment-registry.jsonl
+Experiment recorded to: data/strategies/{slug}/experiment-registry.jsonl
 
 Next steps:
 - Run additional experiments if needed (each increments the trial counter)

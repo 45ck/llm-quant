@@ -50,16 +50,17 @@ Also read the experiment registry for backtest baselines:
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
-import json, os
+import json, os, sys
 
-registry_path = 'data/strategies/experiment-registry.jsonl'
+slug = sys.argv[1] if len(sys.argv) > 1 else ''
+registry_path = f'data/strategies/{slug}/experiment-registry.jsonl'
 if os.path.exists(registry_path):
     with open(registry_path) as f:
         for line in f:
             entry = json.loads(line.strip())
-            if entry.get('slug') == '$SLUG':
+            if entry.get('slug') == slug:
                 print(json.dumps(entry, indent=2))
-"
+" "$SLUG"
 ```
 
 **Step 2: Pull live performance metrics**

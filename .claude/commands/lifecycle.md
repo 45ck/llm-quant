@@ -169,6 +169,7 @@ Check the current lifecycle state and show what exists, what is missing, and wha
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 from pathlib import Path
 from llm_quant.backtest.artifacts import (
     get_lifecycle_state, LifecycleState, ExperimentRegistry,
@@ -177,7 +178,7 @@ from llm_quant.backtest.artifacts import (
 import yaml, json, os
 from datetime import datetime
 
-slug = '$ARGUMENTS'.strip().split()[0] if '$ARGUMENTS'.strip() else ''
+slug = sys.argv[1].strip().split()[0] if len(sys.argv) > 1 and sys.argv[1].strip() else ''
 if not slug:
     print('NO_SLUG')
     exit(0)
@@ -330,7 +331,7 @@ for i, label in enumerate(labels):
         parts.append(f'({label})')
 pipeline = ' -> '.join(parts)
 print(f'PIPELINE|{pipeline}')
-"
+" "$ARGUMENTS"
 ```
 
 **If output is `NOT_FOUND`**, display:
@@ -389,15 +390,16 @@ First, run the same state-detection script from Mode 2 to determine the current 
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 from pathlib import Path
 from llm_quant.backtest.artifacts import (
     get_lifecycle_state, LifecycleState, ExperimentRegistry, load_artifact,
 )
 import yaml
 
-args = '$ARGUMENTS'.strip().split()
-slug = args[0] if args else ''
-subcmd = args[1] if len(args) > 1 else ''
+raw_args = sys.argv[1].strip().split() if len(sys.argv) > 1 and sys.argv[1].strip() else []
+slug = raw_args[0] if raw_args else ''
+subcmd = raw_args[1] if len(raw_args) > 1 else ''
 
 if not slug:
     print('NO_SLUG')
@@ -465,7 +467,7 @@ if next_cmd is None:
 next_cmd = next_cmd.replace('{slug}', slug)
 gate = GATE_CHECKS.get(state, '')
 print(f'NEXT_ACTION|{next_cmd}|{gate}')
-"
+" "$ARGUMENTS"
 ```
 
 **If the output is `TERMINAL`**, display:
@@ -496,6 +498,7 @@ Run a comprehensive audit of every artifact, including hashes, dates, gate resul
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
 from pathlib import Path
 from llm_quant.backtest.artifacts import (
     get_lifecycle_state, LifecycleState, ExperimentRegistry,
@@ -504,8 +507,8 @@ from llm_quant.backtest.artifacts import (
 import yaml, json, os
 from datetime import datetime
 
-args = '$ARGUMENTS'.strip().split()
-slug = args[0] if args else ''
+raw_args = sys.argv[1].strip().split() if len(sys.argv) > 1 and sys.argv[1].strip() else []
+slug = raw_args[0] if raw_args else ''
 
 if not slug:
     print('NO_SLUG')
@@ -728,7 +731,7 @@ elif sp.exists():
     print('  No experiments to verify against.')
 else:
     print('  No spec or experiments yet.')
-"
+" "$ARGUMENTS"
 ```
 
 Present the output directly -- it is already formatted for human reading. Add section headers and any PASS/FAIL highlights as markdown.

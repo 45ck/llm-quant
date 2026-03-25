@@ -40,9 +40,10 @@ Check that at least 2 backtest experiments exist:
 
 ```bash
 cd E:/llm-quant && PYTHONPATH=src python -c "
-import json, os
+import json, os, sys
 
-registry_path = 'data/strategies/experiment-registry.jsonl'
+slug = sys.argv[1] if len(sys.argv) > 1 else ''
+registry_path = f'data/strategies/{slug}/experiment-registry.jsonl'
 if not os.path.exists(registry_path):
     print('ERROR: No experiment registry found. Run at least 2 backtests first.')
     exit(1)
@@ -51,16 +52,16 @@ count = 0
 with open(registry_path) as f:
     for line in f:
         entry = json.loads(line.strip())
-        if entry.get('slug') == '$SLUG':
+        if entry.get('slug') == slug:
             count += 1
 
 if count < 2:
-    print(f'ERROR: Only {count} experiment(s) found for $SLUG. Need >= 2.')
-    print('Run more backtests with: /backtest $SLUG')
+    print(f'ERROR: Only {count} experiment(s) found for {slug}. Need >= 2.')
+    print(f'Run more backtests with: /backtest {slug}')
     exit(1)
 else:
-    print(f'Found {count} experiments for $SLUG. Proceeding with robustness analysis.')
-"
+    print(f'Found {count} experiments for {slug}. Proceeding with robustness analysis.')
+" "$ARGUMENTS"
 ```
 
 Also verify the frozen research spec exists:

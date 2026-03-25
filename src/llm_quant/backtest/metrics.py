@@ -423,6 +423,18 @@ def compute_all_metrics(
     """Compute all metrics from a NAV series and trade list."""
     metrics = BacktestMetrics()
 
+    # Filter out NaN/None values
+    clean_nav = [
+        v
+        for v in nav_series
+        if v is not None and not (isinstance(v, float) and math.isnan(v))
+    ]
+    if len(clean_nav) < len(nav_series):
+        dropped = len(nav_series) - len(clean_nav)
+        logger.warning("Dropped %d NaN/None values from NAV series", dropped)
+        metrics.warnings.append(f"Dropped {dropped} NaN/None values from NAV series")
+    nav_series = clean_nav
+
     if len(nav_series) < 2:
         metrics.warnings.append("NAV series too short for metrics computation")
         return metrics
