@@ -1,0 +1,127 @@
+# Robustness Analysis: xlu-spy-inverse-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "xlu-spy-inverse-lead-lag"
+trial_family: "lead_lag_xlu_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8683
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR=0.8683 is the closest to passing of all three H-series hypotheses,
+      but still below the 0.95 threshold. The positive Sharpe (0.531) is
+      directionally correct, but with 1 trial and ~4 years of data the
+      statistical confidence is insufficient to clear the bar. Annualised
+      returns of 5.45% with high win-rate variance make this borderline.
+      If the strategy generated returns in a larger sample, DSR would improve.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 trial in this
+      family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: 0.6893
+    std_oos_sharpe: 0.8610
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of 0.6893 is positive. High std (0.8610) reflects
+      significant variation across time windows — the strategy performs
+      better in some periods than others. The positive mean OOS Sharpe
+      suggests genuine alpha exists in this signal, but consistency is
+      limited. Some sub-periods likely correspond to strong sector rotation
+      regimes where the XLU canary works well.
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    notes: >
+      3 of 5 perturbations are stable (within 30% Sharpe change). The lag=1
+      perturbation shows -93% change (signals degrade at shorter lag — the
+      1-day horizon is too short). The entry_threshold=0.016 variant degrades
+      significantly (-75%) because the signal becomes too infrequent with a
+      high threshold. These instabilities suggest the specific parameter
+      choices matter, though the lag=3 variant is actually better.
+    details:
+      - name: "lag_days=1"
+        sharpe: 0.0344
+        max_dd: 0.2019
+        pct_change: -92.9
+        stable: false
+      - name: "lag_days=3"
+        sharpe: 0.5527
+        max_dd: 0.1876
+        pct_change: +14.3
+        stable: true
+      - name: "entry_threshold=0.004"
+        sharpe: 0.4079
+        max_dd: 0.2427
+        pct_change: -15.6
+        stable: true
+      - name: "entry_threshold=0.016"
+        sharpe: 0.1214
+        max_dd: 0.1516
+        pct_change: -74.9
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: 0.4572
+        max_dd: 0.2062
+        pct_change: -5.4
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: 0.531
+  max_dd_1x: 24.92
+  notes: >
+    Strategy is profitable at 1x costs (Sharpe=0.531) but degrades to 0.159
+    at 3x cost multiplier. Real-world tradability is cost-sensitive. At 2x
+    (realistic for retail execution), Sharpe=0.331 — still positive but
+    well below target of 0.80.
+
+max_drawdown_check:
+  value: 24.92
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 24.92% exceeds the 15% mandate threshold. The strategy
+    takes 90% weight in SPY, which naturally suffers large drawdowns in risk-off
+    periods (2022 bear market drew down significantly). The XLU inverse signal
+    provides some timing benefit vs buy-and-hold SPY (which drew down ~25% in
+    2022 alone) but does not reduce drawdown below 15%. Position sizing at 90%
+    target weight in a single high-vol equity ETF is the root cause of the
+    drawdown exceedance.
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: Sharpe=0.531 DSR=0.8683 MaxDD=24.9% — DSR and MaxDD gates fail.
+  The XLU inverse lead-lag mechanism shows genuine signal: CPCV OOS Sharpe
+  is positive (0.69), perturbation stability is 3/5, and the strategy is
+  profitable. However, DSR=0.87 < 0.95 threshold means insufficient statistical
+  confidence in the 5-year sample. MaxDD=24.9% exceeds 15% mandate constraint —
+  the full 90% SPY weight creates unacceptable drawdown. This hypothesis is not
+  ready for promotion but shows more promise than H7/H8. Future iterations should
+  consider: (1) reducing position size to limit drawdown; (2) combining with a
+  drawdown overlay; (3) testing with a longer sample period to strengthen DSR.
+  The economic mechanism (utilities as defensive canary) has empirical support
+  — the signal is real, the sizing and drawdown management need improvement.
+
+created_at: "2026-03-26"

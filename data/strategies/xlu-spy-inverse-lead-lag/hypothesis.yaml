@@ -1,0 +1,44 @@
+# Hypothesis: xlu-spy-inverse-lead-lag
+strategy_slug: "xlu-spy-inverse-lead-lag"
+statement: >
+  XLU (Utilities Select Sector ETF) inversely leads SPY (S&P 500 ETF) by 2
+  trading days. When XLU declines >0.8% over a 3-day signal window (risk-on
+  rotation signal), SPY will rise over the following 2 days. When XLU rises,
+  SPY will decline. This inverse relationship generates Sharpe > 0.50 over a
+  5-year test period with max drawdown < 15%.
+mechanism: >
+  Utilities (XLU) are the canonical defensive sector: stable dividends, regulated
+  returns, bond-like characteristics. When investors are risk-on, they rotate OUT
+  of utilities (selling XLU) and INTO cyclicals and growth. This defensive-to-
+  cyclical rotation in XLU precedes broader market gains in SPY because:
+  1. Large institutional rebalancers (pension funds, multi-asset funds) sell
+     utilities first (most liquid defensive) before adding broad market exposure.
+  2. The same yield-seeking behavior that drives XLU buying in risk-off also
+     competes with long-duration equities (high-PE growth in SPY) for capital.
+  3. Sector rotation from defensives to cyclicals is a known leading indicator
+     of equity bull legs — utilities underperformance typically precedes market
+     breadth expansion by 2-3 days as the rotation propagates from bond-proxies
+     to the broader index.
+  The inverse=true parameter implements this: XLU 3-day return BELOW -0.8%
+  triggers a BUY on SPY (XLU is being sold = risk-on rotation in progress);
+  XLU 3-day return ABOVE +0.3% triggers EXIT (defensive rotation = risk-off).
+universe: ["XLU", "SPY"]
+measurement: >
+  Leader: XLU (3-day cumulative return signal window, inverse logic).
+  Follower: SPY (position entered at lag_days=2 after XLU inverse signal triggers).
+  Entry (inverse): XLU 3-day cumulative return < -0.8% (entry_threshold=0.008,
+    inverse logic: leader_ret <= -entry_thresh triggers BUY).
+  Exit (inverse): XLU 3-day cumulative return > +0.3% (exit_threshold=-0.003,
+    inverse logic: leader_ret >= -exit_thresh triggers EXIT).
+  Target position weight: 90% of capital.
+data_sources:
+  - "Yahoo Finance daily OHLCV for XLU"
+  - "Yahoo Finance daily OHLCV for SPY"
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too infrequent)"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium"
+created_at: "2026-03-26"

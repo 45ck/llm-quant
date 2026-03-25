@@ -1,0 +1,29 @@
+# Data Contract: xlu-spy-inverse-lead-lag
+strategy_slug: "xlu-spy-inverse-lead-lag"
+sources:
+  - symbol: "XLU"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "US equity sector ETF with daily OHLCV. High liquidity, no significant gaps. Quality grade A."
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "US equity ETF with daily OHLCV. Highest liquidity instrument, no gaps. Quality grade A."
+computed_signals:
+  - name: "xlu_cumulative_return"
+    formula: "xlu_close.pct_change(signal_window).shift(lag_days)"
+    causal: true
+    notes: "Lagged cumulative return of XLU over signal_window=3 days, shifted by lag_days=2"
+  - name: "inverse_lead_lag_signal"
+    formula: "1 if xlu_cumulative_return <= -entry_threshold else (-1 if xlu_cumulative_return >= -exit_threshold else 0)"
+    causal: true
+    notes: "Inverse logic: XLU decline = buy SPY; XLU advance = exit SPY. Implemented via inverse=true parameter."
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"
