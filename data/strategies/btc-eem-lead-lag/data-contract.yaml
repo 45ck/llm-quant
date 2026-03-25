@@ -1,0 +1,35 @@
+# Data Contract: btc-eem-lead-lag
+strategy_slug: "btc-eem-lead-lag"
+sources:
+  - symbol: "BTC-USD"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: >
+      Bitcoin daily OHLCV from Yahoo Finance. 24/7 market — data is available
+      on weekends and holidays. No gaps expected. The strategy uses only trading
+      day signals (aligned with EEM which is a US equity ETF). Quality grade A
+      for data completeness, though BTC prices are volatile and prone to
+      large single-day moves. Yahoo Finance BTC data is reliable for daily closes.
+  - symbol: "EEM"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "US-listed EM ETF with daily OHLCV. High liquidity, no significant gaps. Quality grade A."
+computed_signals:
+  - name: "btc_cumulative_return"
+    formula: "btc_close.pct_change(signal_window).shift(lag_days)"
+    causal: true
+    notes: "Lagged cumulative return of BTC-USD over signal_window=3 days, shifted by lag_days=2"
+  - name: "lead_lag_signal"
+    formula: "1 if btc_cumulative_return > entry_threshold else (-1 if btc_cumulative_return < exit_threshold else 0)"
+    causal: true
+    notes: "Entry at +2% threshold (higher than equity lead-lag to filter BTC noise)"
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+  notes: "BTC-USD data is continuous (24/7). Alignment with EEM trading days handled by backtest engine."
+created_at: "2026-03-26"

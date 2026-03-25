@@ -1,0 +1,38 @@
+# Hypothesis: btc-eem-lead-lag
+strategy_slug: "btc-eem-lead-lag"
+statement: >
+  Bitcoin (BTC-USD) leads EEM (MSCI Emerging Markets ETF) by 2-3 trading days.
+  A 3-day positive momentum signal in BTC >2% predicts a positive forward return
+  in EEM at the 2-day lag, generating Sharpe > 0.50 over a 5-year test period
+  with max drawdown < 20% (cross-asset budget, higher for crypto-originated signal).
+mechanism: >
+  Bitcoin is the canonical "risk appetite thermometer" for global speculative capital.
+  When BTC rallies strongly, it signals a shift in global risk appetite: investors
+  are allocating to high-risk, high-return assets. This risk-on sentiment typically
+  propagates to emerging market equities (EEM) within 2-3 trading days as the same
+  investor cohort that drives crypto rotates into EM equities, and as institutional
+  desks observe crypto momentum and increase EM allocations. The mechanism is
+  strongest when BTC moves >2% over 3 days (noise-filtered) because smaller moves
+  may reflect idiosyncratic crypto events (protocol upgrades, exchange news) rather
+  than genuine macro risk-appetite shifts. EEM, as the broadest liquid EM vehicle,
+  receives these flows with a short delay as global macro funds reposition.
+  The 24/7 crypto market also means BTC can react to weekend macro events before
+  equity markets open on Monday, creating an informational lead.
+universe: ["BTC-USD", "EEM"]
+measurement: >
+  Leader: BTC-USD (3-day cumulative return signal window).
+  Follower: EEM (position entered at lag_days=2 after BTC signal triggers).
+  Entry: BTC 3-day cumulative return > +2.0% (entry_threshold, higher for crypto vol).
+  Exit: BTC 3-day cumulative return < -1.0% (exit_threshold, symmetric to entry).
+  Target position weight: 90% of capital.
+data_sources:
+  - "Yahoo Finance daily OHLCV for BTC-USD"
+  - "Yahoo Finance daily OHLCV for EEM"
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 20% (cross-asset budget)"
+  - "Fewer than 10 complete round trips (signal too infrequent)"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium"
+created_at: "2026-03-26"

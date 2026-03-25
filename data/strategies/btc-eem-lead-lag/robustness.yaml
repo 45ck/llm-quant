@@ -1,0 +1,119 @@
+# Robustness Analysis: btc-eem-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "btc-eem-lead-lag"
+trial_family: "lead_lag_btc_eem"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.2639
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR=0.2639 is far below the 0.95 threshold. The negative Sharpe ratio
+      (-0.248) means the strategy is confidently underperforming — DSR here
+      measures probability the observed Sharpe (negative) exceeds the haircut
+      threshold. With a negative Sharpe, this gate cannot pass regardless of
+      sample size.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 trial in this
+      family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: -0.1026
+    std_oos_sharpe: 0.6318
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -0.1026 is negative. High std (0.6318) indicates
+      highly variable performance across folds — some periods show slightly
+      positive OOS Sharpe but the mean is negative. The strategy has no
+      reliable out-of-sample alpha.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    notes: >
+      Only 2 of 5 perturbations are stable. Lag changes (lag=1, lag=3) cause
+      large performance swings — +107% change at lag=3 (near zero but still
+      negative). This instability suggests the signal is highly sensitive to
+      the exact lag choice and is not robust. Even if lag=3 were slightly
+      positive, it was not the pre-specified parameter.
+    details:
+      - name: "lag_days=1"
+        sharpe: -0.6917
+        max_dd: 0.4690
+        pct_change: -152.3
+        stable: false
+      - name: "lag_days=3"
+        sharpe: 0.0203
+        max_dd: 0.2167
+        pct_change: +107.4
+        stable: false
+      - name: "entry_threshold=0.01"
+        sharpe: -0.3163
+        max_dd: 0.3646
+        pct_change: -15.4
+        stable: true
+      - name: "entry_threshold=0.04"
+        sharpe: -0.3614
+        max_dd: 0.2635
+        pct_change: -31.8
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: -0.2736
+        max_dd: 0.2440
+        pct_change: +0.2
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: -0.248
+  max_dd_1x: 27.87
+  notes: "Strategy is unprofitable before costs. Costs worsen to Sharpe=-0.545 at 3x."
+
+max_drawdown_check:
+  value: 27.87
+  threshold: "< 20.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 27.87% exceeds the 20% cross-asset budget threshold.
+    Even with the more generous threshold for the BTC-originated signal,
+    the strategy draws down too much. Win rate of 22.8% indicates the
+    BTC 3-day momentum signal does not predict EEM direction at 2-day lag.
+    The 24/7 BTC market advantage is not materializing as alpha in EEM.
+
+data_warnings:
+  - "BTC-USD data is 24/7; signal computation aligns to trading days only"
+  - "EEM shows 69% date coverage (1116/1625 dates) — data alignment warning from backtest engine"
+  - "Data alignment between BTC weekend prices and EEM trading days may create phantom signals"
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: Sharpe=-0.248 DSR=0.2639 MaxDD=27.87% — all major gates fail.
+  The BTC→EEM 2-day lead-lag hypothesis is empirically false over the 5-year
+  test period 2021-2026. Win rate of 22.8% and profit factor of 0.84 confirm
+  the signal has no directional predictive power. Perturbation instability (2/5
+  stable) indicates the result is highly sensitive to lag parameter choice.
+  The data alignment issue between BTC's 24/7 trading and EEM's US market hours
+  may be introducing noise into the signal computation. CPCV OOS Sharpe=-0.10
+  confirms no exploitable alpha exists.
+
+created_at: "2026-03-26"

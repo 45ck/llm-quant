@@ -1,0 +1,38 @@
+strategy_slug: "btc-eem-lead-lag"
+strategy_type: "lead_lag"
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+parameters:
+  leader_symbol: "BTC-USD"
+  follower_symbol: "EEM"
+  lag_days: 2
+  signal_window: 3
+  entry_threshold: 0.02
+  exit_threshold: -0.01
+  target_weight: 0.90
+  inverse: false
+  rebalance_frequency_days: 1
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 2.0
+  slippage_volatility_factor: 0.1
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  lag_days: "Pre-specified from hypothesis. Not optimized. BTC leads EM risk appetite by 2 trading days."
+  signal_window: "3-day return window captures short-term crypto momentum. Pre-specified."
+  entry_threshold: "2% threshold filters crypto noise. Higher than equity thresholds due to BTC vol. Pre-specified."
+  exit_threshold: "-1% exit is symmetric to 2% entry scaled for crypto vol. Pre-specified."
+backtest_spec:
+  symbols: ["BTC-USD", "EEM"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+family: "lead_lag_btc_eem"
+family_trial_number: 1
+family_prior_trials: 0
+created_at: "2026-03-26"
+updated_at: "2026-03-26"
