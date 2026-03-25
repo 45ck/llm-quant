@@ -545,6 +545,8 @@ class TrendFollowingStrategy(Strategy):
         stop_mult = params["stop_mult"]
         regime = params["regime"]
 
+        min_positive = params.get("min_tf_positive", 1)
+
         new_positions = 0
         for symbol in symbols:
             sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
@@ -552,10 +554,35 @@ class TrendFollowingStrategy(Strategy):
             if close <= 0 or len(sym_data) < lookback:
                 continue
 
-            ret = _trailing_return(sym_data, lookback)
+            # Multi-timeframe momentum consensus
+            lookbacks = [
+                params.get("lookback_short"),
+                params.get("lookback_medium"),
+                params.get("lookback_long"),
+            ]
+            lookbacks = [lb for lb in lookbacks if lb is not None]
+            if not lookbacks:
+                lookbacks = [lookback]  # fallback to single timeframe
+
+            timeframe_returns: list[tuple[int, float]] = []
+            for lb in lookbacks:
+                ret = _trailing_return(sym_data, lb)
+                if ret is not None:
+                    timeframe_returns.append((lb, ret))
+
+            positive_count = sum(1 for _, r in timeframe_returns if r > 0)
             above_sma = _close_above_sma(sym_data, sma_col)
             has_position = symbol in portfolio.positions
-            is_bullish = ret is not None and ret > 0 and above_sma
+            is_bullish = positive_count >= min_positive and above_sma
+
+            # Momentum acceleration: short > medium suggests strengthening trend
+            has_acceleration = False
+            if len(timeframe_returns) >= 2:
+                sorted_tfs = sorted(timeframe_returns, key=lambda x: x[0])
+                short_ret = sorted_tfs[0][1]
+                med_ret = sorted_tfs[len(sorted_tfs) // 2][1]
+                if short_ret > med_ret:
+                    has_acceleration = True
 
             if is_bullish and not has_position:
                 if (
@@ -570,26 +597,40 @@ class TrendFollowingStrategy(Strategy):
                 stop_loss = _get_atr_stop(
                     sym_data, close, stop_mult, self.config.stop_loss_pct
                 )
+
+                if has_acceleration and positive_count == len(timeframe_returns):
+                    conviction = Conviction.HIGH
+                else:
+                    conviction = Conviction.MEDIUM
+
+                tf_summary = ", ".join(f"{lb}d={r:.2%}" for lb, r in timeframe_returns)
+                reasoning = (
+                    f"Trend-following: [{tf_summary}], "
+                    f"{positive_count}/{len(timeframe_returns)} positive, "
+                    f"above SMA200, regime={regime}"
+                )
+                if has_acceleration:
+                    reasoning += ", accelerating"
+
                 signals.append(
                     TradeSignal(
                         symbol=symbol,
                         action=Action.BUY,
-                        conviction=Conviction.MEDIUM,
+                        conviction=conviction,
                         target_weight=weight,
                         stop_loss=stop_loss,
-                        reasoning=(
-                            f"Trend-following: {ret:.2%} 126d return, "
-                            f"above SMA200, regime={regime}"
-                        ),
+                        reasoning=reasoning,
                     )
                 )
                 new_positions += 1
             elif not is_bullish and has_position:
-                reason = "Trend-following exit: "
-                if ret is not None and ret <= 0:
-                    reason += f"negative 126d return ({ret:.2%})"
-                else:
-                    reason += "below SMA200"
+                tf_summary = ", ".join(f"{lb}d={r:.2%}" for lb, r in timeframe_returns)
+                reason = (
+                    f"Trend-following exit: [{tf_summary}], "
+                    f"{positive_count}/{len(timeframe_returns)} positive"
+                )
+                if not above_sma:
+                    reason += ", below SMA200"
                 signals.append(
                     TradeSignal(
                         symbol=symbol,
@@ -623,14 +664,26 @@ class TrendFollowingStrategy(Strategy):
             if s != "VIX"
         ]
 
-        eval_params = {
+        lookback_short = params.get("lookback_short", None)
+        lookback_medium = params.get("lookback_medium", lookback)
+        lookback_long = params.get("lookback_long", None)
+        min_tf_positive = params.get("min_timeframes_positive", 1)
+
+        eval_params: dict = {
             "lookback": lookback,
             "sma_col": f"sma_{sma_trend}",
             "target_vol": params.get("target_vol", 0.12),
             "weight_mult_risk_off": params.get("weight_mult_risk_off", 0.50),
             "stop_mult": params.get("stop_atr_multiplier", 1.5),
             "regime": regime,
+            "min_tf_positive": min_tf_positive,
         }
+        if lookback_short is not None:
+            eval_params["lookback_short"] = lookback_short
+        if lookback_medium != lookback:
+            eval_params["lookback_medium"] = lookback_medium
+        if lookback_long is not None:
+            eval_params["lookback_long"] = lookback_long
 
         return self._evaluate_symbols(
             indicators_df, symbols, portfolio, prices, eval_params

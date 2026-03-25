@@ -56,6 +56,19 @@ def _build_strategy_config(strategy_name: str, spec: dict) -> StrategyConfig:
     if "rebalance_frequency_days" in params and "rebalance_frequency" not in params:
         mapped_params["rebalance_frequency"] = params["rebalance_frequency_days"]
 
+    # Multi-timeframe momentum parameters (TrendFollowingStrategy v3)
+    spec_params = spec.get("parameters", {})
+    if "lookback_short" in spec_params:
+        mapped_params["lookback_short"] = spec_params["lookback_short"]
+    if "lookback_long" in spec_params:
+        mapped_params["lookback_long"] = spec_params["lookback_long"]
+    if "lookback_medium" in spec_params:
+        mapped_params["lookback_medium"] = spec_params["lookback_medium"]
+    if "min_timeframes_positive" in spec_params:
+        mapped_params["min_timeframes_positive"] = spec_params[
+            "min_timeframes_positive"
+        ]
+
     return StrategyConfig(
         name=strategy_name,
         rebalance_frequency_days=params.get(
