@@ -1,0 +1,17 @@
+# Mandate: pre-fomc-tlt-drift
+strategy_slug: "pre-fomc-tlt-drift"
+objective: >
+  Capture the pre-FOMC drift in TLT by holding Treasury bonds in the 3
+  trading days immediately before each Federal Reserve FOMC meeting.
+  8 meetings/year x 3 days = ~24 TLT holding days/year.
+benchmark: "60/40 SPY/TLT"
+benchmark_weights:
+  SPY: 0.60
+  TLT: 0.40
+universe: ["TLT"]
+constraints:
+  max_drawdown: 0.12
+  min_sharpe: 0.40
+  min_trades: 15
+capital: 100000
+created_at: "2026-03-26"

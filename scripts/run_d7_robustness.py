@@ -1,4 +1,4 @@
-# ruff: noqa: E501,S603,S607,T201
+# ruff: noqa: E501
 """Robustness analysis for D7 eth-btc-ratio-mean-reversion."""
 
 from __future__ import annotations
@@ -131,13 +131,13 @@ for name, params in perturbations:
 
 # --- Read DSR from registry ---
 registry_path = Path(f"data/strategies/{SLUG}/experiment-registry.jsonl")
-with open(registry_path) as f:
+with registry_path.open() as f:
     exps = [json.loads(line) for line in f if line.strip()]
 dsr_value = exps[-1].get("dsr", 0.0)
 
 n_stable = sum(1 for r in perturb_results if r["stable"])
 
-print(f"\n=== Gate Summary ===")
+print("\n=== Gate Summary ===")
 print(
     f"DSR: {dsr_value:.4f} (threshold >= 0.95) -> {'PASS' if dsr_value >= 0.95 else 'FAIL'}"
 )

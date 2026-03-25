@@ -1,0 +1,95 @@
+# Robustness Analysis: pre-fomc-tlt-drift
+# Generated: 2026-03-26
+
+strategy_slug: "pre-fomc-tlt-drift"
+trial_family: "calendar_event"
+trial_count: 2  # Second experiment in calendar_event family (after turn-of-month-spy)
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 1
+gates_failed: 3
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.4363
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from backtest experiment (trial #1 in registry, trial #2 in family).
+      With N=2 family trials, DSR of 0.4363 indicates low statistical confidence
+      in the Sharpe estimate. Well below 0.95 threshold.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants with daily return series.
+      Only 1 valid experiment in this family registry. To compute PBO, would
+      need at least 1 more parameter variant.
+
+  cpcv:
+    mean_oos_sharpe: -0.0861
+    std_oos_sharpe: 0.8675
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 2-day purge on base experiment.
+      Mean OOS Sharpe of -0.0861 is negative -- strategy does not survive
+      cross-validation. High std (0.87) indicates extreme inconsistency
+      across folds.
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "pre_days=2"
+        sharpe: -0.0835
+        pct_change: 56.6
+        stable: false
+      - name: "pre_days=4"
+        sharpe: -0.1924
+        pct_change: 0.0
+        stable: true
+      - name: "pre_days=1"
+        sharpe: -0.0746
+        pct_change: 61.2
+        stable: false
+      - name: "weight=0.80"
+        sharpe: -0.2045
+        pct_change: -6.3
+        stable: true
+      - name: "weight=0.60"
+        sharpe: -0.2044
+        pct_change: -6.2
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: -0.072
+  sharpe_1_5x: -0.165
+  sharpe_2x: -0.257
+  sharpe_3x: -0.439
+  max_dd_1x: 11.71
+  notes: "Strategy is unprofitable at all cost levels. Sharpe negative even at 1x costs."
+
+max_drawdown_check:
+  value: 11.71
+  threshold: "< 12.0"
+  result: "PASS"
+
+overall_passed: false
+rejection_reason: >
+  DSR=0.4363 < 0.95 threshold. CPCV OOS Sharpe=-0.0861 (negative).
+  Strategy has negative Sharpe (-0.072 at 1x costs) -- the pre-FOMC drift
+  in TLT is not statistically significant over 2021-2026. The hypothesis
+  is REJECTED: pre-FOMC windows do not produce reliable positive returns
+  in TLT during this period (22% win rate, -1.98% total return).
+
+created_at: "2026-03-26"

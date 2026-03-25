@@ -1,0 +1,19 @@
+# Data Contract: pre-fomc-tlt-drift
+strategy_slug: "pre-fomc-tlt-drift"
+sources:
+  - symbol: "TLT"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+computed_signals:
+  - name: "is_pre_fomc_window"
+    formula: "date + 1d, +2d, or +3d in FOMC_DATES set"
+    causal: true
+    notes: "FOMC dates are public knowledge; no look-ahead bias"
+fomc_dates_source: "Federal Reserve published schedule (hardcoded 2021-2026)"
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"
