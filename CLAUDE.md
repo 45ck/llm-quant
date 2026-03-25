@@ -38,11 +38,52 @@ Decompose every trading decision into distinct components (per Peterson/quantstr
 
 **Anti-overfitting discipline**: Beware of rule burden — too many rules overfit in-sample. Guard against data snooping (adjusting strategy to fit known outcomes), look-ahead bias, and HARKing (hypothesizing after results are known). Every parameter choice needs theoretical or economic justification, not just curve-fitting.
 
-## /trade Command (Primary Workflow)
+## Workflow Discipline
+
+The system has two distinct tracks. Using the wrong track is a process failure.
+
+### Research Track (strategy development & changes)
+
+For any NEW strategy or material parameter change, follow the lifecycle in order:
+
+```
+/lifecycle → /mandate → /hypothesis → /data-contract → /research-spec →
+/research-spec freeze → /backtest → /robustness → /paper → /promote
+```
+
+- **No shortcuts** — each gate must pass before advancing to the next
+- `/lifecycle` is the dashboard — run it to see where each strategy stands
+- Material changes (new signals, parameter shifts, universe changes) reset the lifecycle
+- Full reference: `docs/governance/quant-lifecycle.md`
+
+### Operations Track (daily trading on deployed strategies)
+
+For executing the current strategy on a day-to-day basis:
+
+```
+/governance → /trade (or /loop) → /evaluate
+```
+
+- Only for PROMOTED strategies or the current default strategy
+- `/governance` runs FIRST — pre-trade gate, checks for halts/warnings
+- `/trade` executes the trading cycle
+- `/evaluate` monitors for performance decay and retirement triggers
+
+### Key Rules
+
+- Strategy changes go through Research Track + `/promote`. Always.
+- Daily portfolio management uses Operations Track. No ad-hoc strategy invention during trading.
+- Never skip `/governance` before `/trade`.
+- Consult the macro briefing (`config/macro-briefing.md`) for regime assessment context.
+- If you're unsure which track applies: if it changes HOW the strategy works, it's Research Track. If it's running the strategy as-is, it's Operations Track.
+
+## /trade Command (Operations Workflow)
+
+> **Note:** `/trade` is for executing decisions on the current deployed strategy, NOT for researching or developing new strategies. Strategy R&D goes through the Research Track above.
 
 The `/trade` command runs the full autonomous trading cycle:
 1. **Build context**: `cd E:/llm-quant && PYTHONPATH=src python scripts/build_context.py` — fetches data if stale, computes indicators, outputs JSON market snapshot
-2. **Analyze & decide**: Read system_prompt + decision_prompt, assess regime, select 0-5 signals, output JSON decision
+2. **Analyze & decide**: Read system_prompt + decision_prompt, assess regime (informed by `config/macro-briefing.md`), select 0-5 signals, output JSON decision
 3. **Execute**: `cd E:/llm-quant && PYTHONPATH=src python scripts/execute_decision.py <<< '<JSON>'` — risk-checks, executes, saves snapshot
 4. **Report**: Display regime, trades, rejections, updated portfolio as markdown tables
 
@@ -78,6 +119,37 @@ Post-trade surveillance monitors 7 failure modes via `surveillance/` module. Run
 **Change protocol**: All strategy changes (parameters, signals, assets) must pass `/promote` checklist and be recorded in `strategy_changelog` table. See `docs/governance/control-matrix.md` and `docs/governance/model-promotion-policy.md`.
 
 **Config**: All thresholds in `config/governance.toml`.
+
+## Session Protocol
+
+A PM's session discipline. Follow this order.
+
+**Before trading:**
+1. Run `/governance` — any halts or warnings? If halted, stop. Sells only.
+2. Review macro briefing (`config/macro-briefing.md`) — any regime-changing events since last session?
+3. Run `/lifecycle` — any strategies ready to advance through the research pipeline?
+
+**Trading:**
+4. Run `/trade` (or `/loop`) — execute on the current deployed strategy.
+
+**After trading:**
+5. Run `/governance` post-trade — verify clean state after execution.
+6. Run `/evaluate` — check for performance decay or retirement signals.
+
+**Strategy development (separate sessions from trading):**
+- Use `/lifecycle {slug}` to check current state of a strategy.
+- Run the next lifecycle command in sequence — never skip steps.
+- Research and trading are separate activities. Don't mix them in one session.
+
+## Macro Intelligence
+
+The macro briefing at `config/macro-briefing.md` provides structured context for regime assessment and trade decisions.
+
+- Updated periodically (quarterly or on major regime shifts)
+- Informs regime classification (risk_on / risk_off / transition) during `/trade`
+- Covers: macro regime, key themes/risks, asset class outlook, scenario framework, calendar risks
+- Not a crystal ball — macro context frames hypotheses, not conclusions
+- Source: synthesized from research reports and market data
 
 ## Commands
 
