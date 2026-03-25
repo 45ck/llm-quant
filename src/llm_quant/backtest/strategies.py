@@ -1386,6 +1386,436 @@ class PairsRatioStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Lead-Lag Strategy
+# ---------------------------------------------------------------------------
+
+
+class LeadLagStrategy(Strategy):
+    """Directional signal from a leading asset's lagged return (H-series).
+
+    Observes the N-day return of a *leader* asset (e.g. XLF, HYG, BTC-USD)
+    and takes a position in a *follower* asset (e.g. SPY, EEM) when the
+    lagged signal is strong enough.
+
+    Parameters:
+      leader_symbol (str): Leading asset ticker (e.g. "XLF").
+      follower_symbol (str): Follower asset ticker (e.g. "SPY").
+      lag_days (int, default 2): How many days ago the leader signal is read.
+      signal_window (int, default 3): Return window on the leader.
+      entry_threshold (float, default 0.01): Min leader return to go long follower.
+      exit_threshold (float, default -0.005): Leader return below which to exit.
+      target_weight (float, default 0.90): Weight for follower when in trade.
+      inverse (bool-like, default False): If True, leader up → short follower.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        leader: str = str(params.get("leader_symbol", "XLF"))
+        follower: str = str(params.get("follower_symbol", "SPY"))
+        lag_days: int = int(params.get("lag_days", 2))
+        sig_window: int = int(params.get("signal_window", 3))
+        entry_thresh: float = float(params.get("entry_threshold", 0.01))
+        exit_thresh: float = float(params.get("exit_threshold", -0.005))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+        inverse: bool = bool(params.get("inverse", False))
+
+        lookback = sig_window + lag_days + 2
+        leader_data = (
+            indicators_df.filter(pl.col("symbol") == leader).sort("date").tail(lookback)
+        )
+        if len(leader_data) < sig_window + lag_days:
+            return []
+
+        prices_list = leader_data["close"].to_list()
+        # Return computed lag_days ago (from [-(lag_days+sig_window)] to [-lag_days])
+        end_idx = len(prices_list) - lag_days
+        start_idx = end_idx - sig_window
+        if start_idx < 0 or prices_list[start_idx] <= 0:
+            return []
+        leader_ret = prices_list[end_idx - 1] / prices_list[start_idx] - 1.0
+
+        follower_price = prices.get(follower, 0)
+        if follower_price <= 0:
+            return []
+
+        has_pos = follower in portfolio.positions
+        signal_long = (
+            (leader_ret >= entry_thresh)
+            if not inverse
+            else (leader_ret <= -entry_thresh)
+        )
+        signal_exit = (
+            (leader_ret <= exit_thresh) if not inverse else (leader_ret >= -exit_thresh)
+        )
+
+        if signal_long and not has_pos:
+            logger.info(
+                "LeadLag: ENTER %s on %s (leader=%s ret=%.3f)",
+                follower,
+                as_of_date,
+                leader,
+                leader_ret,
+            )
+            return [
+                TradeSignal(
+                    symbol=follower,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=follower_price * 0.95,
+                    reasoning=f"Lead-lag: {leader} {leader_ret:.3f}>={entry_thresh}",
+                )
+            ]
+        if signal_exit and has_pos:
+            logger.info(
+                "LeadLag: EXIT %s on %s (leader=%s ret=%.3f)",
+                follower,
+                as_of_date,
+                leader,
+                leader_ret,
+            )
+            return [
+                TradeSignal(
+                    symbol=follower,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"Lead-lag: {leader} {leader_ret:.3f}<={exit_thresh}",
+                )
+            ]
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Asset Rotation Strategy
+# ---------------------------------------------------------------------------
+
+
+class AssetRotationStrategy(Strategy):
+    """Rank assets by recent Sharpe or return; hold top-K (A7, O3, K-series).
+
+    Parameters:
+      symbols_list (str): Comma-separated list of symbols to rotate among.
+      lookback_days (int, default 60): Return window for ranking.
+      top_k (int, default 1): How many assets to hold simultaneously.
+      rerank_days (int, default 20): Minimum days between rebalances.
+      target_weight (float, default 0.90): Weight per held asset.
+      rank_by (str, default "return"): "return" or "sharpe".
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        syms_str: str = str(params.get("symbols_list", "SPY,TLT,GLD"))
+        symbols = [s.strip() for s in syms_str.split(",") if s.strip()]
+        lookback: int = int(params.get("lookback_days", 60))
+        top_k: int = int(params.get("top_k", 1))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+        rank_by: str = str(params.get("rank_by", "return"))
+
+        # Compute scores
+        scores: list[tuple[str, float]] = []
+        for sym in symbols:
+            sym_data = (
+                indicators_df.filter(pl.col("symbol") == sym)
+                .sort("date")
+                .tail(lookback + 2)
+            )
+            if len(sym_data) < lookback:
+                continue
+            p = sym_data["close"].to_list()[-lookback - 1 :]
+            rets = [p[i] / p[i - 1] - 1.0 for i in range(1, len(p))]
+            if not rets:
+                continue
+            if rank_by == "sharpe":
+                mu = sum(rets) / len(rets)
+                std = (sum((r - mu) ** 2 for r in rets) / len(rets)) ** 0.5
+                score = (mu / std * (252**0.5)) if std > 0 else 0.0
+            else:
+                score = p[-1] / p[0] - 1.0 if p[0] > 0 else 0.0
+            scores.append((sym, score))
+
+        if not scores:
+            return []
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        target_set = {s for s, _ in scores[:top_k] if s in prices and prices[s] > 0}
+        current_set = set(portfolio.positions.keys()) & set(symbols)
+
+        # Exit positions no longer in top-K
+        signals: list[TradeSignal] = [
+            TradeSignal(
+                symbol=sym,
+                action=Action.CLOSE,
+                conviction=Conviction.MEDIUM,
+                target_weight=0.0,
+                stop_loss=0.0,
+                reasoning=f"Rotation: {sym} dropped from top-{top_k}",
+            )
+            for sym in current_set - target_set
+        ]
+        # Enter new top-K positions
+        weight_per = tgt_weight / max(len(target_set), 1)
+        for sym in target_set - current_set:
+            p = prices.get(sym, 0)
+            if p <= 0:
+                continue
+            signals.append(
+                TradeSignal(
+                    symbol=sym,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=weight_per,
+                    stop_loss=p * 0.93,
+                    reasoning=f"Rotation: {sym} entered top-{top_k} by {rank_by}",
+                )
+            )
+        return signals
+
+
+# ---------------------------------------------------------------------------
+# VIX Regime Strategy
+# ---------------------------------------------------------------------------
+
+
+class VixRegimeStrategy(Strategy):
+    """Defensive equity positioning based on VIX level or volatility-of-vol (C-series).
+
+    Modes:
+      - "vov": VIX 30-day rolling std dev above percentile_threshold → exit.
+      - "level": VIX level above vix_threshold → defensive.
+      - "vix_spike": Single-day VIX % change above spike_threshold → contrarian entry.
+
+    Parameters:
+      mode (str, default "level"): "vov", "level", or "vix_spike".
+      vix_symbol (str, default "^VIX"): VIX ticker.
+      equity_symbol (str, default "SPY"): Asset to trade.
+      vix_threshold (float, default 25.0): VIX level for "level" mode.
+      vov_window (int, default 30): Rolling window for VoV.
+      vov_percentile (float, default 0.80): Percentile for VoV threshold.
+      spike_threshold (float, default 0.20): 1-day VIX % rise for spike mode.
+      target_weight (float, default 0.90): Position weight in favourable regime.
+    """
+
+    def generate_signals(  # noqa: PLR0911
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        mode: str = str(params.get("mode", "level"))
+        vix_sym: str = str(params.get("vix_symbol", "^VIX"))
+        equity_sym: str = str(params.get("equity_symbol", "SPY"))
+        vix_thresh: float = float(params.get("vix_threshold", 25.0))
+        vov_window: int = int(params.get("vov_window", 30))
+        vov_pct: float = float(params.get("vov_percentile", 0.80))
+        spike_thresh: float = float(params.get("spike_threshold", 0.20))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        vix_data = (
+            indicators_df.filter(pl.col("symbol") == vix_sym)
+            .sort("date")
+            .tail(vov_window + 5)
+        )
+        if len(vix_data) < 5:
+            return []
+
+        vix_prices = vix_data["close"].to_list()
+        vix_now = vix_prices[-1]
+
+        equity_price = prices.get(equity_sym, 0)
+        if equity_price <= 0:
+            return []
+        has_pos = equity_sym in portfolio.positions
+
+        if mode == "level":
+            defensive = vix_now > vix_thresh
+        elif mode == "vov":
+            if len(vix_prices) < vov_window:
+                return []
+            window = vix_prices[-vov_window:]
+            mu = sum(window) / vov_window
+            vov = (sum((v - mu) ** 2 for v in window) / vov_window) ** 0.5
+            # Use expanding percentile as proxy
+            all_vix = vix_prices
+            n_above = sum(1 for v in all_vix if v <= vov)
+            pct = n_above / len(all_vix)
+            defensive = pct >= vov_pct
+        elif mode == "vix_spike":
+            if len(vix_prices) < 2 or vix_prices[-2] <= 0:
+                return []
+            vix_change = vix_prices[-1] / vix_prices[-2] - 1.0
+            # Contrarian: spike → BUY equity (bounce play)
+            if vix_change >= spike_thresh and not has_pos:
+                return [
+                    TradeSignal(
+                        symbol=equity_sym,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=tgt_weight,
+                        stop_loss=equity_price * 0.95,
+                        reasoning=f"VIX spike {vix_change:.1%}>={spike_thresh:.1%}",
+                    )
+                ]
+            return []
+        else:
+            return []
+
+        if defensive and has_pos:
+            return [
+                TradeSignal(
+                    symbol=equity_sym,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"VIX[{mode}]: defensive exit VIX={vix_now:.1f}",
+                )
+            ]
+        if not defensive and not has_pos:
+            return [
+                TradeSignal(
+                    symbol=equity_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=equity_price * 0.95,
+                    reasoning=f"VIX regime [{mode}]: normal, enter (VIX={vix_now:.1f})",
+                )
+            ]
+        return []
+
+
+# ---------------------------------------------------------------------------
+# Yield Curve Regime Strategy
+# ---------------------------------------------------------------------------
+
+
+class YieldCurveRegimeStrategy(Strategy):
+    """Equity/bond positioning based on yield curve slope (N/E-series).
+
+    Uses freely available Yahoo Finance yield tickers (^TNX=10y, ^IRX=3m,
+    ^FVX=5y) to compute yield spread as regime signal.
+
+    Modes:
+      - "inversion": Hold TLT when 2s10s inverted (^IRX > ^TNX); exit when normal.
+      - "momentum": Hold TLT when 63d TNX momentum negative (rates falling).
+      - "steepener": Hold SPY when curve steepening (spread rising).
+
+    Parameters:
+      mode (str, default "inversion"): Strategy mode.
+      short_yield_symbol (str, default "^IRX"): Short-end yield ticker.
+      long_yield_symbol (str, default "^TNX"): Long-end yield ticker.
+      equity_symbol (str, default "SPY"): Equity asset.
+      bond_symbol (str, default "TLT"): Bond asset.
+      momentum_window (int, default 63): Days for yield momentum.
+      target_weight (float, default 0.90): Position weight.
+    """
+
+    def generate_signals(  # noqa: PLR0911
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        mode: str = str(params.get("mode", "momentum"))
+        short_sym: str = str(params.get("short_yield_symbol", "^IRX"))
+        long_sym: str = str(params.get("long_yield_symbol", "^TNX"))
+        equity_sym: str = str(params.get("equity_symbol", "SPY"))
+        bond_sym: str = str(params.get("bond_symbol", "TLT"))
+        mom_window: int = int(params.get("momentum_window", 63))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        long_data = (
+            indicators_df.filter(pl.col("symbol") == long_sym)
+            .sort("date")
+            .tail(mom_window + 5)
+        )
+        if len(long_data) < 5:
+            return []
+        tnx_prices = long_data["close"].to_list()
+        tnx_now = tnx_prices[-1]
+
+        if mode == "momentum":
+            # Hold TLT when 10y yield trending down (rates falling = bonds rising)
+            if len(tnx_prices) < mom_window:
+                return []
+            tnx_past = tnx_prices[-mom_window]
+            rates_falling = tnx_now < tnx_past
+            trade_sym = bond_sym
+        elif mode == "inversion":
+            short_data = (
+                indicators_df.filter(pl.col("symbol") == short_sym).sort("date").tail(5)
+            )
+            if len(short_data) < 2:
+                return []
+            irx_now = short_data["close"].to_list()[-1]
+            inverted = irx_now > tnx_now  # short > long = inverted curve
+            rates_falling = inverted  # inverted curve → hold TLT (defensive)
+            trade_sym = bond_sym
+        elif mode == "steepener":
+            short_data = (
+                indicators_df.filter(pl.col("symbol") == short_sym)
+                .sort("date")
+                .tail(mom_window + 5)
+            )
+            if len(short_data) < mom_window:
+                return []
+            irx = short_data["close"].to_list()
+            spread_now = tnx_now - irx[-1]
+            spread_past = tnx_prices[-mom_window] - irx[-mom_window]
+            rates_falling = spread_now > spread_past  # steepening → hold equities
+            trade_sym = equity_sym
+        else:
+            return []
+
+        asset_price = prices.get(trade_sym, 0)
+        if asset_price <= 0:
+            return []
+        has_pos = trade_sym in portfolio.positions
+
+        if rates_falling and not has_pos:
+            return [
+                TradeSignal(
+                    symbol=trade_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=asset_price * 0.95,
+                    reasoning=f"YieldCurve [{mode}]: signal active (TNX={tnx_now:.2f})",
+                )
+            ]
+        if not rates_falling and has_pos:
+            return [
+                TradeSignal(
+                    symbol=trade_sym,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"YieldCurve [{mode}]: signal off (TNX={tnx_now:.2f})",
+                )
+            ]
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -1401,6 +1831,10 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "correlation_surprise": CorrelationSurpriseStrategy,
     "calendar_event": CalendarEventStrategy,
     "pairs_ratio": PairsRatioStrategy,
+    "lead_lag": LeadLagStrategy,
+    "asset_rotation": AssetRotationStrategy,
+    "vix_regime": VixRegimeStrategy,
+    "yield_curve_regime": YieldCurveRegimeStrategy,
 }
 
 
