@@ -1,0 +1,75 @@
+# Production Governance Configuration
+# All thresholds for the 8 failure mode detectors + kill switches
+
+[regime_drift]
+# Compare rolling window performance vs full-history baseline
+rolling_window_days = 21          # ~1 month trading days
+sharpe_decay_warn = 0.30          # Warning: rolling Sharpe drops 30% vs baseline
+sharpe_decay_halt = 0.50          # Hard stop: rolling Sharpe drops 50%
+win_rate_decay_warn = 0.15        # Warning: win rate drops 15pp
+win_rate_decay_halt = 0.25        # Hard stop: win rate drops 25pp
+vol_spike_warn = 1.5              # Warning: rolling vol 1.5x baseline
+vol_spike_halt = 2.0              # Hard stop: rolling vol 2x baseline
+
+[alpha_decay]
+# Rolling Sharpe vs full-history Sharpe ratio
+rolling_window_days = 63          # ~3 months
+decay_warn = 0.40                 # Warning: rolling/full ratio < 0.60
+decay_halt = 0.60                 # Hard stop: rolling/full ratio < 0.40
+
+[risk_drift]
+# Post-trade exposure monitoring vs configured limits
+exposure_warn_buffer = 0.10       # Warning at 90% of limit
+concentration_warn_buffer = 0.10  # Warning at 90% of sector limit
+
+[data_quality]
+# Stale data, price gaps, plausibility
+max_stale_days = 3                # Hard stop: any symbol >3 days stale
+gap_threshold_pct = 0.20          # Warning: single-day gap >20%
+plausibility_min_price = 0.01     # Hard stop: price below $0.01
+
+[process_drift]
+# SHA-256 config hash monitoring
+tracked_files = [
+    "config/default.toml",
+    "config/risk.toml",
+    "config/universe.toml",
+    "config/governance.toml",
+    "config/prompts/trader_decision.md",
+]
+
+[operational_health]
+# Snapshot gaps, stale prices, hash chain
+max_snapshot_gap_days = 3         # Warning: no snapshot for >3 days
+max_price_staleness_hours = 48    # Warning: prices >48h old
+hash_chain_required = true        # Hard stop: hash chain verification fails
+
+[kill_switches]
+# 6 automatic halt triggers -- any one triggers full halt (sells only)
+max_drawdown_pct = 0.15           # NAV drawdown from peak
+max_daily_loss_pct = 0.05         # Single-day loss >5%
+max_consecutive_losses = 5        # 5 consecutive losing trades
+max_correlation_breach = 0.85     # Portfolio correlation to single asset >85%
+data_blackout_hours = 72          # No fresh data for >72h
+risk_check_failure_streak = 3     # 3 consecutive risk check failures
+
+[promotion]
+# Model Promotion Policy v1.0
+# Hard vetoes -- ANY failure blocks promotion
+min_deflated_sharpe = 0.95        # DSR >= 0.95
+max_pbo = 0.10                    # Probability of Backtest Overfitting <= 10%
+max_spa_p_value = 0.05            # Stepwise SPA p-value <= 0.05
+min_trl = 1                       # Minimum Trail Length >= 1 (at least 1 out-of-sample period)
+
+# Weighted scorecard (0-100)
+scorecard_pass_threshold = 85     # Must score 85+ for live canary
+
+# Paper trading minimums
+min_paper_trades = 50             # At least 50 trades in paper
+min_paper_days = 30               # At least 30 days paper trading
+min_paper_sharpe = 0.60           # Paper Sharpe >= 0.60
+
+# Canary gate
+canary_allocation_pct = 0.10      # Start with 10% allocation
+canary_min_days = 14              # Minimum 14 days in canary
+canary_max_drawdown_pct = 0.10    # Canary drawdown limit (tighter than full)

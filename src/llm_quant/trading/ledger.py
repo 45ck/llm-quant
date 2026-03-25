@@ -30,6 +30,7 @@ def log_trades(
     trades: list[ExecutedTrade],
     trade_date: date,
     decision_id: int | None = None,
+    pod_id: str = "default",
 ) -> list[int]:
     """Persist executed trades to the ``trades`` table.
 
@@ -66,13 +67,14 @@ def log_trades(
         conn.execute(
             """
             INSERT INTO trades (
-                trade_id, date, symbol, action, shares, price,
+                trade_id, date, pod_id, symbol, action, shares, price,
                 notional, conviction, reasoning, llm_decision_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 trade_id,
                 trade_date,
+                pod_id,
                 trade.symbol,
                 trade.action,
                 trade.shares,
@@ -144,6 +146,7 @@ def save_portfolio_snapshot(
     portfolio: Portfolio,
     trade_date: date,
     daily_pnl: float | None = None,
+    pod_id: str = "default",
 ) -> int:
     """Save the current portfolio state to ``portfolio_snapshots`` and
     ``positions``.
@@ -173,14 +176,15 @@ def save_portfolio_snapshot(
     conn.execute(
         """
         INSERT INTO portfolio_snapshots (
-            snapshot_id, date, nav, cash,
+            snapshot_id, date, pod_id, nav, cash,
             gross_exposure, net_exposure,
             total_pnl, daily_pnl
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         [
             snapshot_id,
             trade_date,
+            pod_id,
             nav,
             portfolio.cash,
             portfolio.gross_exposure,
@@ -234,6 +238,7 @@ def save_portfolio_snapshot(
 def get_recent_trades(
     conn: duckdb.DuckDBPyConnection,
     limit: int = 20,
+    pod_id: str | None = None,
 ) -> list[dict]:
     """Return the most recent trades as a list of dicts.
 
@@ -243,36 +248,65 @@ def get_recent_trades(
         Active DuckDB connection.
     limit:
         Maximum number of rows to return (most recent first).
+    pod_id:
+        If provided, only return trades for this pod. If *None*, return
+        all trades (backward compatible).
 
     Returns
     -------
     list[dict]
         Each dict mirrors a row in the ``trades`` table.
     """
-    result = conn.execute(
-        """
-        SELECT
-            trade_id,
-            date,
-            symbol,
-            action,
-            shares,
-            price,
-            notional,
-            conviction,
-            reasoning,
-            llm_decision_id,
-            created_at
-        FROM trades
-        ORDER BY date DESC, trade_id DESC
-        LIMIT ?
-        """,
-        [limit],
-    ).fetchall()
+    if pod_id is not None:
+        result = conn.execute(
+            """
+            SELECT
+                trade_id,
+                date,
+                pod_id,
+                symbol,
+                action,
+                shares,
+                price,
+                notional,
+                conviction,
+                reasoning,
+                llm_decision_id,
+                created_at
+            FROM trades
+            WHERE pod_id = ?
+            ORDER BY date DESC, trade_id DESC
+            LIMIT ?
+            """,
+            [pod_id, limit],
+        ).fetchall()
+    else:
+        result = conn.execute(
+            """
+            SELECT
+                trade_id,
+                date,
+                pod_id,
+                symbol,
+                action,
+                shares,
+                price,
+                notional,
+                conviction,
+                reasoning,
+                llm_decision_id,
+                created_at
+            FROM trades
+            ORDER BY date DESC, trade_id DESC
+            LIMIT ?
+            """,
+            [limit],
+        ).fetchall()
 
     columns = [
         "trade_id",
         "date",
+        "pod_id",
         "symbol",
         "action",
         "shares",
@@ -293,6 +327,7 @@ def get_recent_trades(
 def get_portfolio_history(
     conn: duckdb.DuckDBPyConnection,
     days: int = 30,
+    pod_id: str | None = None,
 ) -> list[dict]:
     """Return portfolio snapshots for the last *days* calendar days.
 
@@ -302,6 +337,9 @@ def get_portfolio_history(
         Active DuckDB connection.
     days:
         Look-back window in calendar days.
+    pod_id:
+        If provided, only return snapshots for this pod. If *None*, return
+        all snapshots (backward compatible).
 
     Returns
     -------
@@ -309,28 +347,51 @@ def get_portfolio_history(
         Each dict mirrors a row in ``portfolio_snapshots``, ordered by
         date ascending.
     """
-    result = conn.execute(
-        """
-        SELECT
-            snapshot_id,
-            date,
-            nav,
-            cash,
-            gross_exposure,
-            net_exposure,
-            total_pnl,
-            daily_pnl,
-            created_at
-        FROM portfolio_snapshots
-        WHERE date >= CURRENT_DATE - INTERVAL ? DAY
-        ORDER BY date ASC, snapshot_id ASC
-        """,
-        [days],
-    ).fetchall()
+    if pod_id is not None:
+        result = conn.execute(
+            f"""
+            SELECT
+                snapshot_id,
+                date,
+                pod_id,
+                nav,
+                cash,
+                gross_exposure,
+                net_exposure,
+                total_pnl,
+                daily_pnl,
+                created_at
+            FROM portfolio_snapshots
+            WHERE date >= CURRENT_DATE - INTERVAL {int(days)} DAY
+              AND pod_id = ?
+            ORDER BY date ASC, snapshot_id ASC
+            """,
+            [pod_id],
+        ).fetchall()
+    else:
+        result = conn.execute(
+            f"""
+            SELECT
+                snapshot_id,
+                date,
+                pod_id,
+                nav,
+                cash,
+                gross_exposure,
+                net_exposure,
+                total_pnl,
+                daily_pnl,
+                created_at
+            FROM portfolio_snapshots
+            WHERE date >= CURRENT_DATE - INTERVAL {int(days)} DAY
+            ORDER BY date ASC, snapshot_id ASC
+            """,
+        ).fetchall()
 
     columns = [
         "snapshot_id",
         "date",
+        "pod_id",
         "nav",
         "cash",
         "gross_exposure",

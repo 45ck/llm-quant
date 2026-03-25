@@ -5,10 +5,12 @@ and prints a formatted markdown context to stdout.
 
 Usage:
     cd E:/llm-quant && PYTHONPATH=src python scripts/build_context.py
+    cd E:/llm-quant && PYTHONPATH=src python scripts/build_context.py --pod momo
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
@@ -20,12 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from llm_quant.brain.context import build_market_context
 from llm_quant.brain.prompts import load_system_prompt, render_decision_prompt
-from llm_quant.config import load_config
+from llm_quant.config import load_config_for_pod
 from llm_quant.data.fetcher import fetch_ohlcv
 from llm_quant.data.indicators import compute_indicators
 from llm_quant.data.store import get_latest_date, upsert_market_data
 from llm_quant.data.universe import get_all_fetch_symbols, get_tradeable_symbols
 from llm_quant.db.schema import get_connection, init_schema
+from llm_quant.surveillance.scanner import SurveillanceScanner
 from llm_quant.trading.portfolio import Portfolio
 
 logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
@@ -81,7 +84,12 @@ def _fetch_and_store(conn, config) -> None:
 
 
 def main() -> None:
-    config = load_config()
+    parser = argparse.ArgumentParser(description="Build market context for LLM trading")
+    parser.add_argument("--pod", default="default", help="Pod ID to build context for")
+    args = parser.parse_args()
+    pod_id = args.pod
+
+    config = load_config_for_pod(pod_id)
     db_path = config.general.db_path
 
     # Resolve relative db_path against project root
@@ -100,7 +108,9 @@ def main() -> None:
             _fetch_and_store(conn, config)
 
         # Load portfolio
-        portfolio = Portfolio.from_db(conn, config.general.initial_capital)
+        portfolio = Portfolio.from_db(
+            conn, config.general.initial_capital, pod_id=pod_id
+        )
 
         # Update prices from latest market data
         prices: dict[str, float] = {}
@@ -126,8 +136,32 @@ def main() -> None:
         # Render decision prompt
         decision_prompt = render_decision_prompt(context)
 
+        # Run lightweight governance scan
+        governance_status = {"overall_severity": "ok", "halts": 0, "warnings": 0}
+        try:
+            scanner = SurveillanceScanner(config)
+            report = scanner.run_full_scan(conn)
+            scanner.persist_scan(conn, report)
+            governance_status = {
+                "overall_severity": report.overall_severity.value,
+                "halts": len(report.halt_checks),
+                "warnings": len(report.warning_checks),
+                "total_checks": len(report.checks),
+                "halt_details": [
+                    {"detector": c.detector, "message": c.message}
+                    for c in report.halt_checks
+                ],
+                "warning_details": [
+                    {"detector": c.detector, "message": c.message}
+                    for c in report.warning_checks
+                ],
+            }
+        except Exception as exc:  # noqa: BLE001
+            print(f"WARNING: Governance scan failed: {exc}", file=sys.stderr)
+
         # Output structured data for Claude Code
         output = {
+            "pod_id": pod_id,
             "system_prompt": system_prompt,
             "decision_prompt": decision_prompt,
             "portfolio_summary": {
@@ -143,6 +177,7 @@ def main() -> None:
                 "yield_spread": context.yield_spread,
                 "spy_trend": context.spy_trend,
             },
+            "governance": governance_status,
             "date": str(context.date),
         }
 

@@ -65,6 +65,19 @@ Maximize risk-adjusted return (Sharpe > 0.8) subject to max 15% drawdown, benchm
 }
 ```
 
+## Governance Compliance
+
+Before every trading decision, check the governance status in the market context JSON:
+
+1. **If `governance.overall_severity == "halt"`**: Only SELL/CLOSE actions permitted. Do not open new positions. Report the halt reason.
+2. **If `governance.overall_severity == "warning"`**: Proceed with caution. Reduce position sizes, avoid new entries in affected areas. Note warnings in your portfolio commentary.
+3. **If `governance.overall_severity == "ok"`**: Trade normally.
+
+**Kill switches** (any one = halt):
+- NAV drawdown >15%, single-day loss >5%, 5 consecutive losing days, no fresh data >72h, 3 halt scans in 7 days
+
+**Strategy changes** require `/promote` checklist: hard vetoes (DSR>=0.95, PBO<=0.10, SPA p<=0.05), scorecard 85+, paper minimums (50 trades, 30 days, Sharpe 0.60), canary gate (10% allocation, 14 days, 10% DD limit).
+
 ## Hash Chain Compliance
 Every trade record receives a `created_at` timestamp assigned by DuckDB (not by you). This timestamp is included in the SHA-256 hash chain that ensures ledger integrity. Never attempt to set, override, or backdate `created_at` values — the executor handles this automatically. If `pq verify` reports hash chain errors, do not modify trade records directly; report the issue.
 

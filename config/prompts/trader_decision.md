@@ -28,6 +28,25 @@
 - **10Y-2Y Spread**: {{ "%.2f"|format(yield_spread) }} bps
 - **SPY 50/200 SMA**: {{ spy_trend }}
 
+{% if governance is defined and governance %}
+## Governance Status
+- **Overall**: {{ governance.overall_severity | upper }}
+- **Checks**: {{ governance.total_checks }} total, {{ governance.halts }} halt(s), {{ governance.warnings }} warning(s)
+{% if governance.overall_severity == "halt" %}
+
+**TRADING RESTRICTED**: Kill switch triggered. Only SELL/CLOSE actions permitted.
+{% for h in governance.halt_details %}
+- {{ h.detector }}: {{ h.message }}
+{% endfor %}
+{% elif governance.overall_severity == "warning" %}
+
+**CAUTION**: Governance warnings active. Consider reducing position sizes.
+{% for w in governance.warning_details %}
+- {{ w.detector }}: {{ w.message }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
 ## Instructions
 Analyze the data above and provide your trading decisions as JSON following the system prompt format. Consider:
 1. Current market regime and any regime shifts
@@ -35,3 +54,4 @@ Analyze the data above and provide your trading decisions as JSON following the 
 3. Existing position management (stop-loss triggers, profit-taking)
 4. New opportunities aligned with the regime
 5. All hard constraints from your mandate
+6. Governance status — respect halt restrictions, note warnings in analysis

@@ -63,11 +63,20 @@ class Position:
 class Portfolio:
     """In-memory representation of the full portfolio state."""
 
-    def __init__(self, initial_capital: float = 100_000.0) -> None:
+    def __init__(
+        self,
+        initial_capital: float = 100_000.0,
+        pod_id: str = "default",
+    ) -> None:
         self.cash: float = initial_capital
         self.positions: dict[str, Position] = {}
         self.initial_capital: float = initial_capital
-        logger.info("Portfolio initialised with capital=%.2f", initial_capital)
+        self.pod_id: str = pod_id
+        logger.info(
+            "Portfolio initialised with capital=%.2f, pod_id=%s",
+            initial_capital,
+            pod_id,
+        )
 
     # -- aggregate properties ----------------------------------------------
 
@@ -181,6 +190,7 @@ class Portfolio:
         cls,
         conn: duckdb.DuckDBPyConnection,
         initial_capital: float,
+        pod_id: str = "default",
     ) -> Portfolio:
         """Restore portfolio from the latest snapshot stored in DuckDB.
 
@@ -192,23 +202,27 @@ class Portfolio:
             """
             SELECT snapshot_id, nav, cash
             FROM portfolio_snapshots
+            WHERE pod_id = ?
             ORDER BY date DESC, snapshot_id DESC
             LIMIT 1
-            """
+            """,
+            [pod_id],
         ).fetchone()
 
         if row is None:
             logger.info(
-                "No existing snapshot found – returning fresh portfolio (capital=%.2f)",
+                "No existing snapshot found – returning fresh "
+                "portfolio (capital=%.2f, pod_id=%s)",
                 initial_capital,
+                pod_id,
             )
-            return cls(initial_capital=initial_capital)
+            return cls(initial_capital=initial_capital, pod_id=pod_id)
 
         snapshot_id: int = row[0]
         nav_db: float = row[1]
         cash_db: float = row[2]
 
-        portfolio = cls(initial_capital=initial_capital)
+        portfolio = cls(initial_capital=initial_capital, pod_id=pod_id)
         portfolio.cash = cash_db
 
         # Load positions attached to this snapshot

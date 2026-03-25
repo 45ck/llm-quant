@@ -1,0 +1,4 @@
+[strategy]
+slug = "default"
+name = "Regime Momentum"
+description = "Daily macro regime rotation across the full multi-asset universe"

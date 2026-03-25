@@ -1,0 +1,18 @@
+[strategy]
+slug = "benchmark"
+name = "Passive Benchmark"
+description = "Equal-weight SPY/QQQ/TLT/GLD/IEF; monthly rebalance; zero market timing"
+
+[risk]
+max_position_weight = 0.25
+max_trade_size = 0.10
+max_gross_exposure = 1.0
+max_net_exposure = 1.0
+max_sector_concentration = 0.50
+max_trades_per_session = 5
+min_cash_reserve = 0.01
+require_stop_loss = true
+default_stop_loss_pct = 0.15
+max_drawdown_pct = 0.30
+crypto_max_position_weight = 0.0
+forex_max_position_weight = 0.0

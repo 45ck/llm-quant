@@ -1,0 +1,19 @@
+[strategy]
+slug = "contrarian"
+name = "Mean Reversion / Contrarian"
+description = "Fade RSI extremes with tight stops; buy oversold, sell overbought, exit quickly"
+
+[risk]
+max_position_weight = 0.08
+max_trade_size = 0.02
+max_gross_exposure = 1.2
+max_net_exposure = 0.8
+max_sector_concentration = 0.25
+max_trades_per_session = 5
+min_cash_reserve = 0.10
+require_stop_loss = true
+default_stop_loss_pct = 0.03
+max_drawdown_pct = 0.12
+crypto_max_position_weight = 0.0
+forex_max_position_weight = 0.06
+forex_default_stop_loss_pct = 0.02

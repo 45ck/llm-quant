@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from llm_quant.config import load_config
 from llm_quant.db.integrity import verify_chain
 from llm_quant.db.schema import get_connection, init_schema
+from llm_quant.surveillance.scanner import SurveillanceScanner
 from llm_quant.trading.performance import compute_performance
 
 logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
@@ -509,6 +510,33 @@ def generate_daily_report(
         )
     else:
         lines.append(f"| Total Return | {_fmt_pct(portfolio_return)} | N/A | N/A |")
+    lines.append("")
+
+    # Governance Status
+    lines.append("## Governance Status")
+    lines.append("")
+    try:
+        scanner = SurveillanceScanner(load_config())
+        report = scanner.run_full_scan(conn)
+        severity = report.overall_severity.value.upper()
+        lines.append(
+            f"- **Overall**: {severity} "
+            f"({len(report.checks)} checks, "
+            f"{len(report.halt_checks)} halts, "
+            f"{len(report.warning_checks)} warnings)"
+        )
+        if report.halt_checks:
+            lines.append("")
+            lines.append("**Halt triggers:**")
+            for c in report.halt_checks:
+                lines.append(f"- [{c.detector}] {c.message}")
+        if report.warning_checks:
+            lines.append("")
+            lines.append("**Warnings:**")
+            for c in report.warning_checks:
+                lines.append(f"- [{c.detector}] {c.message}")
+    except Exception as exc:  # noqa: BLE001
+        lines.append(f"- Governance scan unavailable: {exc}")
     lines.append("")
 
     # Footer

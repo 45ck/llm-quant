@@ -7,10 +7,14 @@ Usage:
     cd E:/llm-quant && PYTHONPATH=src \\
         python scripts/execute_decision.py \\
         <<< '{"market_regime": "risk_on", ...}'
+    cd E:/llm-quant && PYTHONPATH=src \\
+        python scripts/execute_decision.py --pod momo \\
+        <<< '{"market_regime": "risk_on", ...}'
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import sys
@@ -20,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from llm_quant.brain.parser import parse_trading_decision
-from llm_quant.config import load_config
+from llm_quant.config import load_config_for_pod
 from llm_quant.db.schema import get_connection
 from llm_quant.risk.manager import RiskManager
 from llm_quant.trading.executor import execute_signals
@@ -32,13 +36,18 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Execute trading decision")
+    parser.add_argument("--pod", default="default", help="Pod ID to execute for")
+    args = parser.parse_args()
+    pod_id = args.pod
+
     # Read JSON from stdin
     raw_input = sys.stdin.read().strip()
     if not raw_input:
         print(json.dumps({"error": "No input received on stdin"}))
         sys.exit(1)
 
-    config = load_config()
+    config = load_config_for_pod(pod_id)
     db_path = config.general.db_path
 
     # Resolve relative db_path
@@ -54,7 +63,9 @@ def main() -> None:
         decision = parse_trading_decision(raw_input, today)
 
         # Load portfolio
-        portfolio = Portfolio.from_db(conn, config.general.initial_capital)
+        portfolio = Portfolio.from_db(
+            conn, config.general.initial_capital, pod_id=pod_id
+        )
 
         # Get latest prices
         prices: dict[str, float] = {}
@@ -94,12 +105,17 @@ def main() -> None:
 
         # Log trades and save snapshot
         decision_id = None
-        trade_ids = log_trades(conn, executed, today, decision_id) if executed else []
+        trade_ids = (
+            log_trades(conn, executed, today, decision_id, pod_id=pod_id)
+            if executed
+            else []
+        )
 
-        snapshot_id = save_portfolio_snapshot(conn, portfolio, today)
+        snapshot_id = save_portfolio_snapshot(conn, portfolio, today, pod_id=pod_id)
 
         # Build summary
         summary = {
+            "pod_id": pod_id,
             "date": str(today),
             "decision": {
                 "market_regime": decision.market_regime.value,

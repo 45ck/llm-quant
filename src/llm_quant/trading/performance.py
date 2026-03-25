@@ -70,19 +70,37 @@ def _compute_benchmark_return(
 def _get_best_worst_positions(
     conn: duckdb.DuckDBPyConnection,
     n: int = 3,
+    pod_id: str | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """Return top-*n* best and worst positions by unrealized_pnl.
 
     Reads from the ``positions`` table for the latest snapshot.
     Returns ``(best, worst)`` where each is a list of dicts with
     keys ``symbol``, ``unrealized_pnl``, ``weight``.
+
+    Parameters
+    ----------
+    pod_id:
+        If provided, only consider snapshots for this pod.
     """
-    latest_snap = conn.execute("""
-        SELECT snapshot_id
-        FROM portfolio_snapshots
-        ORDER BY date DESC, snapshot_id DESC
-        LIMIT 1
-        """).fetchone()
+    if pod_id is not None:
+        latest_snap = conn.execute(
+            """
+            SELECT snapshot_id
+            FROM portfolio_snapshots
+            WHERE pod_id = ?
+            ORDER BY date DESC, snapshot_id DESC
+            LIMIT 1
+            """,
+            [pod_id],
+        ).fetchone()
+    else:
+        latest_snap = conn.execute("""
+            SELECT snapshot_id
+            FROM portfolio_snapshots
+            ORDER BY date DESC, snapshot_id DESC
+            LIMIT 1
+            """).fetchone()
 
     if latest_snap is None:
         return [], []
@@ -121,6 +139,7 @@ def _get_best_worst_positions(
 def compute_performance(  # noqa: C901, PLR0912, PLR0915
     conn: duckdb.DuckDBPyConnection,
     initial_capital: float = 100_000.0,
+    pod_id: str | None = None,
 ) -> dict:
     """Compute headline performance metrics.
 
@@ -136,6 +155,9 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
         Active DuckDB connection.
     initial_capital:
         Starting capital used to compute total return.
+    pod_id:
+        If provided, only include data for this pod. If *None*, use all
+        data (backward compatible).
 
     Returns
     -------
@@ -169,11 +191,22 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     # ------------------------------------------------------------------
     # 1. Load portfolio snapshots into Polars
     # ------------------------------------------------------------------
-    snap_rows = conn.execute("""
-        SELECT date, nav, daily_pnl
-        FROM portfolio_snapshots
-        ORDER BY date ASC, snapshot_id ASC
-        """).fetchall()
+    if pod_id is not None:
+        snap_rows = conn.execute(
+            """
+            SELECT date, nav, daily_pnl
+            FROM portfolio_snapshots
+            WHERE pod_id = ?
+            ORDER BY date ASC, snapshot_id ASC
+            """,
+            [pod_id],
+        ).fetchall()
+    else:
+        snap_rows = conn.execute("""
+            SELECT date, nav, daily_pnl
+            FROM portfolio_snapshots
+            ORDER BY date ASC, snapshot_id ASC
+            """).fetchall()
 
     if not snap_rows:
         logger.info("No portfolio snapshots – returning default metrics.")
@@ -272,16 +305,32 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     win_rate: float = 0.0
     avg_trade_pnl: float = 0.0
 
-    trade_rows = conn.execute("""
-        SELECT
-            t.symbol,
-            t.action,
-            t.shares,
-            t.price,
-            t.notional
-        FROM trades t
-        ORDER BY t.date ASC, t.trade_id ASC
-        """).fetchall()
+    if pod_id is not None:
+        trade_rows = conn.execute(
+            """
+            SELECT
+                t.symbol,
+                t.action,
+                t.shares,
+                t.price,
+                t.notional
+            FROM trades t
+            WHERE t.pod_id = ?
+            ORDER BY t.date ASC, t.trade_id ASC
+            """,
+            [pod_id],
+        ).fetchall()
+    else:
+        trade_rows = conn.execute("""
+            SELECT
+                t.symbol,
+                t.action,
+                t.shares,
+                t.price,
+                t.notional
+            FROM trades t
+            ORDER BY t.date ASC, t.trade_id ASC
+            """).fetchall()
 
     total_trades = len(trade_rows)
 
@@ -331,7 +380,7 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     # ------------------------------------------------------------------
     # 6. Best / worst positions
     # ------------------------------------------------------------------
-    best_positions, worst_positions = _get_best_worst_positions(conn)
+    best_positions, worst_positions = _get_best_worst_positions(conn, pod_id=pod_id)
 
     # ------------------------------------------------------------------
     # 7. Assemble result

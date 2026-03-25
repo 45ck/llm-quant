@@ -22,11 +22,14 @@ flow:
 
 done when:
   gate snapshot_today: cd E:/llm-quant && PYTHONPATH=src python -c "import duckdb,sys;db=duckdb.connect('E:/llm-quant/data/llm_quant.duckdb');r=db.execute('SELECT COUNT(*) FROM portfolio_snapshots WHERE date=CURRENT_DATE').fetchone();sys.exit(0 if r[0]>0 else 1)"
+  gate governance_clear: cd E:/llm-quant && PYTHONPATH=src python -c "import duckdb,sys;db=duckdb.connect('E:/llm-quant/data/llm_quant.duckdb');r=db.execute(\"SELECT overall_severity FROM surveillance_scans ORDER BY scan_id DESC LIMIT 1\").fetchone();sys.exit(0 if r and r[0]!='halt' else 1)"
 ```
 
-## What the Gate Enforces
+## What the Gates Enforce
 
 The `snapshot_today` gate runs a DuckDB query checking that a portfolio snapshot exists for today. This only happens after `execute_decision.py` completes successfully — meaning data was fetched, indicators computed, a decision made, risk checks passed, and the portfolio state was persisted. Claude cannot declare the cycle complete without this proof.
+
+The `governance_clear` gate checks that the most recent surveillance scan is not in `halt` status. If governance detects a kill switch trigger, the trading cycle cannot be marked complete until the halt condition is resolved or acknowledged.
 
 ## When This Retries
 

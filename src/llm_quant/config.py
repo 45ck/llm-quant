@@ -1,10 +1,16 @@
 """Configuration loading and validation via Pydantic."""
 
+import logging
 import os
+import re
 import tomllib
 from pathlib import Path
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+
+POD_ID_RE = re.compile(r"^[a-z][a-z0-9-]{0,30}[a-z0-9]$")
 
 
 def _find_config_dir() -> Path:
@@ -63,6 +69,87 @@ class RiskLimits(BaseModel):
     forex_default_stop_loss_pct: float = 0.03
 
 
+class RegimeDriftConfig(BaseModel):
+    rolling_window_days: int = 21
+    sharpe_decay_warn: float = 0.30
+    sharpe_decay_halt: float = 0.50
+    win_rate_decay_warn: float = 0.15
+    win_rate_decay_halt: float = 0.25
+    vol_spike_warn: float = 1.5
+    vol_spike_halt: float = 2.0
+
+
+class AlphaDecayConfig(BaseModel):
+    rolling_window_days: int = 63
+    decay_warn: float = 0.40
+    decay_halt: float = 0.60
+
+
+class RiskDriftConfig(BaseModel):
+    exposure_warn_buffer: float = 0.10
+    concentration_warn_buffer: float = 0.10
+
+
+class DataQualityConfig(BaseModel):
+    max_stale_days: int = 3
+    gap_threshold_pct: float = 0.20
+    plausibility_min_price: float = 0.01
+
+
+class ProcessDriftConfig(BaseModel):
+    tracked_files: list[str] = Field(
+        default_factory=lambda: [
+            "config/default.toml",
+            "config/risk.toml",
+            "config/universe.toml",
+            "config/governance.toml",
+            "config/prompts/trader_decision.md",
+        ]
+    )
+
+
+class OperationalHealthConfig(BaseModel):
+    max_snapshot_gap_days: int = 3
+    max_price_staleness_hours: int = 48
+    hash_chain_required: bool = True
+
+
+class KillSwitchConfig(BaseModel):
+    max_drawdown_pct: float = 0.15
+    max_daily_loss_pct: float = 0.05
+    max_consecutive_losses: int = 5
+    max_correlation_breach: float = 0.85
+    data_blackout_hours: int = 72
+    risk_check_failure_streak: int = 3
+
+
+class PromotionConfig(BaseModel):
+    min_deflated_sharpe: float = 0.95
+    max_pbo: float = 0.10
+    max_spa_p_value: float = 0.05
+    min_trl: int = 1
+    scorecard_pass_threshold: int = 85
+    min_paper_trades: int = 50
+    min_paper_days: int = 30
+    min_paper_sharpe: float = 0.60
+    canary_allocation_pct: float = 0.10
+    canary_min_days: int = 14
+    canary_max_drawdown_pct: float = 0.10
+
+
+class GovernanceConfig(BaseModel):
+    regime_drift: RegimeDriftConfig = Field(default_factory=RegimeDriftConfig)
+    alpha_decay: AlphaDecayConfig = Field(default_factory=AlphaDecayConfig)
+    risk_drift: RiskDriftConfig = Field(default_factory=RiskDriftConfig)
+    data_quality: DataQualityConfig = Field(default_factory=DataQualityConfig)
+    process_drift: ProcessDriftConfig = Field(default_factory=ProcessDriftConfig)
+    operational_health: OperationalHealthConfig = Field(
+        default_factory=OperationalHealthConfig
+    )
+    kill_switches: KillSwitchConfig = Field(default_factory=KillSwitchConfig)
+    promotion: PromotionConfig = Field(default_factory=PromotionConfig)
+
+
 class AssetEntry(BaseModel):
     symbol: str
     name: str
@@ -93,6 +180,7 @@ class AppConfig(BaseModel):
     data: DataConfig = Field(default_factory=DataConfig)
     risk: RiskLimits = Field(default_factory=RiskLimits)
     universe: UniverseConfig = Field(default_factory=UniverseConfig)
+    governance: GovernanceConfig = Field(default_factory=GovernanceConfig)
 
 
 def _load_toml(path: Path) -> dict:
@@ -143,10 +231,53 @@ def load_config(config_dir: Path | None = None) -> AppConfig:
     if env_model:
         llm_data["model"] = env_model
 
+    # Load governance.toml
+    governance_data: dict = {}
+    governance_path = config_dir / "governance.toml"
+    if governance_path.exists():
+        governance_data = _load_toml(governance_path)
+
     return AppConfig(
         general=GeneralConfig(**general_data),
         llm=LLMConfig(**llm_data),
         data=DataConfig(**data_data),
         risk=RiskLimits(**risk_data),
         universe=UniverseConfig(**universe_data),
+        governance=GovernanceConfig(**governance_data),
     )
+
+
+def validate_pod_id(pod_id: str) -> bool:
+    """Check whether *pod_id* is syntactically valid."""
+    return pod_id == "default" or bool(POD_ID_RE.match(pod_id))
+
+
+def load_config_for_pod(
+    pod_id: str = "default",
+    config_dir: Path | None = None,
+) -> AppConfig:
+    """Load base config, then overlay strategy-specific TOML if it exists."""
+    base = load_config(config_dir)
+    if pod_id == "default":
+        return base
+
+    cfg_dir = config_dir or _find_config_dir()
+    strategy_path = cfg_dir / "strategies" / f"{pod_id}.toml"
+    if not strategy_path.exists():
+        logger.warning("No strategy overlay for pod '%s' at %s", pod_id, strategy_path)
+        return base
+
+    with strategy_path.open("rb") as f:
+        overlay = tomllib.load(f)
+
+    # Merge overlay into base config dict
+    base_dict = base.model_dump()
+    for section, values in overlay.items():
+        if (
+            section in base_dict
+            and isinstance(values, dict)
+            and isinstance(base_dict[section], dict)
+        ):
+            base_dict[section].update(values)
+
+    return AppConfig(**base_dict)

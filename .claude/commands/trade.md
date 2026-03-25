@@ -8,7 +8,7 @@ You are the portfolio manager. Run the complete autonomous trading cycle: fetch 
 cd E:/llm-quant && PYTHONPATH=src python scripts/build_context.py
 ```
 
-This outputs JSON with `system_prompt`, `decision_prompt`, `portfolio_summary`, `macro`, and `date`.
+This outputs JSON with `system_prompt`, `decision_prompt`, `portfolio_summary`, `macro`, `governance`, and `date`.
 
 The script automatically fetches fresh data from Yahoo Finance if the existing data is stale (>1 trading day old). On weekends, Friday's data is considered current.
 
@@ -16,6 +16,16 @@ The script automatically fetches fresh data from Yahoo Finance if the existing d
 - DB doesn't exist: `cd E:/llm-quant && PYTHONPATH=src python -c "from llm_quant.db.schema import init_schema; init_schema('data/llm_quant.duckdb')"`
 - Packages missing: `cd E:/llm-quant && pip install -e .`
 - Yahoo Finance timeout: Retry once. If still failing, report to user — do not trade on stale data.
+
+## Step 1.5: Governance Gate
+
+Check the `governance` field in the JSON output:
+
+- **`overall_severity: "ok"`** — Proceed normally with Step 2.
+- **`overall_severity: "warning"`** — Proceed with caution. Note the warnings in your analysis and consider reducing position sizes or avoiding new entries. Display warnings to the user.
+- **`overall_severity: "halt"`** — **STOP.** Only SELL/CLOSE actions are permitted. Do NOT open new positions. Display the halt reasons to the user and explain why trading is restricted to exits only. Review `halt_details` for specific kill switch triggers.
+
+The governance scan runs 7 detectors: regime drift, alpha decay, risk drift, data quality, process drift, operational health, and kill switches. Any kill switch trigger forces a full halt.
 
 ## Step 2: Analyze and Decide
 

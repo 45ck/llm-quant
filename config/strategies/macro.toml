@@ -1,0 +1,19 @@
+[strategy]
+slug = "macro"
+name = "Concentrated Macro"
+description = "Max 8 high-conviction macro positions; heavy regime tilts; 8% entry sizes"
+
+[risk]
+max_position_weight = 0.20
+max_trade_size = 0.08
+max_gross_exposure = 1.5
+max_net_exposure = 1.2
+max_sector_concentration = 0.50
+max_trades_per_session = 3
+min_cash_reserve = 0.10
+require_stop_loss = true
+default_stop_loss_pct = 0.08
+max_drawdown_pct = 0.20
+crypto_max_position_weight = 0.12
+crypto_default_stop_loss_pct = 0.20
+forex_max_position_weight = 0.0

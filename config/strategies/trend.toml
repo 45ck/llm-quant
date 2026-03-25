@@ -1,0 +1,19 @@
+[strategy]
+slug = "trend"
+name = "Pure Trend Following"
+description = "CTA-style long-only trend following: enter above SMA50, exit below SMA20, 2x ATR stops"
+
+[risk]
+max_position_weight = 0.12
+max_trade_size = 0.04
+max_gross_exposure = 1.5
+max_net_exposure = 1.2
+max_sector_concentration = 0.35
+max_trades_per_session = 3
+min_cash_reserve = 0.08
+require_stop_loss = true
+default_stop_loss_pct = 0.10
+max_drawdown_pct = 0.18
+crypto_max_position_weight = 0.06
+crypto_default_stop_loss_pct = 0.20
+forex_max_position_weight = 0.0

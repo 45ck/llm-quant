@@ -59,6 +59,26 @@ The `/trade` command runs the full autonomous trading cycle:
 - Stop-loss required on every new position
 - Max 5 trades per session
 
+## Production Governance
+
+Post-trade surveillance monitors 7 failure modes via `surveillance/` module. Runs automatically during `/trade` (Step 1.5 governance gate) and on-demand via `/governance`.
+
+**Kill switches** (any one triggers halt — sells only):
+1. NAV drawdown >15% from peak
+2. Single-day loss >5%
+3. 5 consecutive losing days
+4. Portfolio correlation >85% to single asset (deferred)
+5. No fresh data >72h
+6. 3 halt-level scans in 7 days
+
+**Governance commands**:
+- `/governance` — Run full surveillance scan, display results
+- `/promote` — Strategy change promotion checklist (hard vetoes, scorecard, paper minimums, canary gate)
+
+**Change protocol**: All strategy changes (parameters, signals, assets) must pass `/promote` checklist and be recorded in `strategy_changelog` table. See `docs/governance/control-matrix.md` and `docs/governance/model-promotion-policy.md`.
+
+**Config**: All thresholds in `config/governance.toml`.
+
 ## Commands
 
 - `pq init` — Create DuckDB schema + default configs
@@ -75,6 +95,7 @@ The `/trade` command runs the full autonomous trading cycle:
 - `src/llm_quant/brain/` — LLM integration (prompts, context, response parsing)
 - `src/llm_quant/trading/` — Paper trading (portfolio, executor, ledger, performance)
 - `src/llm_quant/risk/` — Pre-trade risk checks (7 limits)
+- `src/llm_quant/surveillance/` — Post-trade governance monitoring (7 detectors + kill switches)
 - `src/llm_quant/db/` — DuckDB schema + hash chain integrity
 - `src/llm_quant/cli.py` — Typer CLI entry point
 - `src/llm_quant/config.py` — Pydantic config from TOML

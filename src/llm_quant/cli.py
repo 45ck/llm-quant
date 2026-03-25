@@ -1,9 +1,11 @@
 """CLI entry point for llm-quant paper trading system."""
 
 import logging
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 
+import duckdb
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -17,6 +19,13 @@ app = typer.Typer(
 console = Console()
 
 logger = logging.getLogger("llm_quant")
+
+# ---------------------------------------------------------------------------
+# Pods sub-command group
+# ---------------------------------------------------------------------------
+
+pods_app = typer.Typer(name="pods", help="Manage trading pods")
+app.add_typer(pods_app, name="pods")
 
 
 def _setup_logging(level: str = "INFO") -> None:
@@ -33,10 +42,21 @@ def _get_config():
     return load_config()
 
 
+def _get_config_for_pod(pod_id: str = "default"):
+    from llm_quant.config import load_config_for_pod
+
+    return load_config_for_pod(pod_id)
+
+
 def _get_db_path(config=None):
     if config is None:
         config = _get_config()
     return Path(config.general.db_path)
+
+
+# ---------------------------------------------------------------------------
+# init / fetch (unchanged — not pod-scoped)
+# ---------------------------------------------------------------------------
 
 
 @app.command()
@@ -98,20 +118,11 @@ def fetch():
     console.print(f"[green]OK[/green] Stored {count} rows in database")
 
 
-@app.command()
-def run(
-    dry_run: bool = typer.Option(
-        False,
-        "--dry-run",
-        "-n",
-        help="Show signals without executing trades",
-    ),
-):
-    """Full cycle: fetch -> indicators -> Claude -> trade -> log."""
-    _setup_logging()
-    config = _get_config()
-    db_path = _get_db_path(config)
+# --- run - pod-aware -------------------------------------------------------
 
+
+def _run_single_pod(pod_id: str, *, dry_run: bool = False) -> None:
+    """Execute a full trading cycle for a single pod."""
     from llm_quant.brain.context import build_market_context
     from llm_quant.brain.engine import SignalEngine
     from llm_quant.data.fetcher import fetch_ohlcv
@@ -123,6 +134,9 @@ def run(
     from llm_quant.trading.executor import execute_signals
     from llm_quant.trading.ledger import log_trades, save_portfolio_snapshot
     from llm_quant.trading.portfolio import Portfolio
+
+    config = _get_config_for_pod(pod_id)
+    db_path = _get_db_path(config)
 
     conn = get_connection(db_path)
     today = datetime.now(tz=UTC).date()
@@ -144,7 +158,7 @@ def run(
 
     # Step 2: Load portfolio
     console.print("[bold]Step 2/5:[/bold] Loading portfolio...")
-    portfolio = Portfolio.from_db(conn, config.general.initial_capital)
+    portfolio = Portfolio.from_db(conn, config.general.initial_capital, pod_id=pod_id)
 
     # Get latest prices for portfolio
     latest = conn.execute("""
@@ -205,18 +219,66 @@ def run(
         decision_id = engine.log_decision(conn, decision)
 
         # Log trades
-        trade_ids = log_trades(conn, executed, today, decision_id)
+        trade_ids = log_trades(conn, executed, today, decision_id, pod_id=pod_id)
         console.print(f"  [green]OK[/green] Logged trade IDs: {trade_ids}")
     else:
         console.print("  No trades to execute.")
 
     # Step 5: Save snapshot
     console.print("[bold]Step 5/5:[/bold] Saving portfolio snapshot...")
-    snap_id = save_portfolio_snapshot(conn, portfolio, today)
+    snap_id = save_portfolio_snapshot(conn, portfolio, today, pod_id=pod_id)
     console.print(f"  [green]OK[/green] Snapshot #{snap_id} saved")
 
     conn.close()
     console.print(f"\n[bold green]Done.[/bold green] NAV: ${portfolio.nav:,.2f}")
+
+
+@app.command()
+def run(
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        "-n",
+        help="Show signals without executing trades",
+    ),
+    pod: str = typer.Option("default", "--pod", "-p", help="Pod to operate on"),
+    all_pods: bool = typer.Option(
+        False, "--all-pods", help="Run all active pods sequentially"
+    ),
+):
+    """Full cycle: fetch -> indicators -> Claude -> trade -> log."""
+    _setup_logging()
+
+    if all_pods:
+        config = _get_config()
+        db_path = _get_db_path(config)
+
+        from llm_quant.db.schema import get_connection
+
+        conn = get_connection(db_path)
+        try:
+            rows = conn.execute(
+                "SELECT pod_id FROM pods WHERE status = 'active' ORDER BY pod_id"
+            ).fetchall()
+        except (duckdb.CatalogException, duckdb.BinderException):
+            console.print(
+                "[red]FAIL[/red] Could not query pods table. "
+                "Run [bold]pq init[/bold] first."
+            )
+            conn.close()
+            raise typer.Exit(1) from None
+        conn.close()
+
+        if not rows:
+            console.print("[yellow]No active pods found.[/yellow]")
+            return
+
+        for (pid,) in rows:
+            console.rule(f"[bold]Pod: {pid}")
+            _run_single_pod(pid, dry_run=dry_run)
+        return
+
+    _run_single_pod(pod, dry_run=dry_run)
 
 
 def _display_decision(decision):
@@ -267,19 +329,90 @@ def _display_decision(decision):
         )
 
 
+# ---------------------------------------------------------------------------
+# status (pod-aware, with --all flag)
+# ---------------------------------------------------------------------------
+
+
+def _show_all_pods_dashboard(conn) -> None:
+    """Show comparative dashboard across all pods."""
+    try:
+        rows = conn.execute("""
+            SELECT
+                ps.pod_id,
+                ps.nav,
+                ps.cash,
+                ps.total_pnl,
+                ps.gross_exposure,
+                (SELECT COUNT(*) FROM positions p
+                 WHERE p.snapshot_id = ps.snapshot_id) as positions
+            FROM portfolio_snapshots ps
+            INNER JOIN (
+                SELECT pod_id, MAX(snapshot_id) as max_id
+                FROM portfolio_snapshots
+                GROUP BY pod_id
+            ) latest ON ps.pod_id = latest.pod_id AND ps.snapshot_id = latest.max_id
+            ORDER BY ps.pod_id
+        """).fetchall()
+    except (duckdb.CatalogException, duckdb.BinderException):
+        console.print("[dim]No snapshot data available.[/dim]")
+        return
+
+    if not rows:
+        console.print("[dim]No pod snapshots found.[/dim]")
+        return
+
+    table = Table(title="All Pods Dashboard")
+    table.add_column("Pod ID", style="bold")
+    table.add_column("NAV", justify="right")
+    table.add_column("Cash %", justify="right")
+    table.add_column("P&L", justify="right")
+    table.add_column("Positions", justify="right")
+    table.add_column("Gross Exposure", justify="right")
+
+    for pod_id, raw_nav, raw_cash, raw_pnl, raw_exposure, positions in rows:
+        nav_f = float(raw_nav) if raw_nav else 0.0
+        cash_f = float(raw_cash) if raw_cash else 0.0
+        pnl_f = float(raw_pnl) if raw_pnl else 0.0
+        exp_f = float(raw_exposure) if raw_exposure else 0.0
+        cash_pct = (cash_f / nav_f * 100) if nav_f > 0 else 0.0
+        pnl_color = "green" if pnl_f >= 0 else "red"
+        table.add_row(
+            pod_id,
+            f"${nav_f:,.2f}",
+            f"{cash_pct:.1f}%",
+            f"[{pnl_color}]${pnl_f:,.2f}[/{pnl_color}]",
+            str(positions or 0),
+            f"${exp_f:,.2f}",
+        )
+
+    console.print(table)
+
+
 @app.command()
-def status():
+def status(
+    pod: str = typer.Option("default", "--pod", "-p", help="Pod to operate on"),
+    all: bool = typer.Option(  # noqa: A002
+        False, "--all", "-a", help="Show comparative dashboard across all pods"
+    ),
+):
     """Show current portfolio status and metrics."""
     _setup_logging("WARNING")
-    config = _get_config()
-    db_path = _get_db_path(config)
 
     from llm_quant.db.schema import get_connection
     from llm_quant.trading.performance import compute_performance
     from llm_quant.trading.portfolio import Portfolio
 
+    config = _get_config_for_pod(pod)
+    db_path = _get_db_path(config)
     conn = get_connection(db_path)
-    portfolio = Portfolio.from_db(conn, config.general.initial_capital)
+
+    if all:
+        _show_all_pods_dashboard(conn)
+        conn.close()
+        return
+
+    portfolio = Portfolio.from_db(conn, config.general.initial_capital, pod_id=pod)
 
     # Update with latest prices
     latest = conn.execute("""
@@ -297,12 +430,13 @@ def status():
     # Portfolio summary
     cash_pct = portfolio.cash / portfolio.nav * 100
     pnl_pct = portfolio.total_pnl / portfolio.initial_capital * 100
+    title = f"Portfolio Status (pod: {pod})" if pod != "default" else "Portfolio Status"
     console.print(
         Panel(
             f"[bold]NAV:[/bold] ${portfolio.nav:,.2f}  |  "
             f"[bold]Cash:[/bold] ${portfolio.cash:,.2f} ({cash_pct:.1f}%)  |  "
             f"[bold]P&L:[/bold] ${portfolio.total_pnl:,.2f} ({pnl_pct:+.2f}%)",
-            title="Portfolio Status",
+            title=title,
         )
     )
 
@@ -354,6 +488,9 @@ def status():
     conn.close()
 
 
+# --- trades - pod-aware ----------------------------------------------------
+
+
 @app.command()
 def trades(
     limit: int = typer.Option(
@@ -362,24 +499,30 @@ def trades(
         "-l",
         help="Number of recent trades to show",
     ),
+    pod: str = typer.Option("default", "--pod", "-p", help="Pod to operate on"),
 ):
     """Show recent trades with LLM reasoning."""
     _setup_logging("WARNING")
-    config = _get_config()
+    config = _get_config_for_pod(pod)
     db_path = _get_db_path(config)
 
     from llm_quant.db.schema import get_connection
     from llm_quant.trading.ledger import get_recent_trades
 
     conn = get_connection(db_path)
-    recent = get_recent_trades(conn, limit)
+    recent = get_recent_trades(conn, limit, pod_id=pod)
     conn.close()
 
     if not recent:
         console.print("[dim]No trades recorded yet.[/dim]")
         return
 
-    table = Table(title=f"Recent Trades (last {limit})")
+    title = (
+        f"Recent Trades (last {limit}, pod: {pod})"
+        if pod != "default"
+        else f"Recent Trades (last {limit})"
+    )
+    table = Table(title=title)
     table.add_column("ID", style="dim")
     table.add_column("Date")
     table.add_column("Symbol", style="bold")
@@ -408,11 +551,16 @@ def trades(
     console.print(table)
 
 
+# --- verify - pod-aware ----------------------------------------------------
+
+
 @app.command()
-def verify():
+def verify(
+    pod: str = typer.Option("default", "--pod", "-p", help="Pod to operate on"),
+):
     """Verify the tamper-evident hash chain on the trade ledger."""
     _setup_logging("WARNING")
-    config = _get_config()
+    config = _get_config_for_pod(pod)
     db_path = _get_db_path(config)
 
     from llm_quant.db.integrity import verify_chain
@@ -427,6 +575,9 @@ def verify():
     else:
         console.print(f"[red]FAIL[/red] {message}")
         raise typer.Exit(1)
+
+
+# --- report ----------------------------------------------------------------
 
 
 @app.command()
@@ -452,6 +603,178 @@ def report(
         )
         raise typer.Exit(result.returncode)
     console.print(f"[green]OK[/green] {report_type.capitalize()} report generated")
+
+
+# ---------------------------------------------------------------------------
+# pods sub-commands
+# ---------------------------------------------------------------------------
+
+
+_POD_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_-]{0,62}$")
+
+
+@pods_app.command("list")
+def pods_list():
+    """List all registered pods."""
+    _setup_logging("WARNING")
+    config = _get_config()
+    db_path = _get_db_path(config)
+
+    from llm_quant.db.schema import get_connection
+
+    conn = get_connection(db_path)
+
+    try:
+        rows = conn.execute(
+            "SELECT pod_id, display_name, strategy_type, initial_capital, "
+            "status, created_at FROM pods ORDER BY pod_id"
+        ).fetchall()
+    except (duckdb.CatalogException, duckdb.BinderException):
+        console.print(
+            "[yellow]Pods table not found.[/yellow] "
+            "Run [bold]pq init[/bold] to create it."
+        )
+        conn.close()
+        return
+
+    conn.close()
+
+    if not rows:
+        console.print(
+            "[dim]No pods registered. Use [bold]pq pods create[/bold] to add one.[/dim]"
+        )
+        return
+
+    table = Table(title="Trading Pods")
+    table.add_column("Pod ID", style="bold")
+    table.add_column("Display Name")
+    table.add_column("Strategy")
+    table.add_column("Initial Capital", justify="right")
+    table.add_column("Status")
+    table.add_column("Created")
+
+    status_colors = {"active": "green", "paused": "yellow", "retired": "red"}
+    for (
+        pod_id,
+        display_name,
+        strategy_type,
+        initial_capital,
+        pod_status,
+        created_at,
+    ) in rows:
+        s_color = status_colors.get(pod_status, "white")
+        table.add_row(
+            pod_id,
+            display_name or pod_id,
+            strategy_type or "-",
+            f"${float(initial_capital):,.2f}" if initial_capital else "-",
+            f"[{s_color}]{pod_status}[/{s_color}]",
+            str(created_at)[:19] if created_at else "-",
+        )
+
+    console.print(table)
+
+
+@pods_app.command("create")
+def pods_create(
+    pod_id: str = typer.Argument(..., help="Unique pod identifier (lowercase slug)"),
+    name: str = typer.Option(None, "--name", "-n", help="Display name"),
+    strategy: str = typer.Option("custom", "--strategy", "-s", help="Strategy type"),
+    capital: float = typer.Option(100_000.0, "--capital", "-c", help="Initial capital"),
+):
+    """Register a new trading pod."""
+    _setup_logging("WARNING")
+
+    # Validate pod_id format
+    if not _POD_ID_PATTERN.match(pod_id):
+        console.print(
+            f"[red]FAIL[/red] Invalid pod_id '{pod_id}'. "
+            "Must be a lowercase slug (letters, digits, hyphens, underscores), "
+            "starting with a letter, max 63 chars."
+        )
+        raise typer.Exit(1)
+
+    config = _get_config()
+    db_path = _get_db_path(config)
+
+    from llm_quant.db.schema import get_connection
+
+    conn = get_connection(db_path)
+
+    try:
+        conn.execute(
+            "INSERT INTO pods "
+            "(pod_id, display_name, strategy_type, "
+            "initial_capital, status, created_at) "
+            "VALUES (?, ?, ?, ?, 'active', NOW())",
+            [pod_id, name or pod_id, strategy, capital],
+        )
+        console.print(
+            f"[green]OK[/green] Pod [bold]{pod_id}[/bold] created "
+            f"(strategy={strategy}, capital=${capital:,.2f})"
+        )
+    except duckdb.ConstraintException:
+        console.print(f"[red]FAIL[/red] Pod '{pod_id}' already exists.")
+        raise typer.Exit(1) from None
+    except duckdb.Error as e:
+        console.print(f"[red]FAIL[/red] Could not create pod: {e}")
+        raise typer.Exit(1) from e
+    finally:
+        conn.close()
+
+
+@pods_app.command("delete")
+def pods_delete(
+    pod_id: str = typer.Argument(..., help="Pod to remove"),
+    force: bool = typer.Option(
+        False, "--force", help="Hard delete (default: deactivate)"
+    ),
+):
+    """Deactivate or delete a pod."""
+    _setup_logging("WARNING")
+    config = _get_config()
+    db_path = _get_db_path(config)
+
+    from llm_quant.db.schema import get_connection
+
+    conn = get_connection(db_path)
+
+    try:
+        if force:
+            conn.execute("DELETE FROM pods WHERE pod_id = ?", [pod_id])
+            # DuckDB returns row count via changes
+            console.print(
+                f"[green]OK[/green] Pod [bold]{pod_id}[/bold] permanently deleted."
+            )
+        else:
+            conn.execute(
+                "UPDATE pods SET status = 'retired', "
+                "retired_at = NOW() WHERE pod_id = ?",
+                [pod_id],
+            )
+            console.print(
+                f"[green]OK[/green] Pod [bold]{pod_id}[/bold] "
+                "deactivated (status=retired)."
+            )
+    except duckdb.Error as e:
+        console.print(f"[red]FAIL[/red] Could not delete/deactivate pod: {e}")
+        raise typer.Exit(1) from e
+    finally:
+        conn.close()
+
+
+@pods_app.command("status")
+def pods_status():
+    """Show comparative dashboard across all pods."""
+    _setup_logging("WARNING")
+    config = _get_config()
+    db_path = _get_db_path(config)
+
+    from llm_quant.db.schema import get_connection
+
+    conn = get_connection(db_path)
+    _show_all_pods_dashboard(conn)
+    conn.close()
 
 
 if __name__ == "__main__":

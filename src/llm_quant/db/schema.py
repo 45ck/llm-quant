@@ -7,7 +7,7 @@ import duckdb
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 
 DDL_STATEMENTS = [
     """
@@ -41,9 +41,22 @@ DDL_STATEMENTS = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS pods (
+        pod_id VARCHAR PRIMARY KEY,
+        display_name VARCHAR NOT NULL,
+        strategy_type VARCHAR NOT NULL,
+        initial_capital DOUBLE NOT NULL DEFAULT 100000.0,
+        status VARCHAR NOT NULL DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        retired_at TIMESTAMP,
+        config_path VARCHAR
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS portfolio_snapshots (
         snapshot_id INTEGER PRIMARY KEY,
         date DATE NOT NULL,
+        pod_id VARCHAR NOT NULL DEFAULT 'default',
         nav DOUBLE NOT NULL,
         cash DOUBLE NOT NULL,
         gross_exposure DOUBLE NOT NULL,
@@ -75,6 +88,7 @@ DDL_STATEMENTS = [
     CREATE TABLE IF NOT EXISTS trades (
         trade_id INTEGER PRIMARY KEY,
         date DATE NOT NULL,
+        pod_id VARCHAR NOT NULL DEFAULT 'default',
         symbol VARCHAR NOT NULL,
         action VARCHAR NOT NULL,
         shares DOUBLE NOT NULL,
@@ -95,6 +109,7 @@ DDL_STATEMENTS = [
     CREATE TABLE IF NOT EXISTS llm_decisions (
         decision_id INTEGER PRIMARY KEY,
         date DATE NOT NULL,
+        pod_id VARCHAR NOT NULL DEFAULT 'default',
         model VARCHAR NOT NULL,
         prompt_tokens INTEGER,
         completion_tokens INTEGER,
@@ -115,6 +130,56 @@ DDL_STATEMENTS = [
         key VARCHAR PRIMARY KEY,
         value VARCHAR NOT NULL
     )
+    """,
+    # --- Governance / Surveillance tables (v3) ---
+    """
+    CREATE SEQUENCE IF NOT EXISTS seq_scan_id START 1
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS surveillance_scans (
+        scan_id INTEGER PRIMARY KEY DEFAULT nextval('seq_scan_id'),
+        scan_timestamp TIMESTAMP NOT NULL,
+        overall_severity VARCHAR NOT NULL,
+        total_checks INTEGER NOT NULL,
+        halt_count INTEGER NOT NULL,
+        warning_count INTEGER NOT NULL,
+        checks_json TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS config_hashes (
+        file_path VARCHAR NOT NULL,
+        hash_sha256 VARCHAR NOT NULL,
+        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (file_path, hash_sha256)
+    )
+    """,
+    """
+    CREATE SEQUENCE IF NOT EXISTS seq_change_id START 1
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS strategy_changelog (
+        change_id INTEGER PRIMARY KEY DEFAULT nextval('seq_change_id'),
+        change_date DATE NOT NULL,
+        change_type VARCHAR NOT NULL,
+        description TEXT NOT NULL,
+        config_diff TEXT,
+        author VARCHAR DEFAULT 'system',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+    # --- Pod indexes (v4) ---
+    """
+    CREATE INDEX IF NOT EXISTS idx_trades_pod_id
+        ON trades (pod_id, trade_id)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_snapshots_pod_date
+        ON portfolio_snapshots (pod_id, date DESC, snapshot_id DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_decisions_pod_date
+        ON llm_decisions (pod_id, date DESC)
     """,
 ]
 
@@ -139,6 +204,120 @@ def _migrate_v1_to_v2(conn: duckdb.DuckDBPyConnection) -> None:
     logger.info("Migrated schema to v2: hash-chain columns added.")
 
 
+def _migrate_v2_to_v3(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add governance/surveillance tables for production monitoring."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()
+    }
+    if "surveillance_scans" not in tables:
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_scan_id START 1")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS surveillance_scans (
+                scan_id INTEGER PRIMARY KEY DEFAULT nextval('seq_scan_id'),
+                scan_timestamp TIMESTAMP NOT NULL,
+                overall_severity VARCHAR NOT NULL,
+                total_checks INTEGER NOT NULL,
+                halt_count INTEGER NOT NULL,
+                warning_count INTEGER NOT NULL,
+                checks_json TEXT
+            )
+            """)
+    if "config_hashes" not in tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS config_hashes (
+                file_path VARCHAR NOT NULL,
+                hash_sha256 VARCHAR NOT NULL,
+                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (file_path, hash_sha256)
+            )
+            """)
+    if "strategy_changelog" not in tables:
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_change_id START 1")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS strategy_changelog (
+                change_id INTEGER PRIMARY KEY DEFAULT nextval('seq_change_id'),
+                change_date DATE NOT NULL,
+                change_type VARCHAR NOT NULL,
+                description TEXT NOT NULL,
+                config_diff TEXT,
+                author VARCHAR DEFAULT 'system',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+    logger.info("Migrated schema to v3: governance/surveillance tables added.")
+
+
+def _migrate_v3_to_v4(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add pods table and pod_id columns for multi-pod support."""
+    # Create pods table
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()
+    }
+    if "pods" not in tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pods (
+                pod_id VARCHAR PRIMARY KEY,
+                display_name VARCHAR NOT NULL,
+                strategy_type VARCHAR NOT NULL,
+                initial_capital DOUBLE NOT NULL DEFAULT 100000.0,
+                status VARCHAR NOT NULL DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                retired_at TIMESTAMP,
+                config_path VARCHAR
+            )
+            """)
+
+    # Insert default pod if not present
+    existing = conn.execute(
+        "SELECT pod_id FROM pods WHERE pod_id = 'default'"
+    ).fetchone()
+    if not existing:
+        conn.execute(
+            "INSERT INTO pods "
+            "(pod_id, display_name, strategy_type, "
+            "initial_capital, status) "
+            "VALUES ('default', 'Default Pod', "
+            "'regime_momentum', 100000.0, 'active')"
+        )
+
+    # Add pod_id column to trades, portfolio_snapshots, llm_decisions
+    for table in ("trades", "portfolio_snapshots", "llm_decisions"):
+        cols = {
+            row[0]
+            for row in conn.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = ?",
+                [table],
+            ).fetchall()
+        }
+        if "pod_id" not in cols:
+            conn.execute(
+                f"ALTER TABLE {table} ADD COLUMN pod_id VARCHAR DEFAULT 'default'"
+            )
+            conn.execute(f"UPDATE {table} SET pod_id = 'default' WHERE pod_id IS NULL")
+
+    # Create indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_trades_pod_id ON trades (pod_id, trade_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_snapshots_pod_date "
+        "ON portfolio_snapshots (pod_id, date DESC, snapshot_id DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_decisions_pod_date "
+        "ON llm_decisions (pod_id, date DESC)"
+    )
+
+    logger.info("Migrated schema to v4: multi-pod support added.")
+
+
 def init_schema(db_path: str | Path) -> duckdb.DuckDBPyConnection:
     """Create all tables in DuckDB. Returns the connection."""
     db_path = Path(db_path)
@@ -155,6 +334,10 @@ def init_schema(db_path: str | Path) -> duckdb.DuckDBPyConnection:
     old_version = int(old_ver[0]) if old_ver else 0
     if old_version < 2:
         _migrate_v1_to_v2(conn)
+    if old_version < 3:
+        _migrate_v2_to_v3(conn)
+    if old_version < 4:
+        _migrate_v3_to_v4(conn)
 
     conn.execute(
         "INSERT OR REPLACE INTO schema_meta VALUES ('version', ?)",
