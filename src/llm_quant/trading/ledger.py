@@ -302,7 +302,10 @@ def get_recent_trades(
     list[dict]
         Each dict mirrors a row in the ``trades`` table.
     """
-    if pod_id is not None:
+    trade_cols = [c[0] for c in conn.execute("DESCRIBE trades").fetchall()]
+    has_pod_id = "pod_id" in trade_cols
+
+    if has_pod_id and pod_id is not None:
         result = conn.execute(
             """
             SELECT
@@ -325,7 +328,21 @@ def get_recent_trades(
             """,
             [pod_id, limit],
         ).fetchall()
-    else:
+        columns = [
+            "trade_id",
+            "date",
+            "pod_id",
+            "symbol",
+            "action",
+            "shares",
+            "price",
+            "notional",
+            "conviction",
+            "reasoning",
+            "llm_decision_id",
+            "created_at",
+        ]
+    elif has_pod_id:
         result = conn.execute(
             """
             SELECT
@@ -347,21 +364,54 @@ def get_recent_trades(
             """,
             [limit],
         ).fetchall()
-
-    columns = [
-        "trade_id",
-        "date",
-        "pod_id",
-        "symbol",
-        "action",
-        "shares",
-        "price",
-        "notional",
-        "conviction",
-        "reasoning",
-        "llm_decision_id",
-        "created_at",
-    ]
+        columns = [
+            "trade_id",
+            "date",
+            "pod_id",
+            "symbol",
+            "action",
+            "shares",
+            "price",
+            "notional",
+            "conviction",
+            "reasoning",
+            "llm_decision_id",
+            "created_at",
+        ]
+    else:
+        result = conn.execute(
+            """
+            SELECT
+                trade_id,
+                date,
+                symbol,
+                action,
+                shares,
+                price,
+                notional,
+                conviction,
+                reasoning,
+                llm_decision_id,
+                created_at
+            FROM trades
+            ORDER BY date DESC, trade_id DESC
+            LIMIT ?
+            """,
+            [limit],
+        ).fetchall()
+        columns = [
+            "trade_id",
+            "date",
+            "symbol",
+            "action",
+            "shares",
+            "price",
+            "notional",
+            "conviction",
+            "reasoning",
+            "llm_decision_id",
+            "created_at",
+        ]
 
     trades = [dict(zip(columns, row, strict=True)) for row in result]
 
@@ -392,7 +442,10 @@ def get_portfolio_history(
         Each dict mirrors a row in ``portfolio_snapshots``, ordered by
         date ascending.
     """
-    if pod_id is not None:
+    snap_cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+    has_pod_id = "pod_id" in snap_cols
+
+    if has_pod_id and pod_id is not None:
         result = conn.execute(
             f"""
             SELECT
@@ -413,7 +466,19 @@ def get_portfolio_history(
             """,
             [pod_id],
         ).fetchall()
-    else:
+        columns = [
+            "snapshot_id",
+            "date",
+            "pod_id",
+            "nav",
+            "cash",
+            "gross_exposure",
+            "net_exposure",
+            "total_pnl",
+            "daily_pnl",
+            "created_at",
+        ]
+    elif has_pod_id:
         result = conn.execute(
             f"""
             SELECT
@@ -432,19 +497,47 @@ def get_portfolio_history(
             ORDER BY date ASC, snapshot_id ASC
             """,
         ).fetchall()
-
-    columns = [
-        "snapshot_id",
-        "date",
-        "pod_id",
-        "nav",
-        "cash",
-        "gross_exposure",
-        "net_exposure",
-        "total_pnl",
-        "daily_pnl",
-        "created_at",
-    ]
+        columns = [
+            "snapshot_id",
+            "date",
+            "pod_id",
+            "nav",
+            "cash",
+            "gross_exposure",
+            "net_exposure",
+            "total_pnl",
+            "daily_pnl",
+            "created_at",
+        ]
+    else:
+        result = conn.execute(
+            f"""
+            SELECT
+                snapshot_id,
+                date,
+                nav,
+                cash,
+                gross_exposure,
+                net_exposure,
+                total_pnl,
+                daily_pnl,
+                created_at
+            FROM portfolio_snapshots
+            WHERE date >= CURRENT_DATE - INTERVAL {int(days)} DAY
+            ORDER BY date ASC, snapshot_id ASC
+            """,
+        ).fetchall()
+        columns = [
+            "snapshot_id",
+            "date",
+            "nav",
+            "cash",
+            "gross_exposure",
+            "net_exposure",
+            "total_pnl",
+            "daily_pnl",
+            "created_at",
+        ]
 
     history = [dict(zip(columns, row, strict=True)) for row in result]
 

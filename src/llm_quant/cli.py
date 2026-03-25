@@ -440,8 +440,9 @@ def status(
         )
     )
 
-    # Positions table
-    if portfolio.positions:
+    # Positions table — filter to active (shares > 0) from latest snapshot
+    active_positions = {s: p for s, p in portfolio.positions.items() if p.shares > 0}
+    if active_positions:
         table = Table(title="Positions")
         table.add_column("Symbol", style="bold")
         table.add_column("Shares", justify="right")
@@ -453,7 +454,7 @@ def status(
         table.add_column("Weight", justify="right")
         table.add_column("Stop", justify="right")
 
-        for sym, pos in sorted(portfolio.positions.items()):
+        for sym, pos in sorted(active_positions.items()):
             pnl_color = "green" if pos.unrealized_pnl >= 0 else "red"
             weight = pos.market_value / portfolio.nav * 100
             table.add_row(

@@ -83,7 +83,10 @@ def _get_best_worst_positions(
     pod_id:
         If provided, only consider snapshots for this pod.
     """
-    if pod_id is not None:
+    snap_cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+    has_pod_id = "pod_id" in snap_cols
+
+    if has_pod_id and pod_id is not None:
         latest_snap = conn.execute(
             """
             SELECT snapshot_id
@@ -191,7 +194,10 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     # ------------------------------------------------------------------
     # 1. Load portfolio snapshots into Polars
     # ------------------------------------------------------------------
-    if pod_id is not None:
+    snap_cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+    snap_has_pod_id = "pod_id" in snap_cols
+
+    if snap_has_pod_id and pod_id is not None:
         snap_rows = conn.execute(
             """
             SELECT date, nav, daily_pnl
@@ -305,7 +311,10 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     win_rate: float = 0.0
     avg_trade_pnl: float = 0.0
 
-    if pod_id is not None:
+    trade_cols = [c[0] for c in conn.execute("DESCRIBE trades").fetchall()]
+    trade_has_pod_id = "pod_id" in trade_cols
+
+    if trade_has_pod_id and pod_id is not None:
         trade_rows = conn.execute(
             """
             SELECT

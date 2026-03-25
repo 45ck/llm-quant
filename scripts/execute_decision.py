@@ -111,7 +111,24 @@ def main() -> None:
             else []
         )
 
-        snapshot_id = save_portfolio_snapshot(conn, portfolio, today, pod_id=pod_id)
+        # Compute daily P&L (change from previous day's NAV)
+        prev_snap = conn.execute(
+            """
+            SELECT nav FROM portfolio_snapshots
+            WHERE date < ?
+            ORDER BY date DESC, snapshot_id DESC
+            LIMIT 1
+            """,
+            [today],
+        ).fetchone()
+
+        daily_pnl = None
+        if prev_snap is not None:
+            daily_pnl = portfolio.nav - float(prev_snap[0])
+
+        snapshot_id = save_portfolio_snapshot(
+            conn, portfolio, today, daily_pnl=daily_pnl, pod_id=pod_id
+        )
 
         # Build summary
         summary = {
