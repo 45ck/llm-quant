@@ -1,0 +1,28 @@
+# Data Contract: xlf-spy-lead-lag
+strategy_slug: "xlf-spy-lead-lag"
+sources:
+  - symbol: "XLF"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "US equity ETF with daily OHLCV. High liquidity, no gaps. Quality grade A."
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "US equity ETF with daily OHLCV. Highest liquidity instrument, no gaps. Quality grade A."
+computed_signals:
+  - name: "xlf_cumulative_return"
+    formula: "xlf_close.pct_change(signal_window).shift(lag_days)"
+    causal: true
+    notes: "Lagged cumulative return of XLF over signal_window days, shifted by lag_days"
+  - name: "lead_lag_signal"
+    formula: "1 if xlf_cumulative_return > entry_threshold else (-1 if xlf_cumulative_return < exit_threshold else 0)"
+    causal: true
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"

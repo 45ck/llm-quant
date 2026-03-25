@@ -1,0 +1,114 @@
+# Robustness Analysis: ashr-eem-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "ashr-eem-lead-lag"
+trial_family: "lead_lag_ashr_eem"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.0015
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR=0.0015 is essentially zero. The strategy has no statistical credibility
+      whatsoever. The Sharpe ratio of -1.188 is negative, so DSR measures confidence
+      in a negative Sharpe — the strategy is confidently bad, not confidently good.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 trial in this
+      family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: -1.1824
+    std_oos_sharpe: 0.6482
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -1.1824 is strongly negative across all folds.
+      No out-of-sample period shows positive performance. The strategy
+      consistently loses money across all time windows tested.
+
+  perturbation:
+    n_stable: 4
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    notes: >
+      4 of 5 perturbations are stable (within 30% change from base). However,
+      stability here means consistently bad — all variants have negative Sharpe.
+      A strategy that is consistently and stably poor passes the perturbation
+      gate mechanically but fails on all economic grounds.
+    details:
+      - name: "lag_days=2"
+        sharpe: -0.5345
+        max_dd: 0.3488
+        pct_change: +59.4
+        stable: false
+      - name: "lag_days=4"
+        sharpe: -0.9628
+        max_dd: 0.4177
+        pct_change: +26.8
+        stable: true
+      - name: "entry_threshold=0.005"
+        sharpe: -1.1693
+        max_dd: 0.5164
+        pct_change: +11.2
+        stable: true
+      - name: "entry_threshold=0.02"
+        sharpe: -1.2364
+        max_dd: 0.4287
+        pct_change: +6.0
+        stable: true
+      - name: "target_weight=0.70"
+        sharpe: -1.3155
+        max_dd: 0.4279
+        pct_change: +0.0
+        stable: true
+
+cost_sensitivity:
+  sharpe_1x: -1.188
+  max_dd_1x: 43.91
+  notes: "Strategy is deeply unprofitable even before costs. Costs worsen results to Sharpe=-1.578 at 3x."
+
+max_drawdown_check:
+  value: 43.91
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 43.91% vastly exceeds the 15% threshold. The strategy takes
+    90% weight in EEM whenever ASHR shows 3-day positive momentum, but EEM has
+    declined significantly over the test period vs SPY benchmark. The ASHR signal
+    does not lead EEM in a predictive way over the 3-day horizon — the lead-lag
+    relationship is not present or is too noisy to be exploitable with these
+    parameters.
+
+data_warnings:
+  - "ASHR may have gaps from Chinese market holidays (Golden Week, Lunar New Year, National Day)"
+  - "Data quality grade B for ASHR — stale prices during Chinese closures may affect signal computation"
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: Sharpe=-1.188 DSR=0.0015 MaxDD=43.91% — all major gates fail.
+  The ASHR→EEM 3-day lead-lag hypothesis is empirically false over the 5-year
+  test period 2022-2026. Win rate of 20.3% indicates the signal has no
+  directional predictive power. The strategy consistently buys EEM on ASHR
+  momentum signals and consistently loses money — the leader signal is either
+  unrelated to EEM forward returns or the lag structure is wrong. CPCV OOS
+  Sharpe=-1.18 confirms no exploitable alpha exists in any sub-period.
+
+created_at: "2026-03-26"

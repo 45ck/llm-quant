@@ -1,0 +1,31 @@
+# Data Contract: soxx-qqq-lead-lag
+strategy_slug: "soxx-qqq-lead-lag"
+sources:
+  - symbol: "SOXX"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "iShares Semiconductor ETF. Daily OHLCV. High liquidity, minimal gaps."
+  - symbol: "QQQ"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 5
+    quality_grade: "A"
+    notes: "Invesco Nasdaq-100 ETF. Daily OHLCV. Highest liquidity ETF, no data gaps expected."
+computed_signals:
+  - name: "soxx_signal_return"
+    formula: "SOXX_close[t - lag_days] / SOXX_close[t - lag_days - signal_window] - 1"
+    causal: true
+    notes: "Leader return computed lag_days ago over signal_window days. Fully backward-looking."
+  - name: "entry_signal"
+    formula: "soxx_signal_return >= entry_threshold (0.02)"
+    causal: true
+  - name: "exit_signal"
+    formula: "soxx_signal_return <= exit_threshold (-0.01)"
+    causal: true
+validation:
+  min_data_points: 1000
+  max_missing_pct: 0.01
+  quality_grade: "A"
+created_at: "2026-03-26"

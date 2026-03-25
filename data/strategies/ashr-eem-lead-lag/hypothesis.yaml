@@ -1,0 +1,37 @@
+# Hypothesis: ashr-eem-lead-lag
+strategy_slug: "ashr-eem-lead-lag"
+statement: >
+  ASHR (China A-shares CSI 300 ETF) leads EEM (MSCI Emerging Markets ETF) by
+  3 trading days. A 3-day positive momentum signal in ASHR predicts a positive
+  forward return in EEM at the 3-day lag, generating Sharpe > 0.50 over a 5-year
+  test period with max drawdown < 15%.
+mechanism: >
+  China is the largest single-country weight in the MSCI Emerging Markets index
+  (~25-30%). China A-shares (domestic market) respond first to shifts in Chinese
+  economic policy, PBOC liquidity decisions, and domestic risk appetite before
+  those signals propagate to the broader EM complex. When Chinese domestic equities
+  rally (ASHR up), it signals improving Chinese macro conditions — rising PMI,
+  credit easing, or policy stimulus — which subsequently attracts capital flows
+  into broader EM assets (EEM) over the following 2-3 trading days as global
+  investors reposition. The lag is driven by the time it takes for EM-focused
+  fund managers to observe Chinese market moves and reallocate into the broader
+  EM benchmark. Chinese market closures (Golden Week, Lunar New Year) can
+  create informational gaps that extend or compress this lag.
+universe: ["ASHR", "EEM"]
+measurement: >
+  Leader: ASHR (3-day cumulative return signal window).
+  Follower: EEM (position entered at lag_days=3 after ASHR signal triggers).
+  Entry: ASHR 3-day cumulative return > +1.0% (entry_threshold).
+  Exit: ASHR 3-day cumulative return < -0.5% (exit_threshold).
+  Target position weight: 90% of capital.
+data_sources:
+  - "Yahoo Finance daily OHLCV for ASHR"
+  - "Yahoo Finance daily OHLCV for EEM"
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too infrequent)"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium"
+created_at: "2026-03-26"

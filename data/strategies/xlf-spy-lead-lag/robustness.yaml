@@ -1,0 +1,103 @@
+# Robustness Analysis: xlf-spy-lead-lag
+# Generated: 2026-03-26
+
+strategy_slug: "xlf-spy-lead-lag"
+trial_family: "lead_lag_xlf_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 0
+gates_failed: 4
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.3142
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment e705b9e9 (trial #1 in family).
+      DSR=0.3142 is far below the 0.95 threshold. The strategy generates
+      negative Sharpe (-0.236) with very low statistical confidence that
+      the observed performance is not noise. This is a decisive rejection.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. With only 1 valid experiment
+      in this family, PBO is undefined.
+
+  cpcv:
+    mean_oos_sharpe: -0.0883
+    std_oos_sharpe: 0.5233
+    threshold: "> 0"
+    result: "FAIL"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge on base experiment.
+      Mean OOS Sharpe of -0.0883 is negative -- strategy destroys value
+      out-of-sample. High std (0.5233) confirms highly erratic performance
+      across folds. The strategy has no OOS predictive power.
+
+  perturbation:
+    n_stable: 1
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lag_days=1"
+        sharpe: 0.1590
+        pct_change: +186.1
+        stable: false
+      - name: "lag_days=3"
+        sharpe: 0.2244
+        pct_change: +221.5
+        stable: false
+      - name: "entry_threshold=0.005"
+        sharpe: 0.0118
+        pct_change: +106.4
+        stable: false
+      - name: "entry_threshold=0.02"
+        sharpe: 0.0265
+        pct_change: +114.3
+        stable: false
+      - name: "target_weight=0.70"
+        sharpe: -0.1642
+        pct_change: +11.1
+        stable: true
+
+max_drawdown_check:
+  value: 19.47
+  threshold: "< 15.0"
+  result: "FAIL"
+  notes: >
+    Max drawdown of 19.47% exceeds the 15% equity threshold. Notably,
+    different lag days (lag=1: 13.3%, lag=3: 14.5%) generate lower drawdowns,
+    which highlights that the pre-specified lag_days=2 is particularly
+    poor for risk control -- a sign of parameter instability rather than
+    robustness.
+
+cost_sensitivity:
+  sharpe_1x: -0.236
+  max_dd_1x: 19.47
+  notes: "Strategy is unprofitable at base 1x costs (Sharpe=-0.236). Degrades sharply at 1.5x (-0.367) and 2x (-0.471)."
+
+overall_passed: false
+rejection_reason: >
+  REJECTED: All four gates failed.
+  DSR=0.3142 << 0.95 (strategy generates negative Sharpe with near-zero confidence).
+  CPCV OOS Sharpe=-0.0883 (negative, strategy destroys value out-of-sample).
+  Perturbation: only 1/5 variants stable (20% < 60% threshold).
+  MaxDD=19.47% > 15% equity threshold.
+  The XLF-leads-SPY hypothesis finds no empirical support at lag_days=2 with
+  these parameters. The perturbation analysis reveals extreme sensitivity to
+  lag_days choice -- alternative lags produce positive Sharpe while the
+  pre-specified lag=2 is the worst performer -- consistent with data mining
+  risk rather than a robust signal. The hypothesis is rejected.
+
+created_at: "2026-03-26"

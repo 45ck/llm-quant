@@ -1,0 +1,35 @@
+# Hypothesis: xlf-spy-lead-lag
+strategy_slug: "xlf-spy-lead-lag"
+statement: >
+  XLF (SPDR Financial Select Sector ETF) leads the SPY (S&P 500 ETF) by 2-3
+  trading days. A 3-day positive momentum signal in XLF predicts a positive
+  forward return in SPY at the 2-day lag, generating Sharpe > 0.50 over a 5-year
+  test period with max drawdown < 15%.
+mechanism: >
+  Financial stocks (banks, insurers, brokers) are macro bellwethers: they react
+  first to changes in credit conditions, yield curve shape, and capital flows
+  because their earnings are directly linked to those factors. When XLF rallies,
+  it signals improving credit conditions and/or risk appetite ahead of broader
+  market repricing — creating a lead-lag effect of 2-3 trading days as the signal
+  propagates through the S&P 500. Conversely, XLF weakness often precedes broad
+  market deterioration as tightening credit conditions ripple outward. The
+  financial sector's weighting (~12% of SPY) and its role as a transmission
+  mechanism for monetary policy creates this predictive relationship.
+universe: ["XLF", "SPY"]
+measurement: >
+  Leader: XLF (3-day cumulative return signal window).
+  Follower: SPY (position entered at lag_days=2 after XLF signal triggers).
+  Entry: XLF 3-day cumulative return > +1.0% (entry_threshold).
+  Exit: XLF 3-day cumulative return < -0.5% (exit_threshold).
+  Target position weight: 90% of capital.
+data_sources:
+  - "Yahoo Finance daily OHLCV for XLF"
+  - "Yahoo Finance daily OHLCV for SPY"
+falsification_criteria:
+  - "Sharpe < 0.50 after transaction costs"
+  - "Max drawdown > 15%"
+  - "Fewer than 10 complete round trips (signal too infrequent)"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95 (insufficient statistical confidence)"
+conviction: "medium"
+created_at: "2026-03-26"
