@@ -8,6 +8,7 @@ Each strategy follows the Strategy ABC contract:
 from __future__ import annotations
 
 import logging
+import math
 from datetime import date
 
 import polars as pl
@@ -425,6 +426,388 @@ class RegimeMomentumStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+
+def _detect_regime_from_vix(
+    indicators_df: pl.DataFrame,
+    vix_threshold: float,
+) -> str:
+    """Classify regime as risk_on or risk_off based on VIX level."""
+    vix_data = indicators_df.filter(pl.col("symbol") == "VIX").sort("date")
+    if len(vix_data) > 0:
+        vix_close = vix_data.tail(1).row(0, named=True)["close"]
+        if vix_close >= vix_threshold:
+            return "risk_off"
+    return "risk_on"
+
+
+def _get_atr_stop(
+    sym_data: pl.DataFrame,
+    close: float,
+    stop_mult: float,
+    fallback_pct: float,
+) -> float:
+    """Compute ATR-based stop-loss, falling back to percentage-based."""
+    if "atr_14" in sym_data.columns and len(sym_data) > 0:
+        atr_val = sym_data.tail(1).row(0, named=True).get("atr_14")
+        if atr_val and atr_val > 0:
+            return close - (stop_mult * atr_val)
+    return close * (1.0 - fallback_pct)
+
+
+def _vol_target_weight(
+    sym_data: pl.DataFrame,
+    base_weight: float,
+    target_vol: float,
+) -> float:
+    """Compute volatility-targeted weight using ATR as vol proxy.
+
+    realized_vol_proxy = ATR_14 * sqrt(252) / close
+    weight = base_weight * (target_vol / realized_vol)
+    Clamped to [0.01, base_weight * 2].
+    """
+    if "atr_14" not in sym_data.columns or len(sym_data) == 0:
+        return base_weight
+    row = sym_data.tail(1).row(0, named=True)
+    atr_val = row.get("atr_14")
+    close = row.get("close", 0)
+    if not atr_val or atr_val <= 0 or not close or close <= 0:
+        return base_weight
+    realized_vol = atr_val * math.sqrt(252) / close
+    if realized_vol <= 0:
+        return base_weight
+    weight = base_weight * (target_vol / realized_vol)
+    return max(0.01, min(weight, base_weight * 2))
+
+
+def _trailing_return(sym_data: pl.DataFrame, lookback: int) -> float | None:
+    """Compute trailing return over lookback days. Returns None if insufficient data."""
+    if len(sym_data) < lookback:
+        return None
+    recent = sym_data.tail(lookback)
+    first_close = recent.row(0, named=True)["close"]
+    last_close = recent.row(-1, named=True)["close"]
+    if first_close <= 0:
+        return None
+    return last_close / first_close - 1.0
+
+
+def _close_above_sma(sym_data: pl.DataFrame, sma_col: str = "sma_200") -> bool:
+    """Check if latest close is above the given SMA. True if SMA not available."""
+    if sma_col not in sym_data.columns or len(sym_data) == 0:
+        return True  # no SMA data = no filter applied
+    row = sym_data.tail(1).row(0, named=True)
+    sma_val = row.get(sma_col)
+    if sma_val is None:
+        return True
+    return row["close"] >= sma_val
+
+
+# ---------------------------------------------------------------------------
+# Trend Following (time-series momentum)
+# ---------------------------------------------------------------------------
+
+
+class TrendFollowingStrategy(Strategy):
+    """Time-series momentum: go long each asset with positive trailing return.
+
+    Unlike cross-sectional momentum, each asset is evaluated independently.
+    Long if: 126d return > 0 AND close > SMA_200.
+    Flat if: 126d return <= 0 OR close < SMA_200.
+    """
+
+    def _evaluate_symbols(
+        self,
+        indicators_df: pl.DataFrame,
+        symbols: list[str],
+        portfolio: Portfolio,
+        prices: dict[str, float],
+        params: dict,
+    ) -> list[TradeSignal]:
+        """Evaluate each symbol independently for trend-following signals."""
+        signals: list[TradeSignal] = []
+        lookback = params["lookback"]
+        sma_col = params["sma_col"]
+        target_vol = params["target_vol"]
+        weight_mult_risk_off = params["weight_mult_risk_off"]
+        stop_mult = params["stop_mult"]
+        regime = params["regime"]
+
+        new_positions = 0
+        for symbol in symbols:
+            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+            close = prices.get(symbol, 0)
+            if close <= 0 or len(sym_data) < lookback:
+                continue
+
+            ret = _trailing_return(sym_data, lookback)
+            above_sma = _close_above_sma(sym_data, sma_col)
+            has_position = symbol in portfolio.positions
+            is_bullish = ret is not None and ret > 0 and above_sma
+
+            if is_bullish and not has_position:
+                if (
+                    len(portfolio.positions) + new_positions
+                    >= self.config.max_positions
+                ):
+                    continue
+                base_weight = self.config.target_position_weight
+                if regime == "risk_off":
+                    base_weight *= weight_mult_risk_off
+                weight = _vol_target_weight(sym_data, base_weight, target_vol)
+                stop_loss = _get_atr_stop(
+                    sym_data, close, stop_mult, self.config.stop_loss_pct
+                )
+                signals.append(
+                    TradeSignal(
+                        symbol=symbol,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=weight,
+                        stop_loss=stop_loss,
+                        reasoning=(
+                            f"Trend-following: {ret:.2%} 126d return, "
+                            f"above SMA200, regime={regime}"
+                        ),
+                    )
+                )
+                new_positions += 1
+            elif not is_bullish and has_position:
+                reason = "Trend-following exit: "
+                if ret is not None and ret <= 0:
+                    reason += f"negative 126d return ({ret:.2%})"
+                else:
+                    reason += "below SMA200"
+                signals.append(
+                    TradeSignal(
+                        symbol=symbol,
+                        action=Action.CLOSE,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=reason,
+                    )
+                )
+
+        return signals
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters
+        lookback = params.get("lookback_days", 126)
+        sma_trend = params.get("sma_trend", 200)
+        vix_threshold = params.get("vix_threshold", 22)
+
+        regime = _detect_regime_from_vix(indicators_df, vix_threshold)
+
+        symbols = [
+            s
+            for s in indicators_df.select("symbol").unique().to_series().to_list()
+            if s != "VIX"
+        ]
+
+        eval_params = {
+            "lookback": lookback,
+            "sma_col": f"sma_{sma_trend}",
+            "target_vol": params.get("target_vol", 0.12),
+            "weight_mult_risk_off": params.get("weight_mult_risk_off", 0.50),
+            "stop_mult": params.get("stop_atr_multiplier", 1.5),
+            "regime": regime,
+        }
+
+        return self._evaluate_symbols(
+            indicators_df, symbols, portfolio, prices, eval_params
+        )
+
+
+class MultiFactorStrategy(Strategy):
+    """Multi-factor strategy: momentum + value + quality composite ranking.
+
+    Combines three uncorrelated signals:
+    - Momentum: 126d trailing return (higher = better)
+    - Value: RSI_14 inverted (lower RSI = more value/oversold)
+    - Quality: inverse realized volatility (lower vol = higher quality)
+    """
+
+    def _score_universe(
+        self,
+        indicators_df: pl.DataFrame,
+        symbols: list[str],
+        momentum_lookback: int,
+        sma_col: str,
+    ) -> list[dict]:
+        """Score each symbol on momentum, value, and quality factors."""
+        scored: list[dict] = []
+        for symbol in symbols:
+            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+            if len(sym_data) < momentum_lookback:
+                continue
+            row = sym_data.tail(1).row(0, named=True)
+            close = row["close"]
+            if close <= 0:
+                continue
+
+            mom = _trailing_return(sym_data, momentum_lookback)
+            if mom is None:
+                continue
+
+            rsi = row.get("rsi_14") if "rsi_14" in sym_data.columns else None
+            if rsi is None:
+                continue
+            value = 100.0 - rsi
+
+            atr_val = row.get("atr_14") if "atr_14" in sym_data.columns else None
+            if atr_val and atr_val > 0:
+                vol_proxy = atr_val * math.sqrt(252) / close
+                quality = 1.0 / vol_proxy if vol_proxy > 0 else 0.0
+            else:
+                quality = 0.0
+
+            above_sma = _close_above_sma(sym_data, sma_col)
+
+            scored.append(
+                {
+                    "symbol": symbol,
+                    "momentum": mom,
+                    "value": value,
+                    "quality": quality,
+                    "above_sma": above_sma,
+                    "close": close,
+                    "sym_data": sym_data,
+                }
+            )
+        return scored
+
+    def _normalize_and_rank(
+        self,
+        scored: list[dict],
+        mom_w: float,
+        val_w: float,
+        qual_w: float,
+    ) -> list[dict]:
+        """Z-score normalize factors and compute composite score."""
+        if len(scored) < 2:
+            return scored
+
+        for factor in ("momentum", "value", "quality"):
+            vals = [s[factor] for s in scored]
+            mean = sum(vals) / len(vals)
+            std = (sum((v - mean) ** 2 for v in vals) / len(vals)) ** 0.5
+            for s in scored:
+                if std > 0:
+                    s[f"{factor}_z"] = (s[factor] - mean) / std
+                else:
+                    s[f"{factor}_z"] = 0.0
+
+        for s in scored:
+            s["composite"] = (
+                mom_w * s["momentum_z"] + val_w * s["value_z"] + qual_w * s["quality_z"]
+            )
+
+        scored.sort(key=lambda x: x["composite"], reverse=True)
+        return scored
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        signals: list[TradeSignal] = []
+        params = self.config.parameters
+        momentum_lookback = params.get(
+            "momentum_lookback", params.get("lookback_days", 126)
+        )
+        top_n = params.get("top_n", 7)
+        mom_w = params.get("momentum_weight", 0.40)
+        val_w = params.get("value_weight", 0.30)
+        qual_w = params.get("quality_weight", 0.30)
+        target_vol = params.get("target_vol", 0.12)
+        stop_mult = params.get("stop_atr_multiplier", 1.5)
+        vix_risk_off = params.get("vix_risk_off", 25)
+        sma_trend = params.get("sma_trend", 200)
+
+        regime = _detect_regime_from_vix(indicators_df, vix_risk_off)
+        sma_col = f"sma_{sma_trend}"
+
+        symbols = [
+            s
+            for s in indicators_df.select("symbol").unique().to_series().to_list()
+            if s != "VIX"
+        ]
+
+        scored = self._score_universe(
+            indicators_df, symbols, momentum_lookback, sma_col
+        )
+        scored = self._normalize_and_rank(scored, mom_w, val_w, qual_w)
+
+        # Filter: composite > 0 AND above SMA trend filter
+        eligible = [s for s in scored if s["composite"] > 0 and s["above_sma"]]
+        top_symbols = {s["symbol"] for s in eligible[:top_n]}
+        all_scored_symbols = {s["symbol"] for s in scored}
+
+        # Generate buy signals for top-N
+        new_positions = 0
+        for entry in eligible[:top_n]:
+            symbol = entry["symbol"]
+            if symbol in portfolio.positions:
+                continue
+            if len(portfolio.positions) + new_positions >= self.config.max_positions:
+                continue
+            close = prices.get(symbol, 0)
+            if close <= 0:
+                continue
+
+            base_weight = self.config.target_position_weight
+            if regime == "risk_off":
+                base_weight *= 0.5
+            weight = _vol_target_weight(entry["sym_data"], base_weight, target_vol)
+            stop_loss = _get_atr_stop(
+                entry["sym_data"], close, stop_mult, self.config.stop_loss_pct
+            )
+
+            signals.append(
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=weight,
+                    stop_loss=stop_loss,
+                    reasoning=(
+                        f"Multi-factor top-{top_n}: composite={entry['composite']:.2f} "
+                        f"(mom={entry['momentum_z']:.2f}, val={entry['value_z']:.2f}, "
+                        f"qual={entry['quality_z']:.2f}), regime={regime}"
+                    ),
+                )
+            )
+            new_positions += 1
+
+        # Close positions not in top-N (only for symbols we scored)
+        signals.extend(
+            TradeSignal(
+                symbol=symbol,
+                action=Action.CLOSE,
+                conviction=Conviction.LOW,
+                target_weight=0.0,
+                stop_loss=0.0,
+                reasoning=f"Multi-factor: dropped from top-{top_n}",
+            )
+            for symbol in portfolio.positions
+            if symbol not in top_symbols and symbol in all_scored_symbols
+        )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -434,6 +817,8 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "momentum": MomentumStrategy,
     "macd": MACDStrategy,
     "regime_momentum": RegimeMomentumStrategy,
+    "trend_following": TrendFollowingStrategy,
+    "multi_factor": MultiFactorStrategy,
 }
 
 
