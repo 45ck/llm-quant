@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501,F841,PTH123
+# ruff: noqa: F841
 """Run robustness analysis for spy-tlt-correlation-regime (A8).
 
 Runs CPCV + parameter perturbations + writes robustness.yaml.

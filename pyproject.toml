@@ -101,6 +101,9 @@ ignore = [
 "scripts/**/*.py" = [
   "INP001",  # scripts are standalone, not packages
   "T201",    # scripts use print() for user-facing output
+  "E501",    # analysis scripts allow long lines for readability
+  "BLE001",  # broad exception catching fine in analysis scripts
+  "PTH123",  # open() fine in scripts
 ]
 "src/llm_quant/backtest/engine.py" = [
   "PLR0913", # engine.run() needs many params by design

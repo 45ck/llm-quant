@@ -1,4 +1,3 @@
-# ruff: noqa: E501
 """Robustness analysis for D7 eth-btc-ratio-mean-reversion."""
 
 from __future__ import annotations

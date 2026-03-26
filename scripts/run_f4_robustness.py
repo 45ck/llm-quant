@@ -1,4 +1,3 @@
-# ruff: noqa: E501, PTH123
 """Robustness analysis for F4 pre-fomc-tlt-drift strategy."""
 
 import json

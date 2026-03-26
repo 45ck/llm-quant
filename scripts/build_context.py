@@ -156,7 +156,7 @@ def main() -> None:
                     for c in report.warning_checks
                 ],
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"WARNING: Governance scan failed: {exc}", file=sys.stderr)
 
         # Output structured data for Claude Code

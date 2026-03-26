@@ -1647,15 +1647,29 @@ class VixRegimeStrategy(Strategy):
         if mode == "level":
             defensive = vix_now > vix_thresh
         elif mode == "vov":
-            if len(vix_prices) < vov_window:
+            if len(vix_prices) < vov_window + 1:
                 return []
-            window = vix_prices[-vov_window:]
-            mu = sum(window) / vov_window
-            vov = (sum((v - mu) ** 2 for v in window) / vov_window) ** 0.5
-            # Use expanding percentile as proxy
-            all_vix = vix_prices
-            n_above = sum(1 for v in all_vix if v <= vov)
-            pct = n_above / len(all_vix)
+
+            def _rolling_std(series: list[float], w: int) -> float:
+                if len(series) < w:
+                    return 0.0
+                vals = series[-w:]
+                mu = sum(vals) / w
+                return (sum((v - mu) ** 2 for v in vals) / w) ** 0.5
+
+            # Current VoV = std dev of last vov_window VIX prices
+            vov_now = _rolling_std(vix_prices, vov_window)
+            # Historical VoV series: one value per past day (expanding window)
+            hist_vov = [
+                _rolling_std(vix_prices[: i + 1], vov_window)
+                for i in range(vov_window - 1, len(vix_prices))
+            ]
+            if not hist_vov:
+                return []
+            # Percentile rank of current VoV in its own history
+            n_below = sum(1 for v in hist_vov if v <= vov_now)
+            pct = n_below / len(hist_vov)
+            # Defensive when VoV is elevated (top percentile of its own history)
             defensive = pct >= vov_pct
         elif mode == "vix_spike":
             if len(vix_prices) < 2 or vix_prices[-2] <= 0:

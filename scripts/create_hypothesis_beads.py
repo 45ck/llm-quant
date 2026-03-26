@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: E501,S603,S607,PLR0913,PLW1510,F401,I001,E401
+# ruff: noqa: S603, S607, PLR0913, PLW1510, F401, I001, E401
 """Batch create all 133 hypothesis beads + 1 epic + 5 INFRA-B = 139 total."""
 
 import subprocess, sys

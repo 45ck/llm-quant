@@ -1,4 +1,3 @@
-# ruff: noqa: E501, PTH123
 """Robustness analysis for F3 turn-of-month-spy."""
 
 import json

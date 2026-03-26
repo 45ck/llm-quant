@@ -535,7 +535,7 @@ def generate_daily_report(
             lines.append("**Warnings:**")
             for c in report.warning_checks:
                 lines.append(f"- [{c.detector}] {c.message}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         lines.append(f"- Governance scan unavailable: {exc}")
     lines.append("")
 
