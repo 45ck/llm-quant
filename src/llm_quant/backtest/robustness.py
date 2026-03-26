@@ -421,3 +421,189 @@ def run_robustness_gate(
     # Overall
     result.compute_overall()
     return result
+
+
+# ---------------------------------------------------------------------------
+# Fraud Detector 1: Shuffled Signal Test
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ShuffledSignalResult:
+    """Result of shuffled signal permutation test."""
+
+    real_sharpe: float = 0.0
+    shuffled_mean: float = 0.0
+    shuffled_95th: float = 0.0
+    shuffled_99th: float = 0.0
+    p_value: float = 1.0
+    n_shuffles: int = 0
+    passed: bool = False  # real Sharpe > 95th percentile of shuffled
+
+
+def shuffled_signal_test(
+    daily_returns: list[float],
+    asset_returns: list[float],
+    n_shuffles: int = 1000,
+    seed: int = 42,
+) -> ShuffledSignalResult:
+    """Test whether signal timing adds value beyond random entry.
+
+    Randomly selects which days to be invested (keeping the same number
+    of invested days) using the ACTUAL asset returns for each randomly
+    chosen day. This tests whether the signal picks better-than-random
+    days to hold the asset.
+
+    Controls for: time-in-market bias, volatility harvesting, bull
+    market drift, and all non-timing sources of return.
+
+    Parameters
+    ----------
+    daily_returns : list[float]
+        Daily strategy returns (including 0.0 for cash days).
+    asset_returns : list[float]
+        Daily returns of the follower asset for ALL days (same length
+        as daily_returns). Used to compute what random entry would yield.
+    n_shuffles : int
+        Number of random permutations to run.
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    ShuffledSignalResult
+        Contains real Sharpe, shuffled distribution stats, and pass/fail.
+    """
+    strat_arr = np.array(daily_returns)
+    asset_arr = np.array(asset_returns)
+    n = len(strat_arr)
+    if n < 30 or len(asset_arr) != n:
+        return ShuffledSignalResult()
+
+    # Real Sharpe
+    real_sharpe = compute_sharpe(daily_returns, annualize=True)
+
+    # Count invested days
+    n_invested = int(np.sum(strat_arr != 0.0))
+    if n_invested < 10:
+        return ShuffledSignalResult(real_sharpe=real_sharpe)
+
+    # Shuffle: randomly pick which N_invested days to be in the asset
+    rng = np.random.default_rng(seed)
+    shuffled_sharpes = np.zeros(n_shuffles)
+
+    for i in range(n_shuffles):
+        shuffled = np.zeros(n)
+        random_days = rng.choice(n, size=n_invested, replace=False)
+        shuffled[random_days] = asset_arr[random_days]
+        shuffled_sharpes[i] = compute_sharpe(shuffled.tolist(), annualize=True)
+
+    # Statistics
+    mean_s = float(np.mean(shuffled_sharpes))
+    p95 = float(np.percentile(shuffled_sharpes, 95))
+    p99 = float(np.percentile(shuffled_sharpes, 99))
+    p_value = float(np.mean(shuffled_sharpes >= real_sharpe))
+
+    return ShuffledSignalResult(
+        real_sharpe=real_sharpe,
+        shuffled_mean=mean_s,
+        shuffled_95th=p95,
+        shuffled_99th=p99,
+        p_value=p_value,
+        n_shuffles=n_shuffles,
+        passed=real_sharpe > p95,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fraud Detector 2: Mechanism Inversion Test
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class InversionResult:
+    """Result of mechanism inversion test."""
+
+    original_sharpe: float = 0.0
+    inverted_sharpe: float = 0.0
+    inverted_is_negative: bool = False
+    passed: bool = False  # inverted Sharpe < 0 (not just flat)
+
+
+def mechanism_inversion_test(
+    original_returns: list[float],
+    inverted_returns: list[float],
+) -> InversionResult:
+    """Test whether inverting the signal produces negative returns.
+
+    If the inverted signal is flat (Sharpe ~0) rather than negative,
+    the original signal is capturing market beta or time-in-market,
+    not genuine directional timing.
+
+    Parameters
+    ----------
+    original_returns : list[float]
+        Daily returns from the original strategy.
+    inverted_returns : list[float]
+        Daily returns from the strategy with inverted signals
+        (buy→sell, sell→buy, or entry/exit thresholds flipped).
+
+    Returns
+    -------
+    InversionResult
+    """
+    orig_sr = compute_sharpe(original_returns, annualize=True)
+    inv_sr = compute_sharpe(inverted_returns, annualize=True)
+
+    return InversionResult(
+        original_sharpe=orig_sr,
+        inverted_sharpe=inv_sr,
+        inverted_is_negative=inv_sr < 0,
+        passed=inv_sr < 0,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fraud Detector 3: Time-in-Market Analysis
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TimeInMarketResult:
+    """Result of time-in-market analysis."""
+
+    total_days: int = 0
+    invested_days: int = 0
+    cash_days: int = 0
+    pct_invested: float = 0.0
+    passed: bool = False  # invested < 80% of the time
+
+
+def time_in_market(daily_returns: list[float]) -> TimeInMarketResult:
+    """Measure what fraction of days the strategy is invested.
+
+    Strategies invested >80% of the time are likely capturing
+    equity beta rather than providing genuine timing alpha.
+
+    Parameters
+    ----------
+    daily_returns : list[float]
+        Daily strategy returns (0.0 = cash day).
+
+    Returns
+    -------
+    TimeInMarketResult
+    """
+    arr = np.array(daily_returns)
+    total = len(arr)
+    invested = int(np.sum(arr != 0.0))
+    cash = total - invested
+    pct = invested / total if total > 0 else 0.0
+
+    return TimeInMarketResult(
+        total_days=total,
+        invested_days=invested,
+        cash_days=cash,
+        pct_invested=pct,
+        passed=pct < 0.80,
+    )
