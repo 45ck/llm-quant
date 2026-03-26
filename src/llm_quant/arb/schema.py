@@ -112,6 +112,26 @@ CREATE TABLE IF NOT EXISTS pm_scan_log (
 );
 """
 
+_PM_EXECUTIONS_DDL = """
+CREATE TABLE IF NOT EXISTS pm_executions (
+    exec_id         VARCHAR PRIMARY KEY,
+    event_ticker    VARCHAR NOT NULL,
+    event_title     VARCHAR,
+    exec_dt         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    conditions_json VARCHAR,
+    sum_yes_ask     DOUBLE,
+    gross_complement DOUBLE,
+    net_spread      DOUBLE,
+    kelly_fraction  DOUBLE,
+    position_usd    DOUBLE,
+    expected_pnl    DOUBLE,
+    status          VARCHAR DEFAULT 'open',
+    actual_pnl      DOUBLE,
+    resolved_dt     TIMESTAMP,
+    notes           VARCHAR
+);
+"""
+
 _ALL_DDL = [
     _PM_MARKETS_DDL,
     _PM_CONDITIONS_DDL,
@@ -119,6 +139,7 @@ _ALL_DDL = [
     _PM_ARB_OPPORTUNITIES_DDL,
     _PM_COMBINATORIAL_PAIRS_DDL,
     _PM_SCAN_LOG_DDL,
+    _PM_EXECUTIONS_DDL,
 ]
 
 

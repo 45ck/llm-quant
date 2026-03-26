@@ -32,6 +32,9 @@ _DEFAULT_TIMEOUT = 15
 _PAGE_SIZE = 200
 _RATE_LIMIT_SLEEP = 0.20  # 5 req/s
 
+# Kalshi uses "active" for tradeable markets (not "open")
+_ACTIVE_STATUS = "open"
+
 # Kalshi fee on winning position
 KALSHI_WIN_FEE = 0.03
 
@@ -154,7 +157,7 @@ class KalshiClient:
             if not cursor or len(batch) < _PAGE_SIZE:
                 break
             time.sleep(_RATE_LIMIT_SLEEP)
-        logger.info("Fetched %d open events from Kalshi", len(events))
+        logger.info("Fetched %d events from Kalshi", len(events))
         return events
 
     def fetch_mutually_exclusive_events(self) -> list[dict[str, Any]]:
@@ -171,9 +174,9 @@ class KalshiClient:
     # ------------------------------------------------------------------
 
     def fetch_markets_for_event(
-        self, event_ticker: str, status: str = "open"
+        self, event_ticker: str, status: str = _ACTIVE_STATUS
     ) -> list[dict[str, Any]]:
-        """Fetch all markets within an event."""
+        """Fetch all active markets within an event."""
         markets: list[dict[str, Any]] = []
         cursor: str | None = None
         while True:
@@ -193,12 +196,12 @@ class KalshiClient:
             time.sleep(_RATE_LIMIT_SLEEP)
         return markets
 
-    def fetch_all_open_markets(self, limit: int = 5000) -> list[dict[str, Any]]:
-        """Paginate through all open markets."""
+    def fetch_all_open_markets(self, limit: int = 50_000) -> list[dict[str, Any]]:
+        """Paginate through all active markets (Kalshi status='active')."""
         markets: list[dict[str, Any]] = []
         cursor: str | None = None
         while len(markets) < limit:
-            params: dict[str, Any] = {"status": "open", "limit": _PAGE_SIZE}
+            params: dict[str, Any] = {"status": _ACTIVE_STATUS, "limit": _PAGE_SIZE}
             if cursor:
                 params["cursor"] = cursor
             page = self._get("/markets", params=params)
@@ -208,7 +211,7 @@ class KalshiClient:
             if not cursor or len(batch) < _PAGE_SIZE:
                 break
             time.sleep(_RATE_LIMIT_SLEEP)
-        logger.info("Fetched %d open markets from Kalshi", len(markets))
+        logger.info("Fetched %d active markets from Kalshi", len(markets))
         return markets
 
     # ------------------------------------------------------------------
@@ -239,12 +242,20 @@ class KalshiClient:
 
     @staticmethod
     def parse_event(raw_event: dict, raw_markets: list[dict]) -> KalshiEvent:
-        """Parse a Kalshi event with its markets."""
+        """Parse a Kalshi event with its markets.
+
+        Filters out empty-book conditions (YES_ask >= 0.97, YES_bid == 0)
+        which are default placeholder prices, not real market prices.
+        """
         conditions = []
         for m in raw_markets:
             c = KalshiClient.parse_condition(m)
-            if c and c.yes_ask > 0:
-                conditions.append(c)
+            if c is None or c.yes_ask <= 0:
+                continue
+            # Skip empty-book conditions: default ask=0.97-1.0 with no active bid
+            if c.yes_ask >= 0.97 and c.yes_bid == 0.0:
+                continue
+            conditions.append(c)
 
         return KalshiEvent(
             event_ticker=raw_event.get("event_ticker", ""),
@@ -259,24 +270,89 @@ class KalshiClient:
     # High-level scan helpers
     # ------------------------------------------------------------------
 
-    def fetch_negrisk_events(self) -> list[KalshiEvent]:
+    def fetch_negrisk_events(  # noqa: C901
+        self,
+        max_events: int = 500,
+        use_bulk: bool = True,
+        bulk_limit: int = 200_000,
+    ) -> list[KalshiEvent]:
         """
-        Fetch all mutually exclusive events and their markets.
-        Returns KalshiEvent objects with conditions populated.
-        """
-        raw_events = self.fetch_mutually_exclusive_events()
-        kalshi_events: list[KalshiEvent] = []
+        Fetch mutually exclusive events with their market prices.
 
-        for raw_evt in raw_events:
-            ticker = raw_evt.get("event_ticker", "")
-            try:
-                raw_markets = self.fetch_markets_for_event(ticker)
-                time.sleep(_RATE_LIMIT_SLEEP)
-                evt = self.parse_event(raw_evt, raw_markets)
-                if len(evt.markets) >= 2:
-                    kalshi_events.append(evt)
-            except Exception as exc:
-                logger.warning("Failed to fetch markets for %s: %s", ticker, exc)
+        Two strategies:
+          bulk (default): Fetch all open events + all markets in parallel sweeps,
+            join in memory. Fast if market count < bulk_limit.
+          per_event: Fetch markets for each ME event individually.
+            Slower (N×API calls) but complete. Used as fallback.
+
+        Args:
+            max_events: Maximum ME events to return.
+            use_bulk: If True, attempt bulk-fetch first.
+            bulk_limit: Max markets to fetch in bulk mode. Increase if elections
+                markets are missed (they can be far in the pagination order).
+        """
+        logger.info("Fetching Kalshi NegRisk events (bulk=%s)...", use_bulk)
+
+        # Step 1: All events indexed by ticker
+        raw_events = self.fetch_all_open_events()
+        event_index: dict[str, dict] = {
+            e["event_ticker"]: e for e in raw_events if e.get("event_ticker")
+        }
+        me_tickers = {t for t, e in event_index.items() if e.get("mutually_exclusive")}
+        logger.info(
+            "Kalshi: %d total events, %d mutually exclusive",
+            len(event_index),
+            len(me_tickers),
+        )
+
+        if use_bulk:
+            # Step 2: Bulk fetch all markets, join in memory
+            raw_markets = self.fetch_all_open_markets(limit=bulk_limit)
+            logger.info("Kalshi: fetched %d total markets in bulk", len(raw_markets))
+
+            by_event: dict[str, list[dict]] = {}
+            for m in raw_markets:
+                evt_ticker = m.get("event_ticker", "")
+                if evt_ticker and evt_ticker in me_tickers:
+                    by_event.setdefault(evt_ticker, []).append(m)
+
+            # For ME events not found in bulk, fall back to per-event fetch
+            missing = [t for t in me_tickers if t not in by_event]
+            if missing:
+                logger.info(
+                    "Bulk missed %d ME events — fetching per-event (cap=%d)",
+                    len(missing),
+                    max_events,
+                )
+                for ticker in list(missing)[:max_events]:
+                    try:
+                        markets = self.fetch_markets_for_event(ticker)
+                        time.sleep(_RATE_LIMIT_SLEEP)
+                        if len(markets) >= 2:
+                            by_event[ticker] = markets
+                    except Exception as exc:
+                        logger.debug("Per-event fetch failed for %s: %s", ticker, exc)
+        else:
+            # Pure per-event approach
+            by_event = {}
+            for ticker in list(me_tickers)[:max_events]:
+                try:
+                    markets = self.fetch_markets_for_event(ticker)
+                    time.sleep(_RATE_LIMIT_SLEEP)
+                    if len(markets) >= 2:
+                        by_event[ticker] = markets
+                except Exception as exc:
+                    logger.debug("Per-event fetch failed for %s: %s", ticker, exc)
+
+        # Parse into KalshiEvent objects
+        kalshi_events: list[KalshiEvent] = []
+        for evt_ticker, markets in by_event.items():
+            if len(markets) < 2:
+                continue
+            raw_evt = event_index.get(evt_ticker, {"event_ticker": evt_ticker})
+            evt = self.parse_event(raw_evt, markets)
+            if len(evt.markets) >= 2:
+                kalshi_events.append(evt)
 
         logger.info(
             "Loaded %d multi-condition ME events from Kalshi", len(kalshi_events)

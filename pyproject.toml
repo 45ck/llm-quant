@@ -116,6 +116,7 @@ ignore = [
   "FBT002",  # boolean defaults fine in API client config methods
   "PLR0913", # data ingestion functions may have many parameters
   "TRY401",  # logger.exception with exc arg fine in error handlers
+  "T201",    # print_report() is an intentional display utility — print() is correct
 ]
 "src/llm_quant/backtest/engine.py" = [
   "PLR0913", # engine.run() needs many params by design

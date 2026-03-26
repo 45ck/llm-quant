@@ -1,1 +1,1 @@
-"""Prediction market arbitrage — Polymarket/Kalshi scanner and detector."""
+"""Arbitrage modules — prediction markets + crypto funding rate scanner."""

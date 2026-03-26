@@ -97,6 +97,11 @@ def parse_args() -> argparse.Namespace:
         help="Run Claude combinatorial detector (polymarket only)",
     )
     p.add_argument(
+        "--no-ssl-verify",
+        action="store_true",
+        help="Disable SSL certificate verification (useful on Windows)",
+    )
+    p.add_argument(
         "--db",
         type=Path,
         default=DEFAULT_DB,
@@ -264,9 +269,10 @@ def main() -> int:
         return 0
 
     # ── Polymarket path ──────────────────────────────────────────────────
+    ssl_verify = not args.no_ssl_verify
     if args.dry_run:
         print("DRY RUN — fetching Polymarket markets (no DB write)...")
-        client = GammaClient()
+        client = GammaClient(ssl_verify=ssl_verify)
         raw = client.fetch_all_active_markets(max_markets=args.max_markets)
         markets = client.parse_all_markets(raw)
 
@@ -318,7 +324,7 @@ def main() -> int:
         )
 
     if args.detect_combinatorial:
-        client = GammaClient()
+        client = GammaClient(ssl_verify=ssl_verify)
         run_combinatorial_detection(scanner, client, args.db)
 
     return 0

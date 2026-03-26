@@ -1,12 +1,18 @@
-"""Polymarket Gamma API client — read-only, no authentication required.
+"""Polymarket market data client — read-only, no authentication required.
+
+Supports two backends:
+  1. Gamma API (gamma-api.polymarket.com) — full market data, geo-blocked in US
+  2. Polymarket US API (api.polymarket.us) — US-regulated, limited without auth
+
+The client tries Gamma first and falls back to the US API on failure.
 
 Gamma API docs: https://docs.polymarket.com/
-Base URL: https://gamma-api.polymarket.com
+US API docs: https://polymarket.us/developer
 
 Key endpoints used:
-  GET /markets          — paginated list of all markets
-  GET /markets/{id}     — single market detail
-  GET /markets?clob_token_ids=... — markets by CLOB condition token
+  Gamma:  GET /markets          — paginated list of all markets
+          GET /markets/{id}     — single market detail
+  US API: GET /v1/markets       — market listing (limited without API key)
 
 NegRisk markets have is_neg_risk=True. For these, the sum of all YES
 outcome prices should equal 1.0 (one outcome must occur). When sum < 1.0,
@@ -25,6 +31,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 GAMMA_BASE = "https://gamma-api.polymarket.com"
+US_API_BASE = "https://api.polymarket.us"
 _DEFAULT_TIMEOUT = 15  # seconds
 _PAGE_SIZE = 100
 _RATE_LIMIT_SLEEP = 0.25  # 4 req/s — well within public limits
@@ -79,17 +86,19 @@ class Market:
 
 
 class GammaClient:
-    """Thin wrapper around Polymarket Gamma REST API."""
+    """Polymarket market data client with Gamma + US API fallback."""
 
     def __init__(
         self,
         base_url: str = GAMMA_BASE,
         timeout: int = _DEFAULT_TIMEOUT,
         ssl_verify: bool = True,
+        us_api_key: str | None = None,
     ) -> None:
         self._base = base_url.rstrip("/")
         self._timeout = timeout
         self._ssl_verify = ssl_verify
+        self._us_api_key = us_api_key
         self._session = requests.Session()
         self._session.headers.update({"User-Agent": "llm-quant-arb-scanner/1.0"})
         if not ssl_verify:
@@ -105,6 +114,22 @@ class GammaClient:
         url = f"{self._base}{path}"
         resp = self._session.get(
             url, params=params, timeout=self._timeout, verify=self._ssl_verify
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    def _get_us(self, path: str, params: dict | None = None) -> Any:
+        """GET against Polymarket US API (api.polymarket.us)."""
+        url = f"{US_API_BASE}{path}"
+        headers = {}
+        if self._us_api_key:
+            headers["Authorization"] = f"Bearer {self._us_api_key}"
+        resp = self._session.get(
+            url,
+            params=params,
+            timeout=self._timeout,
+            verify=self._ssl_verify,
+            headers=headers,
         )
         resp.raise_for_status()
         return resp.json()
@@ -133,8 +158,35 @@ class GammaClient:
             return data
         return data.get("data", data.get("markets", []))
 
+    def _fetch_us_markets(self) -> list[dict]:
+        """Fetch markets from Polymarket US API (limited without auth)."""
+        data = self._get_us("/v1/markets")
+        return data.get("markets", [])
+
     def fetch_all_active_markets(self, max_markets: int = 5000) -> list[dict]:
-        """Paginate through all active markets."""
+        """Paginate through all active markets.
+
+        Tries Gamma API first; falls back to US API if Gamma is unreachable
+        (e.g. geo-blocked from US IPs).
+        """
+        # Try Gamma API first
+        try:
+            return self._fetch_all_gamma(max_markets)
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            logger.warning("Gamma API unreachable (%s), falling back to US API", exc)
+
+        # Fallback: Polymarket US API
+        try:
+            markets = self._fetch_us_markets()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            logger.exception("Both Gamma and US APIs failed: %s", exc)
+            return []
+        else:
+            logger.info("Fetched %d markets from Polymarket US API", len(markets))
+            return markets
+
+    def _fetch_all_gamma(self, max_markets: int) -> list[dict]:
+        """Paginate through Gamma API /markets endpoint."""
         markets: list[dict] = []
         offset = 0
         while len(markets) < max_markets:
@@ -158,12 +210,15 @@ class GammaClient:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def parse_market(raw: dict) -> Market | None:  # noqa: C901
-        """Parse raw Gamma API market dict into Market dataclass."""
+    def parse_market(raw: dict) -> Market | None:  # noqa: C901, PLR0912
+        """Parse raw market dict into Market dataclass.
+
+        Handles both Gamma API and US API response formats.
+        """
         import json as _json
 
         try:
-            market_id = raw.get("id") or raw.get("condition_id", "")
+            market_id = str(raw.get("id") or raw.get("condition_id", ""))
             if not market_id:
                 return None
 
@@ -206,6 +261,20 @@ class GammaClient:
                     elif tok.get("outcome", "").lower() == "no":
                         no_price = float(tok.get("price") or no_price)
 
+            # Approach 3: US API marketSides — extract prices if available
+            sides = raw.get("marketSides", [])
+            if isinstance(sides, list) and sides and not tokens:
+                # US API doesn't provide per-side prices in the public response,
+                # but outcomePrices are already parsed above in Approach 1.
+                pass
+
+            # Use category from API if provided (US API has it), else infer
+            category = raw.get("category", "")
+            if not category:
+                category = _infer_category(
+                    raw.get("question", "") + " " + raw.get("slug", "")
+                )
+
             cond = ConditionPrice(
                 condition_id=raw.get("conditionId", market_id),
                 question=raw.get("question", ""),
@@ -223,9 +292,7 @@ class GammaClient:
                 question=raw.get("question") or raw.get("title", ""),
                 active=bool(raw.get("active", True)),
                 is_negrisk=bool(raw.get("isNegRisk") or raw.get("is_neg_risk", False)),
-                category=_infer_category(
-                    raw.get("question", "") + " " + raw.get("slug", "")
-                ),
+                category=category,
                 end_date=raw.get("endDate") or raw.get("end_date"),
                 conditions=[cond],
                 raw=raw,
