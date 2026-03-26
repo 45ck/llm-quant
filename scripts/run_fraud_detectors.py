@@ -244,6 +244,20 @@ STRATEGIES: list[dict] = [
             "rebalance_frequency_days": 5,
         },
     },
+    {
+        "slug": "gld-slv-mean-reversion-v4",
+        "cls": "pairs_ratio",
+        "syms": ["GLD", "SLV"],
+        "warmup_days": 200,
+        "params": {
+            "symbol_a": "GLD",
+            "symbol_b": "SLV",
+            "consensus_windows": [60, 90, 120],
+            "bb_std": 2.0,
+            "exit_z": 0.5,
+            "target_weight": 0.40,
+        },
+    },
 ]
 
 
@@ -254,6 +268,9 @@ def get_follower_symbol(strat_def: dict) -> str:
         return str(params.get("follower_symbol", "SPY"))
     if strat_def["cls"] == "overnight_momentum":
         return str(params.get("symbol", "SPY"))
+    if strat_def["cls"] == "pairs_ratio":
+        # Use symbol_a as the reference (ratio numerator)
+        return str(params.get("symbol_a", "GLD"))
     return "SPY"
 
 
@@ -278,6 +295,7 @@ def run_backtest(
     follower = get_follower_symbol(strat_def)
     asset_rets = get_asset_daily_returns(follower, prices)
 
+    warmup = strat_def.get("warmup_days", 30)
     config = StrategyConfig(
         name=strat_def["cls"],
         rebalance_frequency_days=strat_def["params"].get("rebalance_frequency_days", 5),
@@ -290,7 +308,7 @@ def run_backtest(
         indicators_df=indicators,
         slug=strat_def["slug"],
         cost_model=CostModel(),
-        warmup_days=30,
+        warmup_days=warmup,
         cost_multiplier=1.0,
     )
 
@@ -320,6 +338,13 @@ def run_inverted_backtest(strat_def: dict) -> list[float]:
         orig_exit = params.get("exit_thresh", -0.0005)
         params["entry_thresh"] = -abs(orig_entry)
         params["exit_thresh"] = abs(orig_exit)
+    elif strat_def["cls"] == "pairs_ratio":
+        # Invert: flip bb_std sign so we buy when stretched IN direction (not mean-revert)
+        # Achieved by inverting symbol_a and symbol_b (swaps entry direction)
+        params["symbol_a"], params["symbol_b"] = (
+            params.get("symbol_b", "SLV"),
+            params.get("symbol_a", "GLD"),
+        )
     else:
         return []
 
@@ -331,6 +356,7 @@ def run_inverted_backtest(strat_def: dict) -> list[float]:
         rebalance_frequency_days=params.get("rebalance_frequency_days", 5),
         parameters=params,
     )
+    warmup = strat_def.get("warmup_days", 30)
     strategy = create_strategy(strat_def["cls"], config)
     engine = BacktestEngine(strategy=strategy, initial_capital=100_000.0)
     result = engine.run(
@@ -338,7 +364,7 @@ def run_inverted_backtest(strat_def: dict) -> list[float]:
         indicators_df=indicators,
         slug=strat_def["slug"] + "-inverted",
         cost_model=CostModel(),
-        warmup_days=30,
+        warmup_days=warmup,
         cost_multiplier=1.0,
     )
     return result.daily_returns
