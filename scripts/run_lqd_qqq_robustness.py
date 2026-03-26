@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Robustness analysis for agg-qqq-credit-lead."""
+"""Robustness analysis for lqd-qqq-credit-lead."""
 
 from __future__ import annotations
 
@@ -16,11 +16,11 @@ from llm_quant.backtest.strategy import StrategyConfig
 from llm_quant.data.fetcher import fetch_ohlcv
 from llm_quant.data.indicators import compute_indicators
 
-SLUG = "agg-qqq-credit-lead"
+SLUG = "lqd-qqq-credit-lead"
 STRATEGY = "lead_lag"
-SYMBOLS = ["AGG", "QQQ"]
+SYMBOLS = ["LQD", "QQQ"]
 BASE_PARAMS = {
-    "leader_symbol": "AGG",
+    "leader_symbol": "LQD",
     "follower_symbol": "QQQ",
     "lag_days": 1,
     "signal_window": 5,
@@ -43,7 +43,7 @@ def run_single(params):
         rebalance_frequency_days=params.get("rebalance_frequency_days", 5),
         max_positions=1,
         target_position_weight=params.get("target_weight", 0.80),
-        stop_loss_pct=0.07,
+        stop_loss_pct=0.05,  # matches run_backtest.py default
         parameters=dict(params),
     )
     strategy = create_strategy(STRATEGY, config)

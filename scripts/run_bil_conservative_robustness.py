@@ -29,7 +29,9 @@ BASE_PARAMS = {
 }
 
 print("Fetching data...")
-prices_df = fetch_ohlcv(SYMBOLS, lookback_days=5 * 365 + 30)
+prices_df = fetch_ohlcv(
+    SYMBOLS, lookback_days=5 * 365
+)  # match official run_backtest.py (no +30)
 indicators_df = compute_indicators(prices_df)
 
 
