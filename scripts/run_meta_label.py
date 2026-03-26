@@ -108,7 +108,7 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
     # 3. Extract signal entry dates from trades
     print("3. Extracting entry signals...", end="", flush=True)
     entry_trades = [
-        t for t in result.trades if t.action == "BUY" and t.symbol == follower
+        t for t in result.trades if t.action.lower() == "buy" and t.symbol == follower
     ]
     print(f" {len(entry_trades)} entries found")
 

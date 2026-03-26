@@ -95,13 +95,13 @@ def apply_triple_barrier(
 # ---------------------------------------------------------------------------
 
 
-def extract_features(  # noqa: PLR0912, PLR0915
+def extract_features(  # noqa: PLR0912, PLR0913, PLR0915
     signal_date: date,
     leader_symbol: str,
     follower_symbol: str,
     leader_return: float,
     indicators_df: pl.DataFrame,
-    _prices_df: pl.DataFrame,
+    prices_df: pl.DataFrame,  # noqa: ARG001
     trade_history: list[dict] | None = None,
 ) -> dict[str, float]:
     """Extract feature vector at signal time. All features causal.
