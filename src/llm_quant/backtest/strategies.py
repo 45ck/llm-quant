@@ -1949,6 +1949,106 @@ class OHLCVMomentumStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Overnight Momentum Strategy (C7 series)
+# ---------------------------------------------------------------------------
+
+
+class OvernightMomentumStrategy(Strategy):
+    """Overnight return decomposition momentum (C7 series).
+
+    Computes the N-day rolling average of overnight returns
+    (overnight_return = open_t / close_{t-1} - 1).  When the average overnight
+    return exceeds ``entry_thresh``, institutional accumulation is assumed and
+    the strategy enters long.  When it drops below ``exit_thresh``, it exits.
+
+    Overnight returns capture institutional order flow executing at market open
+    after after-hours research.  Sustained positive overnight gaps signal demand
+    from large institutions rebalancing on a bi-weekly (10-day) cycle.
+
+    Parameters (via StrategyConfig.parameters):
+      symbol (str, default "SPY"): Asset to trade.
+      window (int, default 10): Rolling window for overnight return average.
+      entry_thresh (float, default 0.002): Enter when avg_overnight > this.
+      exit_thresh (float, default -0.0005): Exit when avg_overnight < this.
+      target_weight (float, default 0.90): Position weight when in trade.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        symbol: str = str(params.get("symbol", "SPY"))
+        window: int = int(params.get("window", 10))
+        entry_thresh: float = float(params.get("entry_thresh", 0.002))
+        exit_thresh: float = float(params.get("exit_thresh", -0.0005))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        ind = (
+            indicators_df.filter(pl.col("symbol") == symbol)
+            .sort("date")
+            .tail(window + 3)
+        )
+        price = prices.get(symbol, 0)
+        if len(ind) < window + 1 or price <= 0:
+            return []
+        if "open" not in ind.columns:
+            return []
+
+        closes = ind["close"].to_list()
+        opens = ind["open"].to_list()
+        n = len(closes)
+
+        overnight_rets = [
+            opens[i] / closes[i - 1] - 1 for i in range(1, n) if closes[i - 1] > 0
+        ]
+        if len(overnight_rets) < window:
+            return []
+
+        avg_overnight = sum(overnight_rets[-window:]) / window
+        has_pos = symbol in portfolio.positions
+
+        if avg_overnight > entry_thresh and not has_pos:
+            logger.info(
+                "OvernightMomentum: ENTER %s on %s (avg_overnight=%.4f)",
+                symbol,
+                as_of_date,
+                avg_overnight,
+            )
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price * 0.95,
+                    reasoning=f"C7: avg_overnight={avg_overnight:.4f} > {entry_thresh}",
+                )
+            ]
+        if avg_overnight < exit_thresh and has_pos:
+            logger.info(
+                "OvernightMomentum: EXIT %s on %s (avg_overnight=%.4f)",
+                symbol,
+                as_of_date,
+                avg_overnight,
+            )
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"C7: avg_overnight={avg_overnight:.4f} < {exit_thresh}",
+                )
+            ]
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -1969,6 +2069,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "vix_regime": VixRegimeStrategy,
     "yield_curve_regime": YieldCurveRegimeStrategy,
     "ohlcv_momentum": OHLCVMomentumStrategy,
+    "overnight_momentum": OvernightMomentumStrategy,
 }
 
 
