@@ -1,0 +1,28 @@
+# Data Contract: lqd-spy-credit-lead (N6-proxy)
+
+strategy_slug: "lqd-spy-credit-lead"
+created_at: "2026-03-26"
+
+symbols:
+  - symbol: "LQD"
+    description: "iShares iBoxx $ Investment Grade Corporate Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002, 1255 days in 5yr window"
+    notes: "Investment-grade corps, NAV closely tracks index"
+
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993, 1255 days in 5yr window"
+
+lookback:
+  years: 5
+  warmup_days: 50
+  rationale: "50-day warmup covers signal_window=5 + lag_days=1 with buffer"
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+validated_at: "2026-03-26"

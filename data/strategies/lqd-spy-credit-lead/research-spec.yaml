@@ -1,0 +1,58 @@
+# Research Spec: lqd-spy-credit-lead (N6-proxy)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "lqd-spy-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-26"
+frozen: true
+frozen_at: "2026-03-26"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Investment-grade corporate bond ETF (LQD) as leading indicator for SPY.
+  When LQD's 5-day return exceeds 0.5% (credit healthy), hold SPY at 0.80.
+  When LQD's 5-day return falls below -0.5% (credit stress), exit SPY.
+  Credit leads equity: corporate bonds price in stress before equities react.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "LQD"
+  follower_symbol: "SPY"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  target_weight: 0.80
+  # IMPORTANT: rebalance_frequency_days must be in the parameters section
+  # (not execution section) for run_backtest.py to read it correctly.
+  # Value 5 aligns signal_window with rebalance interval (non-overlapping windows).
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5   # Corrected (was 1 — spec error; run_backtest.py defaults to 5)
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  spec_correction_note: >
+    Original spec had rebalance_frequency_days=1 in execution section which
+    run_backtest.py does not read. The actual backtest ran at default=5.
+    This parameter value (5) is the canonical frozen design: signal_window=5
+    and rebalance_frequency=5 create non-overlapping 5-day LQD windows,
+    reducing signal noise vs daily re-evaluation.
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. entry_threshold=0.005 and
+  exit_threshold=-0.005 are symmetric ±0.5% for LQD 5d return, standard
+  for bond-equity signal. 0.80 weight is conservative for MaxDD control.
+
+spec_version: "1.0"

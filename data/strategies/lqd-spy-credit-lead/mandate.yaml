@@ -1,0 +1,39 @@
+# Mandate: lqd-spy-credit-lead (N6-proxy)
+# Fixed Income / Credit Cycle Signals
+
+mandate_id: "N6-proxy"
+strategy_slug: "lqd-spy-credit-lead"
+created_at: "2026-03-26"
+
+objective: >
+  Use investment-grade corporate bond returns (LQD 5-day return) as a
+  leading indicator for SPY equity direction. Hold SPY when credit is
+  healthy; exit to cash when credit stress signals emerge.
+
+mechanism: >
+  Corporate bond markets price in credit risk before equity markets react.
+  When LQD (investment-grade bonds) rises over 5 days, credit conditions are
+  healthy → equity likely to follow. When LQD falls, credit stress precedes
+  equity drawdown by 1-2 weeks. This credit-equity lead-lag is well-documented
+  in fixed income literature (Philippon 2009, Adrian et al. 2012).
+
+universe:
+  equity: "SPY"
+  signal: "LQD"
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Credit-regime strategy should beat passive 60/40 by avoiding equity drawdowns
+  during credit stress periods while participating in equity rallies.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+trial_family: "lqd_spy_credit_lead_lag"
+family_trial_number: 1
+
+approved_at: "2026-03-26"
+approved_by: "quant-researcher"

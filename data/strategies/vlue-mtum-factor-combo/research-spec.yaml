@@ -1,0 +1,45 @@
+# Research Spec: vlue-mtum-factor-combo (K2)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "vlue-mtum-factor-combo"
+strategy_name: "asset_rotation"
+created_at: "2026-03-26"
+frozen: true
+frozen_at: "2026-03-26"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Static equal-weight portfolio of VLUE (value factor) and MTUM (momentum factor).
+  Uses asset_rotation with top_k=2 from a 2-asset universe so both are always held.
+  Tests whether value+momentum diversification achieves Sharpe>0.9 and MaxDD<15%.
+
+strategy_class: "asset_rotation"
+parameters:
+  symbols_list: "VLUE,MTUM"
+  lookback_days: 60
+  top_k: 2
+  rebalance_frequency_days: 20
+  target_weight: 0.90
+  rank_by: "sharpe"
+
+execution:
+  rebalance_frequency_days: 20
+  warmup_days: 70
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.9"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified. top_k=2 ensures both factors are always held.
+  0.90 total weight (0.45 per factor) is standard for 2-factor combination.
+
+spec_version: "1.0"

@@ -1,0 +1,52 @@
+# Paper Trading: lqd-spy-credit-lead
+# Initialized: 2026-03-26
+# Second strategy to pass all 5 robustness gates
+
+strategy_slug: "lqd-spy-credit-lead"
+spec_hash: "placeholder-computed-on-freeze"
+robustness_date: "2026-03-26"
+backtest_experiment_id: "b0588e6d"
+
+start_date: "2026-03-26"
+status: "active"
+
+backtest_baseline:
+  sharpe_ratio: 1.2502
+  max_drawdown: 0.1238
+  total_return: 0.5243
+  dsr: 0.9950
+  cpcv_oos_sharpe: 1.2791
+  total_trades: 55
+  sortino_ratio: 1.930
+
+performance:
+  initial_nav: 100000.00
+  current_nav: 100000.00
+  peak_nav: 100000.00
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 0.0
+  total_trades: 0
+
+gate_criteria:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.50
+  max_drawdown_limit: 0.15
+  slippage_drift_limit: 5.0
+
+incidents: []
+daily_log: []
+
+gate_evaluation:
+  days_active: 0
+  gate_passed: null
+  evaluated_at: null
+  notes: >
+    Paper trading initialized 2026-03-26. Strategy: LQD 5-day return as
+    leading indicator for SPY. Signal evaluated every 5 trading days.
+    Entry: LQD 5d return >= 0.5%. Exit: LQD 5d return <= -0.5%.
+    Position: SPY at 80% weight. Use /paper lqd-spy-credit-lead to update.
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"
