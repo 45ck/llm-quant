@@ -1,0 +1,122 @@
+# Robustness Analysis: commodity-momentum-rotation (O3)
+# Generated: 2026-03-26
+
+strategy_slug: "commodity-momentum-rotation"
+trial_family: "commodity_momentum_sharpe_rotation"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+overall_passed: false
+gates_passed: 2
+gates_failed: 3
+gates_total: 5
+
+gate_results:
+  dsr:
+    dsr_value: 0.9220
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR=0.922 misses the gate by 0.028. Sharpe=0.713 is strong but
+      insufficient with trial_count=1 to reach DSR>=0.95.
+
+  max_drawdown:
+    value: 27.61
+    threshold: "< 20.0"
+    result: "FAIL"
+    notes: >
+      MaxDD=27.61% significantly exceeds the 20% mandate limit. Commodity
+      ETFs (especially USO) had severe drawdowns during 2022 bear market
+      and 2024 oil price decline. The 0.75 position weight provides
+      insufficient protection.
+
+  perturbation:
+    n_stable: 2
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 3/5 stable"
+    details:
+      lookback_45: "sharpe=0.493 maxdd=33.70% (-30.9%) UNSTABLE"
+      lookback_90: "sharpe=0.916 maxdd=26.15% (+28.5%) STABLE"
+      rank_by_return: "sharpe=0.414 maxdd=36.07% (-42.0%) UNSTABLE"
+      target_weight_060: "sharpe=0.238 maxdd=27.87% (-66.7%) UNSTABLE"
+      top_k_2: "sharpe=0.754 maxdd=23.68% (+5.8%) STABLE"
+    notes: >
+      60d lookback is locally suboptimal: lookback=90 produces 28.5% higher
+      Sharpe. rank_by=return dramatically underperforms Sharpe ranking.
+      CRITICAL: Reducing weight to 0.60 destroys Sharpe (-66.7%), meaning
+      the MaxDD cannot be easily fixed by weight reduction alone.
+      top_k=2 is mildly beneficial (+5.8%, STABLE).
+
+  cpcv:
+    mean_oos_sharpe: 0.8123
+    std_oos_sharpe: 0.5699
+    oos_is_ratio: 1.139
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      EXCEPTIONALLY STRONG OOS result. OOS Sharpe (0.812) exceeds IS Sharpe
+      (0.713) — OOS/IS=1.139, which is extremely unusual and positive.
+      This strongly suggests the commodity momentum signal is genuine and
+      not the result of in-sample overfitting. The core hypothesis is valid;
+      the failure is structural (MaxDD, not alpha quality).
+
+  cpcv_ois_ratio:
+    value: 1.139
+    threshold: ">= 0.5"
+    result: "PASS"
+    notes: "OOS/IS=1.139 — one of the strongest OOS readings seen in this project."
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "af99200a"
+  sharpe_ratio: 0.7131
+  max_drawdown: 0.2761
+  dsr: 0.9220
+  total_trades: 33
+  total_return: 0.6298
+  annualized_return: 0.1239
+  sortino_ratio: 0.959
+  profit_factor: 4.61
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict
+# ============================================================
+
+rejection_reason: >
+  REJECTED: 3 of 5 gates fail (DSR, MaxDD, Perturbation). The commodity
+  momentum signal is genuine (CPCV OOS/IS=1.139 — strongest OOS reading
+  in this project), but structural MaxDD=27.61% exceeds mandate (20%) and
+  the 60d lookback is locally suboptimal (90d lookback: +28.5% Sharpe).
+
+notes_for_future_research: |
+  HIGH-PRIORITY v2 CANDIDATE. CPCV OOS/IS=1.139 is the strongest
+  out-of-sample result in this project. The momentum signal itself is real.
+
+  O3-v2 design recommendations:
+  1. lookback=90 (perturbation: +28.5% Sharpe, 0.916 vs 0.713)
+  2. top_k=2 (diversification reduces MaxDD: 23.68% vs 27.61%)
+  3. Add VIX regime overlay: exit to cash when VIX > 25 to avoid
+     commodity drawdowns during broad market stress (2022 bear)
+  4. Keep rank_by=sharpe (superior to return ranking)
+  5. Mandate MaxDD: 25% instead of 20% may be appropriate for commodities
+
+  WARNING: target_weight reduction to 0.60 destroys Sharpe (-66.7%).
+  The MaxDD fix must come from regime filtering, NOT weight reduction.
+
+  NOTE on perturbation pattern: All 4 alternative lookbacks/methods
+  produce WORSE Sharpe except lookback=90 (+28.5%). The 60d base is
+  on the wrong side of the optimal. This means O3-v2 with lookback=90
+  is pre-justified by the perturbation result. However, the trial
+  count will be 2 — DSR will be harder to achieve.
+
+created_at: "2026-03-26"

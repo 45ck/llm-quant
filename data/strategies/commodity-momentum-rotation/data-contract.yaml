@@ -1,0 +1,35 @@
+# Data Contract: commodity-momentum-rotation (O3)
+
+strategy_slug: "commodity-momentum-rotation"
+created_at: "2026-03-26"
+
+symbols:
+  - symbol: "GLD"
+    description: "SPDR Gold Shares ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2004, 1255 days in 5yr window"
+
+  - symbol: "USO"
+    description: "United States Oil Fund ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    notes: "1:8 reverse split history; yfinance handles adjust_ohlcv"
+    availability: "since 2006, 1255 days in 5yr window"
+
+  - symbol: "DJP"
+    description: "iPath Bloomberg Commodity Index ETN"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    notes: "ETN (not ETF), credit risk to Barclays; lower liquidity"
+    availability: "since 2006, 1255 days in 5yr window"
+
+lookback:
+  years: 5
+  warmup_days: 70
+  rationale: "70-day warmup covers the 60-day lookback window plus settlement buffer"
+
+data_status: "available"
+data_quality_grade: "B"
+infrastructure: "existing"
+validated_at: "2026-03-26"

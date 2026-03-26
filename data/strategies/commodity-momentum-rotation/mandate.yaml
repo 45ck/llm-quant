@@ -1,0 +1,45 @@
+# Mandate: commodity-momentum-rotation (O3)
+# Commodity Signals — Momentum Rotation
+
+mandate_id: "O3"
+strategy_slug: "commodity-momentum-rotation"
+created_at: "2026-03-26"
+
+objective: >
+  Monthly rotation to the highest 60-day Sharpe commodity ETF among
+  GLD (gold), USO (crude oil), and DJP (broad commodities) generates
+  Sharpe > 0.5 and beats the equal-weight GLD/USO/DJP baseline.
+
+mechanism: >
+  Commodity momentum persists due to supply/demand imbalances that take
+  months to resolve. By holding only the current best-performing commodity,
+  the strategy captures trending regimes in individual commodity markets
+  while rotating out of weakening ones. Gold (GLD) acts as a flight-to-safety
+  anchor during equity stress; oil (USO) captures energy macro cycles; DJP
+  provides diversified commodity exposure.
+
+universe:
+  assets: ["GLD", "USO", "DJP"]
+  defensive: "CASH"
+
+benchmark: "Equal-weight GLD/USO/DJP (rebalanced monthly)"
+benchmark_rationale: >
+  The equal-weight benchmark tests whether active rotation adds value
+  over passive commodity exposure. The mandate also requires beating
+  this modest bar (not necessarily the equity benchmark).
+
+constraints:
+  target_sharpe: "> 0.5"
+  max_drawdown: "< 0.20"
+  max_position_weight: 0.75
+
+trial_family: "commodity_momentum_sharpe_rotation"
+family_trial_number: 1
+
+falsification_criteria:
+  - "Sharpe < 0.3 in full-period backtest"
+  - "MaxDD > 20%"
+  - "DSR < 0.95"
+
+approved_at: "2026-03-26"
+approved_by: "quant-researcher"

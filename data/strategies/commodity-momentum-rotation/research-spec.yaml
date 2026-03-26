@@ -1,0 +1,61 @@
+# Research Spec: commodity-momentum-rotation (O3)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "commodity-momentum-rotation"
+strategy_name: "asset_rotation"
+created_at: "2026-03-26"
+frozen: true
+frozen_at: "2026-03-26"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Monthly rotation to the highest 60d Sharpe ETF among GLD, USO, DJP.
+  Hold only the top-ranked asset at 0.75 weight. Rebalance every 20 trading
+  days. Exit to cash when no asset has positive Sharpe.
+
+strategy_class: "asset_rotation"
+parameters:
+  symbols_list: "GLD,USO,DJP"
+  lookback_days: 60
+  top_k: 1
+  rebalance_frequency_days: 20
+  target_weight: 0.75
+  rank_by: "sharpe"
+
+execution:
+  rebalance_frequency_days: 20
+  warmup_days: 70
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+backtest:
+  lookback_years: 5
+  start_date: "approx 2022-01-11"
+  end_date: "2026-03-26"
+
+signal_logic:
+  compute: "60-day Sharpe ratio for each of GLD, USO, DJP"
+  rank: "descending by Sharpe"
+  entry_rule: "Buy top-1 asset at 0.75 weight if not already held"
+  exit_rule: "Sell current holding when a different asset takes top rank"
+  rebalance: "Every 20 trading days (~monthly)"
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.5"
+    - "MaxDD < 0.20"
+    - "DSR >= 0.95"
+  secondary:
+    - "CPCV OOS/IS >= 0.5"
+    - "Perturbation stability >= 3/5"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest on this slug.
+  60d lookback is standard momentum; 20-day rebalance is monthly;
+  0.75 weight is conservative given K-series MaxDD experience.
+
+spec_version: "1.0"
