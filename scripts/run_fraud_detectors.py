@@ -388,8 +388,9 @@ def main() -> None:
             inv_result = mechanism_inversion_test(returns, inv_returns)
             inv_status = "PASS" if inv_result.passed else "FAIL"
             print(
-                f" {inv_status} (original={inv_result.original_sharpe:.3f}, "
-                f"inverted={inv_result.inverted_sharpe:.3f})"
+                f" {inv_status} (orig={inv_result.original_sharpe:.3f}, "
+                f"inv={inv_result.inverted_sharpe:.3f}, "
+                f"diff={inv_result.sharpe_differential:+.3f})"
             )
         else:
             inv_result = None
@@ -407,6 +408,7 @@ def main() -> None:
         if inv_result:
             result["inversion_original_sharpe"] = round(inv_result.original_sharpe, 4)
             result["inversion_inverted_sharpe"] = round(inv_result.inverted_sharpe, 4)
+            result["inversion_differential"] = round(inv_result.sharpe_differential, 4)
             result["inversion_passed"] = inv_result.passed
 
         all_results.append(result)

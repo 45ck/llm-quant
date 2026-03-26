@@ -526,27 +526,32 @@ class InversionResult:
 
     original_sharpe: float = 0.0
     inverted_sharpe: float = 0.0
+    sharpe_differential: float = 0.0
     inverted_is_negative: bool = False
-    passed: bool = False  # inverted Sharpe < 0 (not just flat)
+    passed: bool = False
 
 
 def mechanism_inversion_test(
     original_returns: list[float],
     inverted_returns: list[float],
+    min_differential: float = 0.25,
 ) -> InversionResult:
-    """Test whether inverting the signal produces negative returns.
+    """Test whether signal direction matters by comparing original vs inverted.
 
-    If the inverted signal is flat (Sharpe ~0) rather than negative,
-    the original signal is capturing market beta or time-in-market,
-    not genuine directional timing.
+    For long-only strategies in trending markets, the inverted signal may
+    still be positive (equity risk premium). The correct test is whether
+    the DIFFERENTIAL (original - inverted) exceeds a meaningful threshold,
+    confirming the signal has genuine directional content.
 
     Parameters
     ----------
     original_returns : list[float]
         Daily returns from the original strategy.
     inverted_returns : list[float]
-        Daily returns from the strategy with inverted signals
-        (buy→sell, sell→buy, or entry/exit thresholds flipped).
+        Daily returns from the strategy with inverted signals.
+    min_differential : float
+        Minimum Sharpe differential (original - inverted) for pass.
+        Default 0.25 = signal direction adds at least 0.25 Sharpe.
 
     Returns
     -------
@@ -554,12 +559,14 @@ def mechanism_inversion_test(
     """
     orig_sr = compute_sharpe(original_returns, annualize=True)
     inv_sr = compute_sharpe(inverted_returns, annualize=True)
+    diff = orig_sr - inv_sr
 
     return InversionResult(
         original_sharpe=orig_sr,
         inverted_sharpe=inv_sr,
+        sharpe_differential=diff,
         inverted_is_negative=inv_sr < 0,
-        passed=inv_sr < 0,
+        passed=diff >= min_differential,
     )
 
 
