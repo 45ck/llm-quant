@@ -8,26 +8,39 @@ uncorrelated alpha sources. It applies to both Track A (Defensive Alpha) and Tra
 
 ## The Math: How Portfolio Sharpe Scales
 
+**Truly uncorrelated strategies (ρ=0):**
 ```
-Portfolio Sharpe = Individual Sharpe × √(N_effective)
+SR_portfolio = √(Σ SR_i²)
 ```
 
-Where N_effective = number of **truly uncorrelated** strategy return streams.
+**Correlated strategies (equal SR, pairwise correlation ρ, equal weight):**
+```
+SR_portfolio = SR_individual × √(N / (1 + (N-1)×ρ))
+```
 
-| Individual Sharpe | N_eff for Portfolio SR=2.0 | N_eff for Portfolio SR=3.0 |
-|-------------------|---------------------------|---------------------------|
-| 0.5 | 16 | 36 |
-| 0.7 | 8 | 18 |
-| 1.0 | 4 | 9 |
-| 1.2 | 3 | 6 |
+The correlation term is critical. At ρ=0.3, 25 strategies with SR=1.0 yield portfolio
+SR=1.86 — not 5.0. The simplified "N_effective" approximation is optimistic.
 
-**Current state (2026-03-26):** Effective N=5.16 across 11 strategies (1 real mechanism
-family dominating). Portfolio Sharpe ≈ 2.3 estimated.
+**Realistic combined SR at different correlation levels:**
 
-**Target state:** 6-9 uncorrelated mechanisms each with Sharpe ≥ 0.7 → Portfolio Sharpe 1.9-2.6.
+| N strategies (SR=1.0) | ρ=0.0 | ρ=0.1 | ρ=0.2 | ρ=0.3 | ρ=0.5 |
+|---|---|---|---|---|---|
+| 4 | 2.00 | 1.71 | 1.51 | 1.37 | 1.15 |
+| 9 | 3.00 | 2.24 | 1.83 | 1.59 | 1.26 |
+| 16 | 4.00 | 2.71 | 2.09 | 1.75 | 1.33 |
+| 25 | 5.00 | 3.09 | 2.28 | 1.86 | 1.39 |
 
-To reach 3.0+ requires: (a) higher individual Sharpes — unlikely at daily frequency with
-free data — or (b) more uncorrelated mechanisms — this is the path.
+**Current state (2026-03-26):** 11 strategies, avg ρ=0.584 across portfolio. Combined
+SR ≈ 1.0 × √(11 / (1 + 10×0.584)) ≈ 1.0 × √(1.82) ≈ **1.35** (corrected estimate —
+the 2.3 estimate assumed zero correlation, which is wrong for our credit-heavy portfolio).
+
+**Target state:** 8+ strategies across 5+ independent mechanism families with avg ρ < 0.20
+→ Portfolio SR ~2.0–2.5. This requires adding genuinely orthogonal mechanism families.
+
+**Crisis warning:** correlations spike during crises. Strategies with ρ=0.1 in normal
+markets become ρ=0.5 in a crisis — cutting portfolio SR from 2.24 to 1.26. Trend
+following is the primary crisis diversifier (historically negative correlation to equities
+during drawdowns). See `docs/research/extreme-sharpe-playbook.md` for full treatment.
 
 ---
 
@@ -277,15 +290,25 @@ but different leader instruments create different entry timing.
 
 ## One-Page Decision Framework
 
-For every hypothesis, answer these 5 questions in order. Stop at the first "no."
+For every hypothesis, answer these 7 questions in order. Stop at the first "no."
 
 1. **Is the mechanism different from credit-equity lead-lag?** No → SKIP (you have enough)
 2. **Can you explain why it works without saying "correlation" or "historically"?** No → KILL
 3. **Does a 2-minute scan show Sharpe > 0.6?** No → KILL
 4. **Does the shuffled signal test show >95th percentile?** No → KILL (it's fake)
 5. **Does it survive ±20% parameter perturbation?** No → KILL (it's fragile)
+6. **Is correlation to the existing portfolio < 0.30?** No → SKIP (redundant, won't move portfolio SR)
+7. **Does adding it increase portfolio SR by > 0.05?** No → SKIP (marginal contribution too small)
 
-If all 5 yes: full lifecycle (5-gate framework + 5-stage promotion).
+If all 7 yes: full lifecycle (5-gate framework + 5-stage promotion).
+
+Questions 6 and 7 require running the correlation matrix and marginal contribution formula:
+```
+ΔSR_P ≈ (SR_k - ρ_{kP} × SR_P) / √(1 + 2×ρ_{kP}×SR_k/SR_P)
+```
+where ρ_{kP} = correlation of new strategy k with existing portfolio P.
+
+See `docs/research/extreme-sharpe-playbook.md` for the full correlation mathematics.
 
 ---
 

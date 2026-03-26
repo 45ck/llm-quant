@@ -218,7 +218,11 @@ Statistical rigor follows institutional standards documented in
 
 Current implementation gaps tracked in
 [docs/research/implementation-gaps.md](docs/research/implementation-gaps.md):
-shuffled signal fraud detector (P1), HRP portfolio weights (P2), volatility targeting (P2).
+shuffled signal fraud detector (P1, **now implemented** in `robustness.py`), HRP portfolio weights (P2), volatility targeting (P2), portfolio correlation gate (P2), marginal SR contribution gate (P2).
+
+Portfolio construction mathematics and the path to extreme Sharpe documented in
+[docs/research/extreme-sharpe-playbook.md](docs/research/extreme-sharpe-playbook.md):
+three paths (breadth, uncorrelated stack, leverage), correlation reality table, tier benchmarks.
 
 ## Configuration
 

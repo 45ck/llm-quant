@@ -15,11 +15,14 @@
 | Experiment registry (strategy graveyard) | PARTIAL | P2 |
 | t-stat threshold enforcement | MISSING | P2 |
 | MinTRL computation | MISSING | P2 |
-| Shuffled signal fraud detector | MISSING | P1 |
+| Shuffled signal fraud detector | IMPLEMENTED | — |
 | Regime split validation (2 of 3) | INFORMAL | P2 |
 | HRP portfolio construction | MISSING | P2 |
 | Volatility targeting | MISSING | P2 |
 | Alpha decay monitoring (generalization ratio) | MISSING | P2 |
+| Marginal portfolio SR contribution gate | MISSING | P2 |
+| Portfolio correlation < 0.30 gate (new strategy) | MISSING | P2 |
+| Corrected combined SR computation (with ρ) | MISSING | P2 |
 | Capacity estimation | MISSING | P3 |
 | Drawdown CUSUM regime-change detection | MISSING | P3 |
 | Kelly / fractional Kelly position sizing | MISSING | P3 |
@@ -197,6 +200,9 @@ These match or exceed institutional standard for a fund at our stage:
 | P2 | HRP portfolio construction | 4-8 hours | High — correct weighting for correlated strategies |
 | P2 | Volatility targeting | 4-8 hours | High — free Sharpe improvement |
 | P2 | Generalization ratio | 2-4 hours | Medium — catches alpha decay early |
+| P2 | Portfolio correlation gate (< 0.30) | 1-2 hours | High — prevents adding redundant strategies |
+| P2 | Marginal SR contribution gate (> 0.05) | 1-2 hours | High — ensures each strategy moves portfolio SR |
+| P2 | Corrected combined SR computation (with ρ) | 1 hour | Medium — accurate portfolio SR estimate |
 | P3 | Capacity estimation | 1 hour | Low at current scale |
 | P3 | CUSUM detection | 4-8 hours | Medium — more sophisticated kill switch |
 
@@ -207,3 +213,4 @@ These match or exceed institutional standard for a fund at our stage:
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | 2026-03-26 | Initial gap analysis vs. institutional-quant-guide.md |
+| 1.1 | 2026-03-26 | Added portfolio correlation gate, marginal SR contribution gate, corrected combined SR to status table and implementation order. Added extreme-sharpe-playbook.md as reference. |
