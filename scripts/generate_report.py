@@ -6,7 +6,7 @@ Usage::
         [daily|weekly|monthly] [--date YYYY-MM-DD]
 """
 
-# ruff: noqa: PLR0912, PLR0915, C901, PERF401
+# ruff: noqa: PLR0912, PLR0915, PERF401
 
 from __future__ import annotations
 

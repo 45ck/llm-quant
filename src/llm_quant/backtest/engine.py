@@ -219,12 +219,14 @@ class BacktestEngine:
         *,
         risk_checks_enabled: bool = False,
         risk_manager: Any = None,
+        ml_gate: Any = None,
     ) -> None:
         self.strategy = strategy
         self.data_dir = data_dir or "data"
         self.initial_capital = initial_capital
         self.risk_checks_enabled = risk_checks_enabled
         self.risk_manager = risk_manager
+        self.ml_gate = ml_gate  # optional MLGate instance; None = disabled
 
     def run(
         self,
@@ -353,6 +355,28 @@ class BacktestEngine:
                 strategy_signals = self.strategy.generate_signals(
                     current_date, causal_indicators, portfolio, today_prices
                 )
+
+                # ML gate: filter BUY signals; CLOSE/SELL always pass
+                gate = self.ml_gate
+                if gate is not None and gate.is_trained() and strategy_signals:
+                    follower = getattr(self.strategy, "follower_symbol", None) or (
+                        self.strategy.config.parameters.get("follower_symbol")
+                        or self.strategy.config.parameters.get("symbol", "SPY")
+                    )
+                    gate_decision = gate.predict(
+                        current_date, causal_indicators, follower
+                    )
+                    strategy_signals, ml_rejected = gate.filter_signals(
+                        strategy_signals, gate_decision
+                    )
+                    if ml_rejected:
+                        logger.debug(
+                            "ML gate blocked %d signal(s) on %s (regime=%s p=%.3f)",
+                            len(ml_rejected),
+                            current_date,
+                            gate_decision.regime_label,
+                            gate_decision.confidence,
+                        )
 
             # Deduplicate: stop-loss takes priority over strategy for same symbol
             stop_symbols = {s.symbol for s in stop_signals}

@@ -104,6 +104,12 @@ ignore = [
   "E501",    # analysis scripts allow long lines for readability
   "BLE001",  # broad exception catching fine in analysis scripts
   "PTH123",  # open() fine in scripts
+  "PLR0913", # analysis scripts may have many CLI args
+  "C901",    # walk-forward loops are inherently complex
+  "ARG001",  # scripts may have unused args for interface consistency
+  "ARG002",  # inline classes may not use all ABC args
+  "RUF059",  # unused unpacked vars fine in scripts
+  "FBT002",  # boolean defaults fine in script helpers
 ]
 "src/llm_quant/backtest/engine.py" = [
   "PLR0913", # engine.run() needs many params by design

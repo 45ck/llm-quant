@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S603, S607, PLR0913, PLW1510
+# ruff: noqa: S603, S607, PLW1510
 """Create Mandate A through H hypothesis beads."""
 
 import subprocess
