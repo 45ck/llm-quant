@@ -111,6 +111,12 @@ ignore = [
   "RUF059",  # unused unpacked vars fine in scripts
   "FBT002",  # boolean defaults fine in script helpers
 ]
+"src/llm_quant/arb/**/*.py" = [
+  "BLE001",  # broad exception catching is intentional in API parsing code
+  "FBT002",  # boolean defaults fine in API client config methods
+  "PLR0913", # data ingestion functions may have many parameters
+  "TRY401",  # logger.exception with exc arg fine in error handlers
+]
 "src/llm_quant/backtest/engine.py" = [
   "PLR0913", # engine.run() needs many params by design
   "PLR0912", # backtest loop has many branches by nature
