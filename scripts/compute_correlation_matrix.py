@@ -195,6 +195,51 @@ STRATEGIES = [
             "rebalance_frequency_days": 1,
         },
     ),
+    (
+        "tlt-spy-rate-momentum",
+        "lead_lag",
+        ["TLT", "SPY"],
+        {
+            "leader_symbol": "TLT",
+            "follower_symbol": "SPY",
+            "lag_days": 5,
+            "signal_window": 10,
+            "entry_threshold": 0.01,
+            "exit_threshold": -0.01,
+            "target_weight": 0.8,
+            "rebalance_frequency_days": 5,
+        },
+    ),
+    (
+        "tlt-qqq-rate-tech",
+        "lead_lag",
+        ["TLT", "QQQ"],
+        {
+            "leader_symbol": "TLT",
+            "follower_symbol": "QQQ",
+            "lag_days": 5,
+            "signal_window": 10,
+            "entry_threshold": 0.01,
+            "exit_threshold": -0.01,
+            "target_weight": 0.8,
+            "rebalance_frequency_days": 5,
+        },
+    ),
+    (
+        "ief-qqq-rate-tech",
+        "lead_lag",
+        ["IEF", "QQQ"],
+        {
+            "leader_symbol": "IEF",
+            "follower_symbol": "QQQ",
+            "lag_days": 5,
+            "signal_window": 10,
+            "entry_threshold": 0.005,
+            "exit_threshold": -0.005,
+            "target_weight": 0.8,
+            "rebalance_frequency_days": 5,
+        },
+    ),
 ]
 
 LOOKBACK_DAYS = 5 * 365  # match run_backtest.py
@@ -296,6 +341,9 @@ def compute_correlation_matrix(df: pl.DataFrame, slugs: list[str]) -> None:
         "emb-spy-credit-lead": "EMB-SPY",
         "agg-efa-credit-lead": "AGG-EFA",
         "spy-overnight-momentum": "SPY-NITE",
+        "tlt-spy-rate-momentum": "TLT-SPY",
+        "tlt-qqq-rate-tech": "TLT-QQQ",
+        "ief-qqq-rate-tech": "IEF-QQQ",
     }
 
     # Extract return arrays
