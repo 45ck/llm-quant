@@ -1,0 +1,180 @@
+============================================================
+K1 / K3 / K4 FACTOR ROTATION BACKTEST RESULTS SUMMARY
+Generated: 2026-03-26
+Period: 2022-01-11 to 2026-03-25 (approx. 4.2 years)
+Universe: 2-asset ETF rotation (weekly rebalance, top_k=1)
+Benchmark: SPY (100%)
+Cost model: 3bps spread + 1bps slippage + 0.05x vol factor
+============================================================
+
+------------------------------------------------------------
+K1 — Quality Factor Rotation (qual-spy-risk-off-rotation)
+Beads issue: llm-quant-u0k
+Strategy: QUAL vs SPY, lookback=20d, rebalance=5d
+------------------------------------------------------------
+Backtest metrics (1x cost):
+  Sharpe Ratio:         0.5935
+  Max Drawdown:        21.03%
+  Total Return:        40.70%
+  Annualized Return:    8.51%
+  Sortino Ratio:        0.858
+  Calmar Ratio:         0.404
+  Total Trades:        97
+  Win Rate:            27.8%
+  DSR:                  0.8880
+  PSR:                  0.3624
+
+Benchmark (SPY):
+  Total Return:        77.69%
+  Sharpe:               0.765
+  Excess Return:       -36.99%
+
+Robustness Analysis:
+  Perturbation stability: 5/5 stable (PASS)
+    lookback=10: sharpe=0.5288 (-10.9%) STABLE
+    lookback=60: sharpe=0.5192 (-12.5%) STABLE
+    rebalance=1: sharpe=0.5888 (-0.8%)  STABLE
+    rebalance=20: sharpe=0.7088 (+19.4%) STABLE
+    weight=0.70: sharpe=0.6009 (+1.2%)  STABLE
+  CPCV mean OOS Sharpe: 0.0471 (std=0.0501) (PASS)
+
+Gate Results:
+  DSR >= 0.95:              0.8880  FAIL
+  Max Drawdown < 15%:      21.03%  FAIL
+  Perturbation >= 3/5:      5/5    PASS
+  CPCV OOS Sharpe > 0:      0.0471  PASS
+
+OVERALL VERDICT: FAIL (2 gates failed: DSR, MaxDD)
+
+------------------------------------------------------------
+K3 — Low-Volatility Anomaly Rotation (usmv-spy-low-vol-rotation)
+Beads issue: llm-quant-gw5
+Strategy: USMV vs SPY, lookback=20d, rebalance=5d
+------------------------------------------------------------
+Backtest metrics (1x cost):
+  Sharpe Ratio:         0.4288
+  Max Drawdown:        22.57%
+  Total Return:        21.30%
+  Annualized Return:    4.73%
+  Sortino Ratio:        0.589
+  Calmar Ratio:         0.209
+  Total Trades:        93
+  Win Rate:            26.9%
+  DSR:                  0.8079
+  PSR:                  0.2473
+
+Benchmark (SPY):
+  Total Return:        77.69%
+  Sharpe:               0.765
+  Excess Return:       -56.39%
+
+Robustness Analysis:
+  Perturbation stability: 3/5 stable (PASS)
+    lookback=10:  sharpe=0.4479 (+4.5%)   STABLE
+    lookback=60:  sharpe=0.4445 (+3.7%)   STABLE
+    rebalance=1:  sharpe=0.5055 (+17.9%)  STABLE
+    rebalance=20: sharpe=0.8207 (+91.4%)  UNSTABLE
+    weight=0.70:  sharpe=0.6374 (+48.6%)  UNSTABLE
+  CPCV mean OOS Sharpe: 0.0487 (std=0.0462) (PASS)
+
+Gate Results:
+  DSR >= 0.95:              0.8079  FAIL
+  Max Drawdown < 15%:      22.57%  FAIL
+  Perturbation >= 3/5:      3/5    PASS
+  CPCV OOS Sharpe > 0:      0.0487  PASS
+
+OVERALL VERDICT: FAIL (2 gates failed: DSR, MaxDD)
+
+------------------------------------------------------------
+K4 — Size Premium Rotation (iwm-spy-size-rotation)
+Beads issue: llm-quant-ep6
+Strategy: IWM vs SPY, lookback=20d, rebalance=5d
+------------------------------------------------------------
+Backtest metrics (1x cost):
+  Sharpe Ratio:         0.1465
+  Max Drawdown:        26.98%
+  Total Return:         4.39%
+  Annualized Return:    1.03%
+  Sortino Ratio:        0.207
+  Calmar Ratio:         0.038
+  Total Trades:        111
+  Win Rate:            25.2%
+  DSR:                  0.6178
+  PSR:                  0.1028
+
+Benchmark (SPY):
+  Total Return:        77.69%
+  Sharpe:               0.765
+  Excess Return:       -73.30%
+
+Robustness Analysis:
+  Perturbation stability: 3/5 stable (PASS)
+    lookback=10:  sharpe=-0.0969 (-166.2%) UNSTABLE
+    lookback=60:  sharpe=-0.0363 (-124.8%) UNSTABLE
+    rebalance=1:  sharpe=0.1351 (-7.8%)    STABLE
+    rebalance=20: sharpe=0.1174 (-19.9%)   STABLE
+    weight=0.70:  sharpe=0.1358 (-7.3%)    STABLE
+  CPCV mean OOS Sharpe: 0.0141 (std=0.0395) (PASS)
+
+Gate Results:
+  DSR >= 0.95:              0.6178  FAIL
+  Max Drawdown < 15%:      26.98%  FAIL
+  Perturbation >= 3/5:      3/5    PASS
+  CPCV OOS Sharpe > 0:      0.0141  PASS
+
+OVERALL VERDICT: FAIL (2 gates failed: DSR, MaxDD)
+
+============================================================
+SUMMARY TABLE
+============================================================
+
+Strategy                    Sharpe  MaxDD    DSR     Trades  CPCV    Perturb  DSR    MaxDD  Perturb CPCV  VERDICT
+qual-spy-risk-off-rotation   0.594  21.03%   0.888   97      0.047   5/5      FAIL   FAIL   PASS    PASS  NOT ELIGIBLE
+usmv-spy-low-vol-rotation    0.429  22.57%   0.808   93      0.049   3/5      FAIL   FAIL   PASS    PASS  NOT ELIGIBLE
+iwm-spy-size-rotation        0.146  26.98%   0.618   111     0.014   3/5      FAIL   FAIL   PASS    PASS  NOT ELIGIBLE
+
+GATE CRITERIA (all 4 must pass for promotion eligibility):
+  1. DSR >= 0.95
+  2. Max Drawdown < 15%
+  3. Perturbation stability >= 3/5
+  4. CPCV mean OOS Sharpe > 0
+
+============================================================
+INTERPRETATION NOTES
+============================================================
+
+All three strategies pass the qualitative robustness checks (perturbation
+stability and CPCV OOS Sharpe > 0), confirming that the momentum-rotation
+signal is not pure noise. However, all three fail the quantitative gates:
+
+1. DSR failure: All DSR values (0.62 - 0.89) fall well below the 0.95
+   threshold. This means the Sharpe ratios observed are not sufficiently
+   deflated for the number of trials run — the strategies need cleaner, 
+   higher Sharpe ratios or longer track records to meet this bar.
+
+2. Max drawdown failure: All three exceed the 15% mandate constraint,
+   with drawdowns of 21-27%. This is a hard risk-management disqualifier.
+   The 2022 equity bear market (and for K4, prolonged small-cap 
+   underperformance through 2025) drove sustained drawdown periods of
+   474-919 days.
+
+3. Benchmark underperformance: All three strategies significantly
+   underperform buy-and-hold SPY on both total return and Sharpe over 
+   this 5-year window (2021-2026). The 2021-2026 period was dominated by
+   a brief bear market (2022) followed by a strong bull market where SPY
+   momentum was strong and persistent, making simple 2-asset rotation
+   inferior to just holding SPY.
+
+RANKING by Sharpe: K1 (0.594) > K3 (0.429) > K4 (0.146)
+
+K1 is the strongest candidate if drawdown management is improved.
+K4 (size rotation) is the weakest — IWM vs SPY momentum is highly
+lookback-sensitive (lookback changes flip sign), indicating the size
+signal is not stable in this regime.
+
+RECOMMENDED ACTION: None of the three strategies meet promotion criteria.
+File research notes in beads issues. Consider:
+  - K1: revisit with explicit VIX-regime overlay to address drawdown
+  - K3: combine with volatility targeting overlay
+  - K4: retire or fundamentally redesign — signal is too unstable
+============================================================

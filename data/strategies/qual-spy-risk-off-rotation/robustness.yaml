@@ -1,0 +1,101 @@
+# Robustness Analysis: qual-spy-risk-off-rotation (K1)
+# Generated: 2026-03-26
+
+strategy_slug: "qual-spy-risk-off-rotation"
+trial_family: "asset_rotation_qual_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8880
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment ea5a2852, trial #1.
+      Highest DSR of the K-series factor rotation hypotheses.
+      Requires Sharpe ~0.85+ at trial count 1 to clear the gate.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: "Single trial in family."
+
+  cpcv:
+    mean_oos_sharpe: 0.0471
+    std_oos_sharpe: 0.0501
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge.
+      Mean OOS Sharpe 0.047 is positive. Signal is real but weak OOS.
+
+  perturbation:
+    n_stable: 5
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lookback=10"
+        sharpe: 0.5288
+        pct_change: -10.9
+        stable: true
+      - name: "lookback=60"
+        sharpe: 0.5192
+        pct_change: -12.5
+        stable: true
+      - name: "rebalance=1"
+        sharpe: 0.5888
+        pct_change: -0.8
+        stable: true
+      - name: "rebalance=20"
+        sharpe: 0.7088
+        pct_change: +19.4
+        stable: true
+      - name: "weight=0.70"
+        sharpe: 0.6009
+        pct_change: +1.2
+        stable: true
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "ea5a2852"
+  sharpe_ratio: 0.5935
+  max_drawdown: 0.2103
+  dsr: 0.8880
+  total_trades: 97
+  total_return: 0.4070
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+verdict: "REJECTED — MaxDD (21.0%) exceeds 15% mandate; DSR gate not met"
+
+failure_analysis: >
+  The asset_rotation strategy at 90% weight in a 2-asset (QUAL/SPY) universe
+  produces unacceptable drawdown during the 2022 equity bear market.
+  Concentrated 90% exposure during sustained drawdown periods leads to
+  MaxDD of 21%. The perturbation showing rebalance=20 gives Sharpe=0.709
+  suggests slower rebalancing reduces friction but does not address the
+  underlying drawdown problem.
+
+notes_for_future_research: |
+  - Add VIX regime overlay: only rotate to QUAL when VIX > 20 (bear market)
+  - Reduce position weight to 40-50% to cap MaxDD below 15%
+  - Expand universe (QUAL/SPY/TLT/SHV) for true risk-off rotation
+  - Current 2-asset format forces binary on/off with no intermediate state

@@ -1,0 +1,106 @@
+# Robustness Analysis: spy-gld-correlation-regime (M1)
+# Generated: 2026-03-26
+
+strategy_slug: "spy-gld-correlation-regime"
+trial_family: "corr_regime_spy_gld"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8473
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment registry, trial #1.
+      With Sharpe=0.500, the DSR of 0.847 falls below the 0.95 threshold.
+      Requires Sharpe ~0.85+ at trial count 1 to meet this gate.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. Single trial in family.
+
+  cpcv:
+    mean_oos_sharpe: 0.0484
+    std_oos_sharpe: 0.0452
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge.
+      Mean OOS Sharpe 0.048 is positive. However, OOS/IS ratio = 0.096
+      (below 0.5 robustness target) — performance is largely IS.
+      2 of 6 CPCV folds showed negative OOS Sharpe.
+
+  perturbation:
+    n_stable: 1
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "corr_window=10"
+        sharpe: 0.9279
+        pct_change: +85.4
+        stable: false
+      - name: "corr_window=30"
+        sharpe: 0.9721
+        pct_change: +94.3
+        stable: false
+      - name: "exit_thresh=0.0"
+        sharpe: 0.8359
+        pct_change: +67.1
+        stable: false
+      - name: "exit_thresh=-0.10"
+        sharpe: 0.8027
+        pct_change: +60.4
+        stable: false
+      - name: "weight=0.75"
+        sharpe: 0.6294
+        pct_change: +25.8
+        stable: true
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "from-registry"
+  sharpe_ratio: 0.5004
+  max_drawdown: 0.1062
+  dsr: 0.8473
+  total_trades: 48
+  total_return: 0.1488
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+verdict: "HYPOTHESIS FALSIFIED — strategy does not pass robustness gates"
+
+failure_analysis: >
+  Critical failure: perturbation analysis shows ALL perturbations improve
+  Sharpe substantially (up to +94%). The base -0.05 threshold is locally
+  suboptimal — all other corr_window and threshold values outperform.
+  This is the signature of parameter overfitting, not economic signal.
+  The OOS/IS gap (CPCV 0.048 vs IS 0.500) confirms the Sharpe is
+  largely IS-specific. The strategy exits to cash during the 2023-2025
+  bull run, missing the majority of SPY upside.
+
+notes_for_future_research: |
+  - Replace cash exit with long GLD (capture flight-to-safety return)
+  - Re-specify with corr_window=30 and threshold=0.0 (more stable per perturbations)
+  - Current form sacrifices too much upside in bull market environment
+  - SPY-GLD correlation mechanism may be more useful as a risk overlay
+    than a standalone timing signal

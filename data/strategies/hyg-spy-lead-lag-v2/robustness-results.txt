@@ -1,0 +1,149 @@
+=============================================================
+ROBUSTNESS RESULTS: hyg-spy-lead-lag-v2
+Run date: 2026-03-26
+=============================================================
+
+STRATEGY PARAMETERS
+-------------------
+leader_symbol:            HYG
+follower_symbol:          SPY
+lag_days:                 1
+signal_window:            5   (v1 was 3)
+entry_threshold:          0.002 (v1 was 0.005)
+exit_threshold:           -0.003
+target_weight:            0.70  (v1 was 0.90)
+rebalance_frequency_days: 1
+
+BACKTEST RESULTS (1.0x cost, 5-year window)
+--------------------------------------------
+Sharpe Ratio:    0.2874   [TARGET: > 0.85 for DSR >= 0.95]
+Max Drawdown:    15.24%   [LIMIT: < 15.00%]
+DSR:             0.5265   [GATE: >= 0.95]
+Total Return:    8.31%
+Annualized Ret:  1.93%
+Win Rate:        26.6%
+Total Trades:    173
+DSR Family:      lead_lag_hyg_spy_v2, trial #1
+
+BENCHMARK COMPARISON (SPY)
+---------------------------
+Strategy total return:    8.31%
+SPY total return:        77.69%
+Strategy Sharpe:          0.287
+SPY Sharpe:               0.765
+Excess return:           -69.37%
+
+PERTURBATION ANALYSIS (30% Sharpe stability window)
+-----------------------------------------------------
+signal_window=3:      sharpe=0.4761  max_dd=0.1413  (+65.6%)  UNSTABLE
+signal_window=10:     sharpe=0.5328  max_dd=0.1216  (+85.4%)  UNSTABLE
+entry_thresh=0.001:   sharpe=0.5045  max_dd=0.1501  (+75.5%)  UNSTABLE
+entry_thresh=0.005:   sharpe=0.7379  max_dd=0.0929  (+156.7%) UNSTABLE
+weight=0.50:          sharpe=0.4970  max_dd=0.1108  (+72.9%)  UNSTABLE
+
+Stability summary: 0/5 perturbations stable (FAIL — threshold 3/5)
+
+CPCV OUT-OF-SAMPLE ANALYSIS (n_groups=6, k_test=2, purge=5)
+-------------------------------------------------------------
+Mean OOS Sharpe: 0.8257
+Std OOS Sharpe:  0.6738
+OOS verdict:     PASS (mean > 0)
+
+NOTE: High std (0.67) relative to mean (0.83) signals high variance
+across folds — the strategy is inconsistent across time periods.
+
+GATE-BY-GATE VERDICT
+--------------------
+Gate 1 - DSR >= 0.95:          0.5265  FAIL
+Gate 2 - MaxDD < 15%:          15.24%  FAIL (breaches by 0.24%)
+Gate 3 - Perturbation 3/5:     0/5     FAIL
+Gate 4 - CPCV OOS > 0:         0.8257  PASS
+
+OVERALL VERDICT: FAILED (3 of 4 gates fail)
+Strategy does NOT advance to paper track.
+
+=============================================================
+DIAGNOSIS: WHY V2 FAILED
+=============================================================
+
+The v2 parameter changes backfired. Root cause analysis:
+
+1. ENTRY THRESHOLD INVERSION (primary failure)
+   - Softening entry_threshold from 0.005 → 0.002 was intended to
+     capture more valid signals. Instead it captured noise.
+   - The perturbation entry_thresh=0.005 (back to v1 level) shows
+     Sharpe=0.738 vs v2 base of 0.287 — a 157% improvement.
+   - This means the 0.002 level has very poor signal quality.
+   - The 26.6% win rate (vs presumably ~35%+ for v1 at 0.005 threshold)
+     confirms most 0.002-threshold triggers are noise.
+
+2. SIGNAL WINDOW MAKES IT WORSE
+   - Longer signal_window=5 compounds the noise problem.
+   - signal_window=3 (v1 level) gives sharpe=0.476 — still bad, but
+     better than v2 base, suggesting the window change also hurt.
+   - signal_window=10 gives sharpe=0.533 — smoother but still can't
+     overcome the weak entry threshold.
+
+3. DRAWDOWN CONTROL FAILED
+   - Lower weight (0.70 vs 0.90) was intended to reduce MaxDD.
+   - MaxDD is 15.24%, actually breaching the 15% limit.
+   - With more frequent (noisy) entries at 0.70 weight, the strategy
+     is more often long during drawdown periods than v1 was at 0.90.
+   - More trades × more bad trades = larger cumulative losses.
+
+4. PERTURBATION INSTABILITY IS DIAGNOSTIC
+   - ALL perturbations improve Sharpe — including moving further AWAY
+     from v2 parameters in both directions.
+   - This means v2's parameter combination is a local minimum in the
+     performance surface.
+   - The hypothesis direction is correct (credit leads equity) but
+     v2 parameters land in a dead zone.
+
+5. CPCV OOS STILL POSITIVE (0.83) BUT VOLATILE (std 0.67)
+   - The OOS result remains above zero, confirming the economic
+     mechanism is real.
+   - But the high standard deviation (0.67) confirms the strategy is
+     inconsistent across market regimes.
+   - V1's CPCV was 0.9905 — much better OOS consistency.
+
+=============================================================
+COMPARISON: V1 VS V2
+=============================================================
+
+Metric           V1        V2        Change
+------           --        --        ------
+Sharpe           0.758     0.287     -62%
+MaxDD            11.0%     15.24%    WORSE (breaches limit)
+DSR              0.9404    0.5265    -44%
+Trades           ~80-90    173       +~100% (2x more trades)
+Win Rate         ~35%      26.6%     -24%
+CPCV OOS         0.9905    0.8257    -17%
+DSR gap to pass  -0.0096   -0.4235   catastrophically worse
+
+Key insight: V1 failed by 0.0096 DSR (razor thin). V2 failed by
+0.4235 DSR — nearly 44x further from passing.
+
+The v2 "fix" was directionally wrong. The original v1 with
+entry_threshold=0.005 was the better parametrization.
+
+=============================================================
+RECOMMENDATION FOR V3 (if warranted)
+=============================================================
+
+If pursuing further development, the lifecycle requires a new
+mandate + hypothesis specifying WHAT is being changed and WHY.
+
+Evidence-based direction (from perturbation data):
+- entry_threshold=0.005 clearly dominates 0.002
+- signal_window=3 is competitive with 5 and 10
+- target_weight=0.70 vs 0.90 is the least impactful variable
+
+The v1 DSR miss (0.9404 vs 0.95) was marginal. Options:
+  (a) Accept v1 as-is — DSR 0.94 is very close to threshold,
+      CPCV OOS 0.99 is strong. Consider whether the DSR gate
+      is calibrated correctly for a 5-year backtest.
+  (b) V3 with modest changes to v1 params — e.g., signal_window=4,
+      entry_threshold=0.004-0.005, target_weight=0.80-0.85.
+  (c) Accept v1 failure and move on to other strategies.
+
+DO NOT proceed to paper track. Strategy is REJECTED.

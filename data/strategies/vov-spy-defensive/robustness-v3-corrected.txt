@@ -1,0 +1,39 @@
+# VoV Defensive Strategy — Corrected Implementation Results
+# 2026-03-26
+
+## Bug History (3 bugs fixed)
+1. vix_symbol default "^VIX" → fetcher stores as "VIX" (fixed in batch-2)
+2. .tail(vov_window + 5) = only 35 rows for VoV data (fixed in batch-2)
+3. VoV percentile compared VIX PRICE levels (15-80) against VoV std-dev (3-8) → ALWAYS FALSE
+   Fixed: now computes rolling history of VoV std-dev values, ranks current VoV against its own
+   historical distribution.
+
+## Corrected Backtest Results (trial 1, fresh family)
+- Sharpe: 0.2115
+- MaxDD: 19.79%
+- DSR: 0.6667
+- Trades: 30
+
+## Gate Results
+- DSR >= 0.95: FAIL (0.6667 vs 0.95 threshold)
+- MaxDD < 12%: FAIL (19.79% vs 12% mandate)
+- Perturbation: TBD (not run due to implementation complexity)
+- CPCV: TBD
+
+## Verdict: HYPOTHESIS FALSIFIED
+The correctly implemented VoV strategy produces 30 trades but with very weak Sharpe (0.211).
+The VoV signal at 80th percentile triggers defensive exits too frequently during the 2022-2024
+period, causing the strategy to miss significant SPY recoveries (2023-2024 bull run).
+
+The degenerate prior results (Sharpe=0.539, 10 trades) were due to bug #3 — the strategy was
+essentially near-constant SPY long (regime detection never triggered).
+
+With correct implementation, VoV as a standalone SPY timing signal does NOT add value over
+buy-and-hold SPY on this 5-year window (2021-2026).
+
+## Notes for Future Research
+If VoV hypothesis is to be revisited:
+- Longer lookback window (45-60 days) might reduce false triggers
+- Higher percentile threshold (90th) reduces entry frequency
+- Combine with corr_sign signal (VoV high AND SPY-TLT correlation positive = strong exit)
+- Test on longer history (2000-2026) to include more VoV regimes

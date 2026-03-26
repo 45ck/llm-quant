@@ -1,0 +1,90 @@
+# Robustness Analysis: usmv-spy-low-vol-rotation (K3)
+# Generated: 2026-03-26
+
+strategy_slug: "usmv-spy-low-vol-rotation"
+trial_family: "asset_rotation_usmv_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8079
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment bd96b2ef, trial #1. Sharpe=0.429 produces DSR=0.808.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: "Single trial in family."
+
+  cpcv:
+    mean_oos_sharpe: 0.0487
+    std_oos_sharpe: 0.0462
+    threshold: "> 0"
+    result: "PASS"
+    notes: "Mean OOS Sharpe 0.049 is positive."
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lookback=10"
+        sharpe: 0.4479
+        pct_change: +4.5
+        stable: true
+      - name: "lookback=60"
+        sharpe: 0.4445
+        pct_change: +3.7
+        stable: true
+      - name: "rebalance=1"
+        sharpe: 0.5055
+        pct_change: +17.9
+        stable: true
+      - name: "rebalance=20"
+        sharpe: 0.8207
+        pct_change: +91.4
+        stable: false
+      - name: "weight=0.70"
+        sharpe: 0.6374
+        pct_change: +48.6
+        stable: false
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "bd96b2ef"
+  sharpe_ratio: 0.4288
+  max_drawdown: 0.2257
+  dsr: 0.8079
+  total_trades: 93
+  total_return: 0.2130
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+verdict: "REJECTED — MaxDD (22.6%) exceeds 15% mandate; DSR gate not met"
+
+notes_for_future_research: |
+  - rebalance=20 gives Sharpe=0.821 (+91%) — monthly rebalance reduces friction
+  - weight=0.70 gives Sharpe=0.637 — lower weight reduces drawdown
+  - Low-vol factor rotation warrants revisit with: (1) monthly rebalance,
+    (2) expanded universe including TLT/SHV as defensive allocation,
+    (3) position weight <= 50% to control MaxDD

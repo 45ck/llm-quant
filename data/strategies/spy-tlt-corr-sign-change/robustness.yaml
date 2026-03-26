@@ -1,0 +1,109 @@
+# Robustness Analysis: spy-tlt-corr-sign-change (M3)
+# Generated: 2026-03-26
+
+strategy_slug: "spy-tlt-corr-sign-change"
+trial_family: "corr_regime_spy_tlt_sign"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.8765
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment registry, trial #1. Strongest DSR of the
+      correlation regime family. Requires Sharpe ~0.85+ at trial count 1
+      to meet the 0.95 threshold — current 0.555 falls short.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: >
+      PBO requires >= 2 distinct strategy variants. Single trial in family.
+
+  cpcv:
+    mean_oos_sharpe: 0.0493
+    std_oos_sharpe: 0.0357
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV with 6 groups, 2 test groups, 5-day purge.
+      All 6 CPCV folds returned non-negative OOS Sharpe (range 0.000 to 0.118).
+      Zero folds negative is a positive consistency signal.
+      However OOS/IS = 0.088 (far below 0.5 robustness target).
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "corr_window=10"
+        sharpe: 0.8325
+        pct_change: +49.9
+        stable: false
+      - name: "corr_window=30"
+        sharpe: 0.4062
+        pct_change: -26.8
+        stable: true
+      - name: "exit_thresh=0.05"
+        sharpe: 0.6338
+        pct_change: +14.1
+        stable: true
+      - name: "exit_thresh=-0.05"
+        sharpe: 0.9560
+        pct_change: +72.2
+        stable: false
+      - name: "weight=0.75"
+        sharpe: 0.6828
+        pct_change: +23.0
+        stable: true
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "from-registry"
+  sharpe_ratio: 0.5552
+  max_drawdown: 0.1493
+  dsr: 0.8765
+  total_trades: 62
+  total_return: 0.2596
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+  notes: "MaxDD at 1x cost is 14.93% (7bps inside 15% limit). Fails at 3x cost (15.01%)."
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+overall_result: "FAIL"
+
+verdict: "REJECTED — DSR gate not met and large IS/OOS performance gap"
+
+key_finding: >
+  The exit_thresh=-0.05 perturbation (Sharpe=0.956, MaxDD=9.55%) is
+  the most important finding in this analysis. It suggests a pre-specified
+  v2 with hysteresis band (entry at corr=-0.05, exit at corr=+0.05) could
+  materially improve both Sharpe and MaxDD while being theoretically
+  justified (filters noise near the zero-correlation boundary).
+
+notes_for_future_research: |
+  For M3-v2 (pre-specified hypothesis, NEW lifecycle):
+  - Set entry corr_exit_threshold=-0.05 (enter defensive when corr drops below -0.05)
+  - Set exit at +0.05 hysteresis band to reduce chop
+  - Extend to 10-year backtest (2013-2026) to include full rate cycles
+  - Add VIX filter to reduce false signals in low-vol regimes
+  - Decompose by year to confirm not 2022-only artifact
+  - All parameter changes MUST be frozen in new research-spec before backtesting

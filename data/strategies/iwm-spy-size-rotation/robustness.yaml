@@ -1,0 +1,99 @@
+# Robustness Analysis: iwm-spy-size-rotation (K4)
+# Generated: 2026-03-26
+
+strategy_slug: "iwm-spy-size-rotation"
+trial_family: "asset_rotation_iwm_spy"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 2
+gates_failed: 2
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.6178
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment a489099b, trial #1. Sharpe=0.147 yields DSR=0.618.
+      Weakest DSR of the K-series.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: "Single trial in family."
+
+  cpcv:
+    mean_oos_sharpe: 0.0141
+    std_oos_sharpe: 0.0395
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      Mean OOS Sharpe 0.014 is barely positive. Weakest CPCV of K-series.
+
+  perturbation:
+    n_stable: 3
+    n_total: 5
+    result: "PASS"
+    threshold: ">= 60% stable"
+    details:
+      - name: "lookback=10"
+        sharpe: -0.0969
+        pct_change: -166.2
+        stable: false
+      - name: "lookback=60"
+        sharpe: -0.0363
+        pct_change: -124.8
+        stable: false
+      - name: "rebalance=1"
+        sharpe: 0.1351
+        pct_change: -7.8
+        stable: true
+      - name: "rebalance=20"
+        sharpe: 0.1174
+        pct_change: -19.9
+        stable: true
+      - name: "weight=0.70"
+        sharpe: 0.1358
+        pct_change: -7.3
+        stable: true
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "a489099b"
+  sharpe_ratio: 0.1465
+  max_drawdown: 0.2698
+  dsr: 0.6178
+  total_trades: 111
+  total_return: 0.0439
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+verdict: "HYPOTHESIS FALSIFIED — IWM/SPY size rotation provides no edge in 2022-2026 window"
+
+failure_analysis: >
+  The size premium (IWM vs SPY) rotation is highly lookback-sensitive:
+  lookback=10 and lookback=60 both produce NEGATIVE Sharpe, while
+  lookback=20 is positive (0.147). This extreme sensitivity indicates
+  the size signal is unstable in this regime. Small-cap underperformance
+  persisted throughout 2022-2025, making the rotation ineffective.
+  MaxDD of 27% is the worst in the K-series.
+
+recommendation: >
+  Retire hypothesis K4 in current form. The IWM/SPY size premium rotation
+  is not a viable standalone timing signal on a 5-year 2022-2026 window.
+  Fundamental redesign required (e.g., macroeconomic factor conditioning)
+  before re-testing.

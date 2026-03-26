@@ -1,0 +1,105 @@
+# Robustness Analysis: hyg-spy-lead-lag-v2
+# Generated: 2026-03-26
+
+strategy_slug: "hyg-spy-lead-lag-v2"
+trial_family: "lead_lag_hyg_spy_v2"
+trial_count: 2
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+gates_passed: 1
+gates_failed: 3
+gates_total: 4
+
+gate_results:
+  dsr:
+    dsr_value: 0.5265
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment 24c7b418, trial #2 in family.
+      The agent ran the backtest twice creating two registry entries.
+      Trial 2 DSR = 0.5265. Even trial 1 DSR = 0.721 would fail the gate.
+      V1 (hyg-spy-lead-lag) had DSR = 0.9404 — v2 is 44x further from the gate.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: "Trials ran identical parameters — not meaningful variants."
+
+  cpcv:
+    mean_oos_sharpe: 0.8257
+    std_oos_sharpe: 0.6738
+    threshold: "> 0"
+    result: "PASS"
+    notes: >
+      CPCV mean OOS Sharpe 0.826 is positive. However std=0.674 is very high,
+      signaling high variance across folds. V1 CPCV was 0.9905 with lower std.
+
+  perturbation:
+    n_stable: 0
+    n_total: 5
+    result: "FAIL"
+    threshold: ">= 60% stable"
+    details:
+      - name: "signal_window=3"
+        sharpe: 0.4761
+        pct_change: +65.6
+        stable: false
+      - name: "signal_window=10"
+        sharpe: 0.5328
+        pct_change: +85.4
+        stable: false
+      - name: "entry_thresh=0.001"
+        sharpe: 0.5045
+        pct_change: +75.5
+        stable: false
+      - name: "entry_thresh=0.005"
+        sharpe: 0.7379
+        pct_change: +156.7
+        stable: false
+      - name: "weight=0.50"
+        sharpe: 0.4970
+        pct_change: +72.9
+        stable: false
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "92793c82"
+  sharpe_ratio: 0.2874
+  max_drawdown: 0.1524
+  dsr: 0.5265
+  total_trades: 173
+  total_return: 0.0831
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+  notes: "MaxDD also breaches 15% mandate (15.24%)."
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+verdict: "REJECTED — V2 parameter changes backfired; all metrics worse than V1"
+
+failure_analysis: >
+  Entry threshold reduction from 0.005 to 0.002 was the primary failure.
+  It tripled trade count (173 vs ~80) and reduced win rate from ~35% to 26.6%.
+  The perturbation entry_thresh=0.005 (reverting to v1) shows Sharpe=0.738 —
+  157% improvement. ALL perturbations outperform v2 base: v2 parameters
+  are in a local minimum of the performance surface.
+  V1 failed DSR by 0.0096 (razor-thin). V2 fails by 0.4235 (catastrophically worse).
+
+notes_for_future_research: |
+  V1 (hyg-spy-lead-lag) remains the best version at Sharpe=0.758 DSR=0.9404.
+  If pursuing V3: use V1 parameters as base, NOT V2.
+  V1's DSR miss was marginal (0.9404 vs 0.95). Options:
+  (a) Accept V1 result — DSR of 0.94 with CPCV 0.99 is near-promotion quality.
+  (b) Very small V1 parameter adjustments (e.g., signal_window=4, thresh=0.004).
+  (c) Move on — the mechanism is real (credit leads equity) but DSR gate is strict.
