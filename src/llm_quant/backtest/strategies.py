@@ -1618,7 +1618,7 @@ class VixRegimeStrategy(Strategy):
     ) -> list[TradeSignal]:
         params = self.config.parameters or {}
         mode: str = str(params.get("mode", "level"))
-        vix_sym: str = str(params.get("vix_symbol", "^VIX"))
+        vix_sym: str = str(params.get("vix_symbol", "VIX"))
         equity_sym: str = str(params.get("equity_symbol", "SPY"))
         vix_thresh: float = float(params.get("vix_threshold", 25.0))
         vov_window: int = int(params.get("vov_window", 30))
@@ -1626,11 +1626,7 @@ class VixRegimeStrategy(Strategy):
         spike_thresh: float = float(params.get("spike_threshold", 0.20))
         tgt_weight: float = float(params.get("target_weight", 0.90))
 
-        vix_data = (
-            indicators_df.filter(pl.col("symbol") == vix_sym)
-            .sort("date")
-            .tail(vov_window + 5)
-        )
+        vix_data = indicators_df.filter(pl.col("symbol") == vix_sym).sort("date")
         if len(vix_data) < 5:
             return []
 
