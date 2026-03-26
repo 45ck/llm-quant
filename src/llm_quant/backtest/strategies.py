@@ -1628,6 +1628,8 @@ class VixRegimeStrategy(Strategy):
       vov_window (int, default 30): Rolling window for VoV.
       vov_percentile (float, default 0.80): Percentile for VoV threshold.
       spike_threshold (float, default 0.20): 1-day VIX % rise for spike mode.
+      spike_exit_vix (float, default 20.0): Exit vix_spike position when VIX
+        drops below this level (fear subsided, bounce captured).
       target_weight (float, default 0.90): Position weight in favourable regime.
     """
 
@@ -1646,6 +1648,7 @@ class VixRegimeStrategy(Strategy):
         vov_window: int = int(params.get("vov_window", 30))
         vov_pct: float = float(params.get("vov_percentile", 0.80))
         spike_thresh: float = float(params.get("spike_threshold", 0.20))
+        spike_exit_vix: float = float(params.get("spike_exit_vix", 20.0))
         tgt_weight: float = float(params.get("target_weight", 0.90))
 
         vix_data = indicators_df.filter(pl.col("symbol") == vix_sym).sort("date")
@@ -1701,6 +1704,18 @@ class VixRegimeStrategy(Strategy):
                         target_weight=tgt_weight,
                         stop_loss=equity_price * 0.95,
                         reasoning=f"VIX spike {vix_change:.1%}>={spike_thresh:.1%}",
+                    )
+                ]
+            # Exit when VIX returns to normal (fear subsided, bounce captured)
+            if has_pos and vix_now < spike_exit_vix:
+                return [
+                    TradeSignal(
+                        symbol=equity_sym,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"VIX spike exit: VIX={vix_now:.1f}",
                     )
                 ]
             return []
