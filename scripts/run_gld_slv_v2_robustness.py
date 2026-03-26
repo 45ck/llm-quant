@@ -25,7 +25,7 @@ DD_THRESHOLD = 0.15
 BASE_PARAMS = {
     "symbol_a": "GLD",
     "symbol_b": "SLV",
-    "bb_period": 60,
+    "bb_window": 60,
     "bb_std": 2.0,
     "target_weight": 0.40,
 }
@@ -108,8 +108,8 @@ print(f"CPCV % Positive Folds: {cpcv_pct_pos:.1%}")
 
 # --- Perturbation analysis ---
 perturbations = [
-    ("bb_period=45", {**BASE_PARAMS, "bb_period": 45}),
-    ("bb_period=90", {**BASE_PARAMS, "bb_period": 90}),
+    ("bb_window=45", {**BASE_PARAMS, "bb_window": 45}),
+    ("bb_window=90", {**BASE_PARAMS, "bb_window": 90}),
     ("bb_std=1.5", {**BASE_PARAMS, "bb_std": 1.5}),
     ("bb_std=2.5", {**BASE_PARAMS, "bb_std": 2.5}),
     ("target_weight=0.30", {**BASE_PARAMS, "target_weight": 0.30}),
