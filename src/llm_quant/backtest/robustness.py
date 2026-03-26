@@ -71,6 +71,10 @@ class RobustnessResult:
     parameter_stability_passed: bool = False
     perturbations: list[PerturbationResult] = field(default_factory=list)
 
+    # Gate 6: Shuffled signal test
+    shuffled_signal: object = None  # ShuffledSignalResult or None
+    shuffled_signal_passed: bool = True  # default True (skipped = pass)
+
     # Overall
     overall_passed: bool = False
     gate_details: dict[str, bool] = field(default_factory=dict)
@@ -83,6 +87,7 @@ class RobustnessResult:
             "cpcv_mean_oos_sharpe_>_0": self.cpcv_passed,
             "2x_costs_survive": self.cost_2x_survives,
             "parameter_stability_>_50%": self.parameter_stability_passed,
+            "shuffled_signal_p_<_0.05": self.shuffled_signal_passed,
         }
         self.overall_passed = all(self.gate_details.values())
 
@@ -363,6 +368,8 @@ def run_robustness_gate(
     perturbation_results: list[PerturbationResult],
     dsr_threshold: float = 0.95,
     pbo_threshold: float = 0.10,
+    asset_returns: list[float] | None = None,
+    n_shuffles: int = 1000,
 ) -> RobustnessResult:
     """Run the complete robustness gate.
 
@@ -382,6 +389,11 @@ def run_robustness_gate(
         Minimum DSR for pass.
     pbo_threshold : float
         Maximum PBO for pass.
+    asset_returns : list[float] | None
+        Buy-and-hold daily returns of the underlying asset (for shuffled
+        signal test).  If None, Gate 6 is skipped (defaults to pass).
+    n_shuffles : int
+        Number of permutations for shuffled signal test.
 
     Returns
     -------
@@ -399,7 +411,7 @@ def run_robustness_gate(
         result.pbo = compute_pbo(returns_matrix)
         result.pbo_passed = result.pbo.pbo <= pbo_threshold
     else:
-        logger.warning("Insufficient experiments for PBO — need >= 2")
+        logger.warning("Insufficient experiments for PBO -- need >= 2")
         result.pbo = PBOResult(pbo=1.0, n_strategies=len(returns_matrix))
         result.pbo_passed = False
 
@@ -417,6 +429,18 @@ def run_robustness_gate(
         profitable = sum(1 for p in perturbation_results if p.profitable)
         result.parameter_stability = profitable / len(perturbation_results)
     result.parameter_stability_passed = result.parameter_stability > 0.50
+
+    # 6. Shuffled signal test (Gate 6)
+    if asset_returns is not None and best_returns:
+        result.shuffled_signal = shuffled_signal_test(
+            daily_returns=best_returns,
+            asset_returns=asset_returns,
+            n_shuffles=n_shuffles,
+        )
+        result.shuffled_signal_passed = result.shuffled_signal.passed
+    else:
+        # Skipped -- default to pass (backwards compatible)
+        result.shuffled_signal_passed = True
 
     # Overall
     result.compute_overall()
