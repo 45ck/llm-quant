@@ -17,8 +17,9 @@ Status: 11 strategies active   Status: research phase
 **Integrity gates are the same on both tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
 anti-overfitting controls, not risk controls, and are non-negotiable.
 
-See [research-tracks.md](docs/governance/research-tracks.md) and
-[alpha-hunting-framework.md](docs/governance/alpha-hunting-framework.md) for full specifications.
+See [research-tracks.md](docs/governance/research-tracks.md),
+[alpha-hunting-framework.md](docs/governance/alpha-hunting-framework.md), and
+[institutional-quant-guide.md](docs/research/institutional-quant-guide.md) for full specifications.
 
 ## How It Works
 
@@ -97,14 +98,14 @@ average correlation 0.386 with the credit-equity family.
 
 ## Live Portfolio Performance
 
-| Metric | Value | Target |
-|--------|-------|--------|
-| NAV | $100,000 | — |
-| Total Return | 0.00% | 8-15% ann. |
-| Sharpe Ratio | — | > 0.80 |
-| Sortino Ratio | — | > 1.00 |
-| Max Drawdown | 0.00% | < 15% |
-| Benchmark (60/40) | — | — |
+| Metric | Value | Track A Target | Track B Target |
+|--------|-------|---------------|---------------|
+| NAV | $100,000 | — | — |
+| Total Return | 0.00% | 15-25% ann. | 40-80% ann. |
+| Sharpe Ratio | — | > 0.80 | > 1.00 |
+| Sortino Ratio | — | > 1.00 | > 1.50 |
+| Max Drawdown | 0.00% | < 15% | < 30% |
+| Benchmark | — | 60/40 SPY/TLT | 100% SPY |
 
 > Updated daily via [automated reports](reports/).
 > Research lab results updated 2026-03-26.
@@ -202,29 +203,47 @@ src/llm_quant/
     └── schema.py   # DuckDB schema
 ```
 
+## Research Methodology
+
+Statistical rigor follows institutional standards documented in
+[docs/research/institutional-quant-guide.md](docs/research/institutional-quant-guide.md):
+
+- **DSR >= 0.95** — Deflated Sharpe Ratio (Bailey & Lopez de Prado 2014) corrects for
+  multiple testing across all strategy variants tested
+- **PBO <= 10%** — Probability of Backtest Overfitting via Combinatorial Symmetric CV
+- **CPCV (15 OOS paths)** — Combinatorially Purged Cross-Validation with purge + embargo
+- **t-stat > 3.0** — Harvey, Liu & Zhu (2016) threshold for new factor proposals
+- **Spec freeze before backtest** — Hypothesis pre-registered, no HARKing
+- **Append-only experiment registry** — Every trial recorded, no selective reporting
+
+Current implementation gaps tracked in
+[docs/research/implementation-gaps.md](docs/research/implementation-gaps.md):
+shuffled signal fraud detector (P1), HRP portfolio weights (P2), volatility targeting (P2).
+
 ## Configuration
 
 All config lives in `config/`:
 
 - **`default.toml`** — General settings (model, capital, lookback)
-- **`universe.toml`** — ETF universe (30 symbols across equities, bonds, commodities)
-- **`risk.toml`** — Risk limits (2% max trade, 10% max position, 200% gross cap)
+- **`universe.toml`** — ETF universe (39 symbols across equities, bonds, commodities, crypto)
+- **`risk.toml`** — Risk limits — Track A (default) and `[track_b]` section
 - **`prompts/`** — Jinja2 templates for the Claude PM persona
 
 ## Risk Constraints
 
-Every trade passes through pre-trade risk checks:
+Every trade passes through pre-trade risk checks. Limits differ by track:
 
-| Limit | Value |
-|-------|-------|
-| Max single trade | 2% of NAV |
-| Max position weight | 10% of NAV |
-| Max gross exposure | 200% of NAV |
-| Max net exposure | 100% of NAV |
-| Max sector concentration | 30% |
-| Min cash reserve | 5% of NAV |
-| Stop-loss required | Yes |
-| Max trades per session | 5 |
+| Limit | Track A | Track B |
+|-------|---------|---------|
+| Max single trade | 2% of NAV | 3% of NAV |
+| Max position weight | 10% of NAV | 15% of NAV |
+| Max gross exposure | 200% of NAV | 200% of NAV |
+| Max net exposure | 100% of NAV | 100% of NAV |
+| Max sector concentration | 30% | 30% |
+| Min cash reserve | 5% of NAV | 3% of NAV |
+| Max drawdown circuit breaker | 15% | 30% |
+| Stop-loss required | Yes | Yes |
+| Max trades per session | 5 | 5 |
 
 ## Cost
 
