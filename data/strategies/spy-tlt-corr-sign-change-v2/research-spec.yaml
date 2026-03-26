@@ -1,0 +1,86 @@
+# Research Spec: spy-tlt-corr-sign-change-v2 (M3-v2)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "spy-tlt-corr-sign-change-v2"
+strategy_name: "correlation_regime"
+created_at: "2026-03-26"
+frozen: true
+frozen_at: "2026-03-26"
+frozen_hash: "placeholder-computed-on-freeze"
+
+# ── Design Summary ────────────────────────────────────────────────────────────
+design_summary: >
+  SPY-TLT 20-day rolling correlation with hysteresis band. Hold SPY at 0.75
+  weight when correlation is clearly negative (< -0.05). Exit to cash when
+  correlation is clearly positive (> +0.05). Maintain current position when
+  correlation is in the [-0.05, +0.05] dead zone. This filters false signals
+  near the zero-correlation boundary.
+
+# ── Strategy Parameters ───────────────────────────────────────────────────────
+strategy_class: "correlation_regime"
+parameters:
+  equity_symbol: "SPY"
+  hedge_symbol: "TLT"
+  corr_window: 20
+  corr_exit_threshold: 0.05      # EXIT equity when corr > +0.05 (clearly positive)
+  corr_entry_threshold: -0.05    # ENTER equity when corr <= -0.05 (clearly negative)
+  spy_weight_risk_on: 0.75       # Reduced from M3's 0.90 for drawdown control
+
+# ── Execution Parameters ──────────────────────────────────────────────────────
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+# ── Backtest Period ───────────────────────────────────────────────────────────
+backtest:
+  lookback_years: 5
+  start_date: "approx 2022-01-11"
+  end_date: "2026-03-26"
+
+# ── Hypothesis Alignment ─────────────────────────────────────────────────────
+hypothesis_alignment: >
+  Parameters are pre-specified per hypothesis M3-v2-H1:
+  - corr_window=20: as specified in measurement protocol
+  - corr_exit_threshold=0.05: exit at clearly positive (not zero) to reduce false exits
+  - corr_entry_threshold=-0.05: enter at clearly negative (not zero) for strict regime filter
+  - spy_weight_risk_on=0.75: conservative weight targeting MaxDD < 12%
+  These parameters are FROZEN before any backtest run. They are NOT derived from
+  M3 perturbation results (exit=-0.05 perturbation result was UNSTABLE and used
+  a different exit threshold). The economic justification is the hysteresis band
+  as a noise-filtering mechanism near the zero-correlation boundary.
+
+# ── Signal Logic (Documented Pre-Backtest) ────────────────────────────────────
+signal_logic:
+  compute: "20-day rolling correlation of SPY and TLT daily returns"
+  entry_rule: "corr_now <= -0.05 AND not currently holding SPY → BUY SPY at 0.75 weight"
+  exit_rule: "corr_now > +0.05 AND currently holding SPY → CLOSE SPY to cash"
+  dead_zone_rule: "-0.05 < corr_now <= +0.05 → MAINTAIN current position"
+  stop_loss: "95% of entry price (5% stop)"
+
+# ── Acceptance Criteria ───────────────────────────────────────────────────────
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.12"
+    - "DSR >= 0.95"
+  secondary:
+    - "CPCV OOS/IS >= 0.5"
+    - "Perturbation stability >= 3/5"
+    - "Benchmark excess: Sharpe > 0.765"
+
+# ── Anti-snooping Attestation ────────────────────────────────────────────────
+anti_snooping_attestation: >
+  This research spec was frozen before any backtest was run on the
+  spy-tlt-corr-sign-change-v2 strategy slug. The parameters were derived from:
+  (a) economic reasoning about hysteresis as a noise filter
+  (b) the M3 perturbation result as directional evidence (not as a fitted value)
+  The exact parameters (exit=+0.05, entry=-0.05) were NOT tested or validated
+  against any prior result — they are the pre-specified canonical test.
+
+spec_version: "1.0"

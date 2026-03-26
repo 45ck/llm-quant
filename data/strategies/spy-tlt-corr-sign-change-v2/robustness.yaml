@@ -1,0 +1,127 @@
+# Robustness Analysis: spy-tlt-corr-sign-change-v2 (M3-v2)
+# Generated: 2026-03-26
+
+strategy_slug: "spy-tlt-corr-sign-change-v2"
+trial_family: "corr_regime_spy_tlt_hysteresis"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+overall_passed: false
+gates_passed: 1
+gates_failed: 2
+gates_total: 3
+
+gate_results:
+  dsr:
+    dsr_value: 0.6886
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      Sharpe=0.243 yields DSR=0.689, far below the 0.95 gate. The strategy
+      failed to generate sufficient risk-adjusted returns in the backtest
+      period.
+
+  max_drawdown:
+    value: 9.27
+    threshold: "< 12.0"
+    result: "PASS"
+    notes: >
+      MaxDD=9.27% is well within the 12% mandate limit. The hysteresis band
+      successfully controlled drawdown vs M3 base (14.93%). This is the one
+      structural improvement over the parent strategy.
+
+  sharpe:
+    value: 0.243
+    threshold: "> 0.8"
+    result: "FAIL"
+    notes: >
+      Sharpe=0.243 is far below both the mandate target (0.8) and the M3 base
+      result (0.555). Hypothesis falsified at the backtest stage.
+
+  pbo:
+    value: "not_computed"
+    result: "SKIP"
+    notes: "Single trial. Mandatory gates already fail."
+
+  cpcv:
+    mean_oos_sharpe: "not_computed"
+    result: "SKIP"
+    notes: "Mandatory gates fail. CPCV not warranted."
+
+  perturbation:
+    result: "SKIP"
+    notes: "Mandatory gates fail. Perturbation not warranted."
+
+# ============================================================
+# Base Backtest Metrics
+# ============================================================
+
+base_metrics:
+  experiment_id: "d0dffd85"
+  sharpe_ratio: 0.2431
+  max_drawdown: 0.0927
+  dsr: 0.6886
+  total_trades: 32
+  total_return: 0.0667
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Root Cause Analysis
+# ============================================================
+
+rejection_reason: >
+  HYPOTHESIS FALSIFIED. The symmetric hysteresis band (entry=-0.05, exit=+0.05)
+  dramatically reduces drawdown (9.27% vs M3 base 14.93%) but at the cost of
+  severely reducing equity participation. After exiting to cash, re-entry
+  requires SPY-TLT correlation ≤ -0.05 (clearly negative). During 2023-2025
+  when correlation was often hovering near 0 or slightly positive, the dead
+  zone kept the strategy in cash, missing the SPY bull run.
+
+  Key asymmetry problem: the symmetric band [-0.05, +0.05] means:
+    - Exit is conservative (only at corr > +0.05)
+    - Re-entry is also conservative (only at corr < -0.05)
+    - Dead zone (-0.05 to +0.05) keeps you in CASH after an exit
+
+  The M3 perturbation that showed Sharpe=0.955 used exit=-0.05 with entry=0.0
+  (asymmetric: exit EARLY at -0.05, enter PERMISSIVELY at 0.0). That is
+  fundamentally different from this design.
+
+comparison_to_parent_m3:
+  m3_sharpe: 0.555
+  m3_maxdd: 0.1493
+  m3v2_sharpe: 0.243
+  m3v2_maxdd: 0.0927
+  assessment: >
+    M3-v2 trades off 31.2 percentage points of Sharpe for 6.7 percentage
+    points of MaxDD reduction. This is a bad trade for a strategy with
+    a 12% MaxDD mandate — M3 base already failed the mandate by only 2.93%.
+    The hysteresis band over-corrected.
+
+notes_for_future_research: |
+  Root cause insight (critical for future M-series research):
+  - The M3 perturbation finding (exit=-0.05 → Sharpe=0.956) is an ASYMMETRIC signal:
+      entry=0.0 (permissive) AND exit=-0.05 (aggressive exit even in negative-corr)
+  - This means: hold SPY ONLY when correlation is clearly negative (< -0.05),
+    but exit READILY (at corr > -0.05) and re-enter READILY (at corr <= 0)
+  - The mechanism is actually: reduce position duration to avoid overstaying in regimes
+    where correlation is drifting toward zero
+
+  IF pursuing this line of research further (separate family, new hypothesis):
+  - M3-v3 option: exact perturbation parameters (exit=-0.05, entry=0.0)
+    → DSR PENALTY: this would be trial 3+ in the broader M3 family tree
+    → Must acknowledge data snooping risk and apply full DSR penalization
+    → Requires explicit family trial accounting across M3, M3-v2, M3-v3
+
+  - A BETTER path: extend history to 2010-2026 to include the pre-QE era
+    where SPY-TLT correlation was structurally different. 5-year backtest
+    may be insufficient to distinguish regime-change alpha from 2022 accident.
+
+  - Consider VIX overlay: enter only when VIX < 25 (avoid entering equity during
+    sustained high-vol regimes where correlation signal may be lagged)
+
+created_at: "2026-03-26"

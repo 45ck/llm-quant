@@ -1,0 +1,64 @@
+# Data Contract: spy-tlt-corr-sign-change-v2 (M3-v2)
+
+strategy_slug: "spy-tlt-corr-sign-change-v2"
+created_at: "2026-03-26"
+
+# ── Symbols Required ─────────────────────────────────────────────────────────
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance (yfinance)"
+    fields: ["date", "open", "high", "low", "close", "volume"]
+    frequency: "daily"
+    availability: "since 1993 — ample history"
+    quality_grade: "A"
+    notes: "Primary equity holding. High liquidity, tight spread."
+
+  - symbol: "TLT"
+    description: "iShares 20+ Year Treasury Bond ETF"
+    source: "Yahoo Finance (yfinance)"
+    fields: ["date", "open", "high", "low", "close", "volume"]
+    frequency: "daily"
+    availability: "since 2002 — ample history"
+    quality_grade: "A"
+    notes: "Correlation reference (not held in portfolio). Liquid, daily pricing."
+
+# ── Lookback Requirements ─────────────────────────────────────────────────────
+lookback:
+  years: 5
+  start_date: "2022-01-11"
+  end_date: "2026-03-26"
+  warmup_days: 50
+  rationale: >
+    5 years captures the 2022 inflation shock (the primary regime of interest),
+    the 2023-2025 bull market, and early 2026. Warmup of 50 days allows the
+    20-day rolling correlation to stabilize before signals are evaluated.
+
+# ── Indicators Required ──────────────────────────────────────────────────────
+indicators:
+  - name: "rolling_correlation_20d"
+    description: "20-day rolling correlation between SPY daily returns and TLT daily returns"
+    computed_by: "CorrelationRegimeStrategy.generate_signals() inline computation"
+    look_ahead_safe: true
+    notes: >
+      Correlation computed from tail(22) prices to get 20 daily returns.
+      Uses only past prices (i.e., as_of_date is always the last available date).
+
+# ── Quality Gates ────────────────────────────────────────────────────────────
+quality_gates:
+  - "Both symbols available from Yahoo Finance with zero missing trading days"
+  - "No adjusted close anomalies (dividend/split adjustments applied by yfinance)"
+  - "Minimum 250 trading days of history before warmup completes"
+
+# ── Data Already Available ───────────────────────────────────────────────────
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+notes: >
+  SPY and TLT are both fetched by the existing fetch_ohlcv() pipeline.
+  No additional data infrastructure needed. The correlation computation is
+  entirely inline in CorrelationRegimeStrategy. No FRED or alternative data
+  required.
+
+validated_at: "2026-03-26"
+validated_by: "data-engineer"

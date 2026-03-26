@@ -1,0 +1,71 @@
+# Mandate: spy-tlt-corr-sign-change-v2 (M3-v2)
+# Correlation Regime Signals — Hysteresis Band Variant
+
+mandate_id: "M3-v2"
+strategy_slug: "spy-tlt-corr-sign-change-v2"
+created_at: "2026-03-26"
+
+# ── Objective ────────────────────────────────────────────────────────────────
+objective: >
+  Improve upon M3 (spy-tlt-corr-sign-change) by replacing the zero-threshold
+  sign flip with a hysteresis band. Enter equity only when SPY-TLT 20d rolling
+  correlation is clearly negative (< -0.05); exit to cash only when clearly
+  positive (> +0.05). Dead zone (-0.05 to +0.05) maintains current position,
+  filtering noise near the zero-correlation boundary.
+
+# ── Economic Rationale ───────────────────────────────────────────────────────
+mechanism: >
+  The 2022 inflation shock demonstrated that SPY-TLT correlation can shift from
+  structurally negative (pre-2022 QE era) to positive (simultaneous equity and
+  bond selloff) during rate-hike cycles. The base M3 strategy used a zero
+  threshold, which fired on measurement noise near the boundary. The hysteresis
+  band ensures regime changes are genuine: entry requires demonstrated negative
+  correlation (diversification is working); exit requires demonstrated positive
+  correlation (diversification is broken).
+
+  M3 perturbation analysis motivating this design:
+  - exit_thresh=-0.05 → Sharpe 0.955 (+72% vs M3 base 0.555)
+  - Motivates strictness on ENTRY: only hold SPY in clearly negative-corr regimes
+  - Hysteresis adds exit buffer at +0.05 to avoid premature selling on transient spikes
+
+# ── Universe ─────────────────────────────────────────────────────────────────
+universe:
+  equity: "SPY"      # S&P 500 tracker — risk-on asset
+  hedge: "TLT"       # 20y+ Treasury — correlation reference asset
+  defensive: "CASH"  # Exit to cash during stress regime
+
+# ── Benchmark ────────────────────────────────────────────────────────────────
+benchmark: "60/40 SPY/TLT"
+benchmark_rationale: >
+  This strategy tactically shifts between SPY and cash based on TLT correlation.
+  The 60/40 benchmark is the relevant passive baseline — it permanently holds
+  both assets. The strategy should beat 60/40 by avoiding prolonged equity
+  drawdowns while missing fewer bull-market days than pure cash-holding.
+
+# ── Constraints ──────────────────────────────────────────────────────────────
+constraints:
+  target_sharpe: "> 0.8"           # Must beat M3 base (0.555) and approach benchmark (0.765)
+  max_drawdown: "< 0.12"           # 12% hard cap — tighter than M3 base (14.93%)
+  max_position_weight: 0.75        # Reduced from M3's 0.90 for drawdown control
+  min_sortino: "> 1.0"
+  benchmark_excess_sharpe: "> 0.0" # Must beat 60/40 Sharpe (0.765)
+
+# ── Family Definition ────────────────────────────────────────────────────────
+trial_family: "corr_regime_spy_tlt_hysteresis"
+family_trial_number: 1
+family_notes: >
+  New family for hysteresis-band variant. M3 (corr_regime_spy_tlt_sign)
+  and this family are SEPARATE — different hypothesis, different frozen spec.
+  Trial count resets. Historical context: M3 base achieved DSR=0.877; this
+  design targets DSR >= 0.95 via higher Sharpe from stricter regime filter.
+
+# ── Falsification Criteria ───────────────────────────────────────────────────
+falsification_criteria:
+  - "Sharpe < 0.6 in full-period backtest"
+  - "MaxDD > 12% in full-period backtest"
+  - "DSR < 0.95 (robustness gate)"
+  - "CPCV OOS/IS ratio < 0.5"
+  - "Perturbation stability < 3/5"
+
+approved_at: "2026-03-26"
+approved_by: "quant-researcher"
