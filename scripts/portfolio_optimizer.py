@@ -53,6 +53,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "tlt-qqq-rate-tech": "2338b9e5",
     "ief-qqq-rate-tech": "594c4f53",
     "behavioral-structural": "7cb2cace",
+    "gld-slv-mean-reversion-v4": "14cdfaaf",
 }
 
 # Mechanism family labels for context
@@ -72,6 +73,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "tlt-qqq-rate-tech": "F6: Rate Momentum",
     "ief-qqq-rate-tech": "F6: Rate Momentum",
     "behavioral-structural": "F7: Behavioral/Structural",
+    "gld-slv-mean-reversion-v4": "F2: Mean Reversion",
 }
 
 TRADING_DAYS_PER_YEAR = 252
