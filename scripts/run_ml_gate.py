@@ -19,8 +19,8 @@ What this script does:
 Anti-overfitting discipline:
   - Labels are ONLY from trades within the current OOS window (no future)
   - Purge buffer = 10 trading days (prevents rolling-feature leakage)
-  - The feature set is FIXED at 5 features — no selection performed here
-  - Threshold is FIXED at 0.5 — not optimised
+  - The feature set is FIXED at 5 features -- no selection performed here
+  - Threshold is FIXED at 0.5 -- not optimised
   - Gate coefficients are printed to inspect economic interpretability
 """
 
@@ -46,12 +46,18 @@ sys.path.insert(0, str(ROOT / "src"))
 
 def _load_spec_and_create_strategy(strat_dir: Path):
     """Load frozen research spec and instantiate strategy."""
+    import importlib.util
+
     from llm_quant.backtest.artifacts import ensure_frozen_spec
     from llm_quant.backtest.engine import CostModel
-    from scripts.run_backtest import (  # type: ignore[import]
-        _build_strategy_config,
-        create_strategy,
+    from llm_quant.backtest.strategies import create_strategy
+
+    rb_spec = importlib.util.spec_from_file_location(
+        "run_backtest", ROOT / "scripts" / "run_backtest.py"
     )
+    rb_mod = importlib.util.module_from_spec(rb_spec)
+    rb_spec.loader.exec_module(rb_mod)
+    _build_strategy_config = rb_mod._build_strategy_config  # noqa: SLF001
 
     spec_path = strat_dir / "research-spec.yaml"
     if not spec_path.exists():
@@ -63,14 +69,14 @@ def _load_spec_and_create_strategy(strat_dir: Path):
         spec = yaml.safe_load(f)
 
     cost_model = CostModel.from_spec(spec)
-    strategy_config = _build_strategy_config(spec)
+    strategy_config = _build_strategy_config(spec["strategy_type"], spec)
     strategy = create_strategy(spec["strategy_type"], strategy_config)
     return strategy, spec, cost_model
 
 
 def _load_price_and_indicator_data(spec: dict, years: int = 5):
     """Load price + indicator data for the strategy's symbols."""
-    from llm_quant.data.fetcher import DataFetcher
+    from llm_quant.data.fetcher import fetch_ohlcv
     from llm_quant.data.indicators import compute_indicators
 
     symbols = []
@@ -88,9 +94,8 @@ def _load_price_and_indicator_data(spec: dict, years: int = 5):
         if extra not in symbols:
             symbols.append(extra)
 
-    fetcher = DataFetcher(data_dir=str(ROOT / "data"))
     lookback_days = years * 365 + 60  # a bit extra for indicator warmup
-    prices_df = fetcher.fetch_multiple(symbols, lookback_days=lookback_days)
+    prices_df = fetch_ohlcv(symbols, lookback_days=lookback_days)
     indicators_df = compute_indicators(prices_df)
     return prices_df, indicators_df
 
@@ -241,7 +246,7 @@ def _walk_forward_ml_backtest(
         train_mask = np.array([d <= purge_cutoff for d in all_trade_dates])
 
         if train_mask.sum() < 10:
-            # Not enough training data yet — pass all signals
+            # Not enough training data yet -- pass all signals
             for d in _dates_in_range(trading_dates, test_start, test_end):
                 gate_decisions[d] = True
             continue
@@ -269,7 +274,7 @@ def _walk_forward_ml_backtest(
 
         final_gate = gate
         print(
-            f"  Window train_end={train_end} test={test_start}→{test_end} "
+            f"  Window train_end={train_end} test={test_start}->{test_end} "
             f"n_train={train_mask.sum()} "
             f"acc={train_meta.get('train_accuracy', 0):.3f} "
             f"balance={train_meta.get('class_balance', 0):.2f}"
@@ -376,7 +381,12 @@ def _print_comparison(base_result, ml_result, block_rate: float) -> None:
 
     _row("Sharpe ratio", base_m.sharpe_ratio, ml_m.sharpe_ratio)
     _row("Max drawdown", base_m.max_drawdown * 100, ml_m.max_drawdown * 100, fmt=".2f")
-    _row("CAGR", base_m.cagr * 100, ml_m.cagr * 100, fmt=".2f")
+    _row(
+        "Ann. return",
+        base_m.annualized_return * 100,
+        ml_m.annualized_return * 100,
+        fmt=".2f",
+    )
     _row("Calmar ratio", base_m.calmar_ratio, ml_m.calmar_ratio)
     _row("Win rate", base_m.win_rate * 100, ml_m.win_rate * 100, fmt=".1f")
     _row("DSR", base_m.dsr, ml_m.dsr)
@@ -399,12 +409,12 @@ def _print_comparison(base_result, ml_result, block_rate: float) -> None:
     def _check(label, passed, detail=""):
         nonlocal passes, fails
         status = "PASS" if passed else "FAIL"
-        symbol = "✓" if passed else "✗"
+        symbol = "Y" if passed else "N"
         if passed:
             passes += 1
         else:
             fails += 1
-        print(f"  [{status}] {symbol} {label}{' — ' + detail if detail else ''}")
+        print(f"  [{status}] {symbol} {label}{' -- ' + detail if detail else ''}")
 
     _check(
         "Sharpe improvement >= 0.10",
@@ -429,14 +439,14 @@ def _print_comparison(base_result, ml_result, block_rate: float) -> None:
 
     print(f"\n  Result: {passes}/{passes + fails} gates pass")
     if passes == passes + fails:
-        print("  → PROCEED to full robustness testing (DSR, CPCV, perturbation)")
+        print("  -> PROCEED to full robustness testing (DSR, CPCV, perturbation)")
         print(
-            "  → Register as new trial in experiment-registry.jsonl (ml_variant=true)"
+            "  -> Register as new trial in experiment-registry.jsonl (ml_variant=true)"
         )
     elif sharpe_delta >= 0:
-        print("  → MARGINAL — run full robustness before deciding")
+        print("  -> MARGINAL -- run full robustness before deciding")
     else:
-        print("  → REJECT — ML gate degraded strategy performance")
+        print("  -> REJECT -- ML gate degraded strategy performance")
 
     print("=" * 60)
 
@@ -498,7 +508,7 @@ def main() -> None:
 
     if len(all_labels) < 20:
         print(
-            f"Only {len(all_labels)} BUY trades found — insufficient for ML training."
+            f"Only {len(all_labels)} BUY trades found -- insufficient for ML training."
         )
         sys.exit(1)
 

@@ -54,7 +54,7 @@ class RiskManager:
     # Single-signal evaluation
     # ------------------------------------------------------------------
 
-    def check_trade(  # noqa: PLR0912
+    def check_trade(  # noqa: PLR0912, C901
         self,
         signal: TradeSignal,
         portfolio: Portfolio,
@@ -214,13 +214,22 @@ class RiskManager:
                 )
             )
 
-        # 7. Stop-loss
-        results.append(
-            check_stop_loss(
-                has_stop_loss=(signal.stop_loss > 0.0),
-                require=self.limits.require_stop_loss,
+        # 7. Stop-loss (buys only — close/sell actions don't need a stop-loss)
+        if is_buy:
+            results.append(
+                check_stop_loss(
+                    has_stop_loss=(signal.stop_loss > 0.0),
+                    require=self.limits.require_stop_loss,
+                )
             )
-        )
+        else:
+            results.append(
+                RiskCheckResult(
+                    passed=True,
+                    rule="stop_loss",
+                    message="Sell/close does not require stop-loss.",
+                )
+            )
 
         # 8. Portfolio drawdown circuit breaker (buys only)
         if is_buy:
