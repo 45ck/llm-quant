@@ -1,23 +1,39 @@
 # llm-quant
 
-LLM-powered paper trading system where **Claude acts as the portfolio manager** — receiving market data, making trade decisions with reasoning, and tracking performance.
+LLM-powered systematic trading research program running **two parallel alpha tracks** — a conservative base (Defensive Alpha) and a high-return research track (Aggressive Alpha). Claude acts as portfolio manager, researcher, and quant analyst.
 
-The unique angle: the LLM *is* the strategy, not hard-coded rules.
+## Dual-Track Research Program
+
+```
+Track A — Defensive Alpha      Track B — Aggressive Alpha
+─────────────────────────      ────────────────────────────
+Target: 15-25% CAGR            Target: 40-80% CAGR
+MaxDD gate: < 15%              MaxDD gate: < 30%
+Sharpe gate: > 0.80            Sharpe gate: > 1.0
+Portfolio weight: 70%          Portfolio weight: 30%
+Status: 11 strategies active   Status: research phase
+```
+
+**Integrity gates are the same on both tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
+anti-overfitting controls, not risk controls, and are non-negotiable.
+
+See [research-tracks.md](docs/governance/research-tracks.md) and
+[alpha-hunting-framework.md](docs/governance/alpha-hunting-framework.md) for full specifications.
 
 ## How It Works
 
-1. **Fetch** daily OHLCV data for 30 liquid US ETFs via Yahoo Finance
-2. **Compute** technical indicators (SMA, RSI, MACD, ATR) using Polars
+1. **Fetch** daily OHLCV data for 39 liquid US ETFs + crypto via Yahoo Finance
+2. **Compute** technical indicators (SMA, RSI, MACD, ATR, rolling correlation) using Polars
 3. **Send** market context + portfolio state to Claude as a structured prompt
 4. **Receive** JSON trade decisions with regime analysis and per-signal reasoning
-5. **Execute** paper trades after pre-trade risk checks
-6. **Track** everything in DuckDB — trades, decisions, portfolio snapshots
+5. **Execute** paper trades after pre-trade risk checks (7 automated limits)
+6. **Track** everything in DuckDB — trades, decisions, portfolio snapshots, hash chain
 
 ## Research Lab Results
 
-This system runs a **133-hypothesis quantitative research lab** — every strategy passes through a strict 5-gate robustness filter before any capital is committed.
+This system runs a **133-hypothesis quantitative research lab** — every strategy passes through a 5-gate robustness filter before any capital is committed.
 
-### The Funnel
+### The Funnel (Track A)
 
 ```
 133  hypotheses in scope (across 16 mandate categories)
@@ -27,17 +43,15 @@ This system runs a **133-hypothesis quantitative research lab** — every strate
   0  promoted to live capital
 ```
 
-### 5-Gate Robustness Filter
+### Gate Comparison by Track
 
-Every strategy must clear **all five** before paper trading:
-
-| Gate | Threshold | Purpose |
-|------|-----------|---------|
-| Sharpe Ratio | > 0.80 | Alpha exists and is meaningful |
-| Max Drawdown | < 15% | Portfolio-safe risk profile |
-| DSR (Deflated Sharpe) | >= 0.95 | Adjusts for multiple testing; p-value for alpha |
-| CPCV OOS/IS | >= 0.50 | Out-of-sample generalization (not curve-fit) |
-| Perturbation stability | >= 3/5 | Parameters are economically robust, not arbitrary |
+| Gate | Track A (Defensive) | Track B (Aggressive) | Purpose |
+|------|---------------------|---------------------|---------|
+| Sharpe Ratio | > 0.80 | > 1.00 | Alpha exists and is meaningful |
+| Max Drawdown | < 15% | < 30% | Portfolio-safe risk profile |
+| DSR (Deflated Sharpe) | >= 0.95 | >= 0.95 | Anti-overfitting — same on both tracks |
+| CPCV OOS/IS | > 0 | > 0 | Out-of-sample generalization — same on both tracks |
+| Perturbation stability | >= 3/5 | >= 3/5 | Parameter robustness — same on both tracks |
 
 ### Passing Strategies (11 of 68 tested)
 

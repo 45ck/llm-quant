@@ -1514,6 +1514,9 @@ class AssetRotationStrategy(Strategy):
       rerank_days (int, default 20): Minimum days between rebalances.
       target_weight (float, default 0.90): Weight per held asset.
       rank_by (str, default "return"): "return" or "sharpe".
+      absolute_momentum_threshold (float|None): If set, only include assets
+        whose trailing return exceeds this value. Assets below threshold are
+        excluded before top-K ranking. Enables dual momentum (Antonacci).
     """
 
     def generate_signals(
@@ -1530,9 +1533,14 @@ class AssetRotationStrategy(Strategy):
         top_k: int = int(params.get("top_k", 1))
         tgt_weight: float = float(params.get("target_weight", 0.90))
         rank_by: str = str(params.get("rank_by", "return"))
+        abs_thresh_raw = params.get("absolute_momentum_threshold")
+        abs_thresh: float | None = (
+            float(abs_thresh_raw) if abs_thresh_raw is not None else None
+        )
 
         # Compute scores
         scores: list[tuple[str, float]] = []
+        returns: dict[str, float] = {}
         for sym in symbols:
             sym_data = (
                 indicators_df.filter(pl.col("symbol") == sym)
@@ -1545,14 +1553,22 @@ class AssetRotationStrategy(Strategy):
             rets = [p[i] / p[i - 1] - 1.0 for i in range(1, len(p))]
             if not rets:
                 continue
+            total_ret = p[-1] / p[0] - 1.0 if p[0] > 0 else 0.0
+            returns[sym] = total_ret
             if rank_by == "sharpe":
                 mu = sum(rets) / len(rets)
                 std = (sum((r - mu) ** 2 for r in rets) / len(rets)) ** 0.5
                 score = (mu / std * (252**0.5)) if std > 0 else 0.0
             else:
-                score = p[-1] / p[0] - 1.0 if p[0] > 0 else 0.0
+                score = total_ret
             scores.append((sym, score))
 
+        if not scores:
+            return []
+
+        # Absolute momentum filter: exclude assets with return below threshold
+        if abs_thresh is not None:
+            scores = [(s, sc) for s, sc in scores if returns.get(s, 0.0) > abs_thresh]
         if not scores:
             return []
 

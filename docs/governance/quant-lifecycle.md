@@ -82,6 +82,7 @@ The mandate defines what the strategy is trying to achieve, what it measures aga
 **Required fields:**
 - `name`: Human-readable strategy name
 - `slug`: URL-safe identifier
+- `track`: `track_a` (Defensive Alpha) or `track_b` (Aggressive Alpha) — determines gate thresholds throughout lifecycle. See `docs/governance/research-tracks.md`.
 - `objective`: What the strategy optimizes for
 - `benchmark`: Name, symbol weights, rebalance frequency, return type (must be `total_return`)
 - `universe`: List of tradeable symbols with selection rationale
@@ -273,16 +274,18 @@ The research spec hash creates a verifiable chain:
 
 ## Robustness Gate
 
-All checks must pass. There is no partial credit.
+All checks must pass. There is no partial credit. Gate thresholds differ by track — see `docs/governance/research-tracks.md`.
 
-| Check | Threshold | Description |
-|-------|-----------|-------------|
-| DSR | >= 0.95 | Deflated Sharpe must exceed 0.95 (95% probability the Sharpe is not a multiple-testing artifact) |
-| PBO | <= 0.10 | Probability of Backtest Overfitting must be at or below 10% |
-| 2x costs survive | Sharpe > 0 at 2x costs | Strategy must remain profitable when cost assumptions are doubled |
-| CPCV mean OOS Sharpe | > 0 | Average out-of-sample Sharpe across all CPCV combinations must be positive |
-| CPCV median OOS Sharpe | > 0 | Median OOS Sharpe must also be positive (robust to outliers) |
-| Parameter stability | > 50% | More than half of free parameters must be stable to +/-20% perturbation |
+| Check | Track A Threshold | Track B Threshold | Description |
+|-------|------------------|------------------|-------------|
+| DSR | >= 0.95 | >= 0.95 | Integrity gate — same on both tracks |
+| PBO | <= 0.10 | <= 0.10 | Integrity gate — same on both tracks |
+| 2x costs survive | Sharpe > 0 | Sharpe > 0 | Same on both tracks |
+| CPCV mean OOS Sharpe | > 0 | > 0 | Integrity gate — same on both tracks |
+| CPCV median OOS Sharpe | > 0 | > 0 | Same on both tracks |
+| Sharpe | >= 0.80 | >= 1.00 | Risk gate — higher bar for Track B |
+| Max Drawdown | < 15% | < 30% | Risk gate — relaxed for Track B |
+| Parameter stability | > 50% | > 50% | Same on both tracks |
 
 ---
 

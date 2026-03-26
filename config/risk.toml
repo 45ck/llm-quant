@@ -27,12 +27,37 @@ default_stop_loss_pct = 0.05  # 5%
 # Portfolio-level drawdown circuit breaker (blocks new buys when breached)
 max_drawdown_pct = 0.15  # 15%
 
-# --- Per-asset-class overrides ---
+# --- Per-asset-class overrides (Track A defaults) ---
 
 # Crypto: Higher volatility → tighter position weight, wider stop-loss
-crypto_max_position_weight = 0.05   # 5%  (vs 10% default)
+crypto_max_position_weight = 0.05   # 5%  (vs 12% default)
 crypto_default_stop_loss_pct = 0.15 # 15% (vs 5% default — wider to avoid noise-triggered exits)
 
 # Forex: Lower volatility → moderate position weight, tight stop-loss
-forex_max_position_weight = 0.08    # 8%  (vs 10% default)
+forex_max_position_weight = 0.08    # 8%  (vs 12% default)
 forex_default_stop_loss_pct = 0.03  # 3%  (vs 5% default — tighter given low vol)
+
+# =============================================================================
+# TRACK B — AGGRESSIVE ALPHA
+# Applied to strategies with track: track_b in their mandate.yaml
+# Gross/net exposure caps unchanged. Position sizing and drawdown relaxed.
+# INTEGRITY GATES (DSR, CPCV) ARE UNCHANGED — only risk gates are relaxed.
+# See docs/governance/research-tracks.md for full specification.
+# =============================================================================
+
+[track_b]
+max_position_weight = 0.15           # 15% (vs 12% Track A)
+max_trade_size = 0.03                # 3%  (vs 4% Track A — note: Track A file shows 4%)
+max_gross_exposure = 2.0             # 200% unchanged
+max_net_exposure = 1.0               # 100% unchanged
+max_sector_concentration = 0.30      # 30% unchanged
+max_trades_per_session = 5           # unchanged
+min_cash_reserve = 0.03              # 3%  (vs 5% Track A)
+require_stop_loss = true
+default_stop_loss_pct = 0.08         # 8%  (vs 5% Track A — wider for volatile strategies)
+max_drawdown_pct = 0.30              # 30% (vs 15% Track A — the key relaxation)
+
+# Track B per-asset-class overrides
+crypto_max_position_weight = 0.08    # 8%  (vs 5% Track A)
+crypto_default_stop_loss_pct = 0.20  # 20% (wider — crypto overnight gaps are large)
+leveraged_etf_max_position_weight = 0.10  # 10% — leveraged ETFs capped below general limit
