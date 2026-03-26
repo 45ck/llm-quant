@@ -866,18 +866,20 @@ class MultiFactorStrategy(Strategy):
 
 
 class CorrelationRegimeStrategy(Strategy):
-    """SPY-TLT rolling correlation regime strategy (stateless).
+    """Rolling correlation regime strategy (stateless).
 
-    Holds SPY when the N-day rolling correlation between SPY and TLT daily
-    returns is >= exit_threshold (normal regime). Exits to cash when
-    correlation drops below exit_threshold (stress regime). Stateless:
-    regime is inferred from current correlation value + portfolio state.
+    Holds equity_symbol when the N-day rolling correlation between equity_symbol
+    and hedge_symbol daily returns is below exit_threshold (normal regime).
+    Exits to cash when correlation rises above exit_threshold (stress regime).
+    Defaults to SPY (equity) / TLT (hedge) for backward compatibility.
 
     Parameters (via StrategyConfig.parameters):
+      equity_symbol (str, default "SPY"): The equity/risk asset to hold.
+      hedge_symbol (str, default "TLT"): The hedge/safe-haven asset for correlation.
       corr_window (int, default 10): Rolling window for correlation.
-      corr_exit_threshold (float, default 0.0): Exit SPY when corr < this.
-      corr_entry_threshold (float, default 0.0): Enter SPY when corr >= this.
-      spy_weight_risk_on (float, default 0.95): Target SPY weight in normal regime.
+      corr_exit_threshold (float, default 0.0): Exit equity when corr > this.
+      corr_entry_threshold (float, default 0.0): Enter equity when corr <= this.
+      spy_weight_risk_on (float, default 0.95): Target weight in normal regime.
     """
 
     def generate_signals(
@@ -888,35 +890,39 @@ class CorrelationRegimeStrategy(Strategy):
         prices: dict[str, float],
     ) -> list[TradeSignal]:
         params = self.config.parameters or {}
+        equity_sym: str = str(params.get("equity_symbol", "SPY"))
+        hedge_sym: str = str(params.get("hedge_symbol", "TLT"))
         corr_window: int = int(params.get("corr_window", 10))
         exit_thresh: float = float(params.get("corr_exit_threshold", 0.0))
         entry_thresh: float = float(params.get("corr_entry_threshold", 0.0))
         risk_on_weight: float = float(params.get("spy_weight_risk_on", 0.95))
 
-        # ── Compute rolling correlation for SPY and TLT ──────────────────────
-        spy_data = (
-            indicators_df.filter(pl.col("symbol") == "SPY")
+        # ── Compute rolling correlation ───────────────────────────────────────
+        eq_data = (
+            indicators_df.filter(pl.col("symbol") == equity_sym)
             .sort("date")
             .tail(corr_window + 2)
         )
-        tlt_data = (
-            indicators_df.filter(pl.col("symbol") == "TLT")
+        hedge_data = (
+            indicators_df.filter(pl.col("symbol") == hedge_sym)
             .sort("date")
             .tail(corr_window + 2)
         )
 
-        if len(spy_data) < corr_window + 1 or len(tlt_data) < corr_window + 1:
+        if len(eq_data) < corr_window + 1 or len(hedge_data) < corr_window + 1:
             return []
 
-        spy_prices = spy_data["close"].to_list()
-        tlt_prices = tlt_data["close"].to_list()
-        min_len = min(len(spy_prices), len(tlt_prices))
+        eq_prices = eq_data["close"].to_list()
+        hedge_prices = hedge_data["close"].to_list()
+        min_len = min(len(eq_prices), len(hedge_prices))
 
         # Compute daily returns
-        spy_rets = [spy_prices[i] / spy_prices[i - 1] - 1.0 for i in range(1, min_len)]
-        tlt_rets = [tlt_prices[i] / tlt_prices[i - 1] - 1.0 for i in range(1, min_len)]
+        eq_rets = [eq_prices[i] / eq_prices[i - 1] - 1.0 for i in range(1, min_len)]
+        hedge_rets = [
+            hedge_prices[i] / hedge_prices[i - 1] - 1.0 for i in range(1, min_len)
+        ]
 
-        if len(spy_rets) < corr_window:
+        if len(eq_rets) < corr_window:
             return []
 
         def _corr(xs: list[float], ys: list[float]) -> float:
@@ -932,16 +938,16 @@ class CorrelationRegimeStrategy(Strategy):
                 return 0.0
             return cov / (sx * sy)
 
-        corr_now = _corr(spy_rets[-corr_window:], tlt_rets[-corr_window:])
+        corr_now = _corr(eq_rets[-corr_window:], hedge_rets[-corr_window:])
 
-        spy_price = prices.get("SPY")
-        if spy_price is None or spy_price <= 0:
+        eq_price = prices.get(equity_sym)
+        if eq_price is None or eq_price <= 0:
             return []
 
-        has_spy = "SPY" in portfolio.positions
+        has_eq = equity_sym in portfolio.positions
 
-        # ── Stress regime: correlation too high (positive) → exit ─────────────
-        if corr_now > exit_thresh and has_spy:
+        # ── Stress regime: correlation positive → exit equity ─────────────────
+        if corr_now > exit_thresh and has_eq:
             logger.info(
                 "CorrelationRegime: EXIT on %s (corr=%.3f > threshold=%.3f)",
                 as_of_date,
@@ -950,7 +956,7 @@ class CorrelationRegimeStrategy(Strategy):
             )
             return [
                 TradeSignal(
-                    symbol="SPY",
+                    symbol=equity_sym,
                     action=Action.CLOSE,
                     conviction=Conviction.HIGH,
                     target_weight=0.0,
@@ -959,8 +965,8 @@ class CorrelationRegimeStrategy(Strategy):
                 )
             ]
 
-        # ── Normal regime: correlation low/negative → hold/enter SPY ─────────
-        if corr_now <= entry_thresh and not has_spy:
+        # ── Normal regime: correlation low → hold/enter equity ────────────────
+        if corr_now <= entry_thresh and not has_eq:
             logger.info(
                 "CorrelationRegime: ENTER on %s (corr=%.3f <= threshold=%.3f)",
                 as_of_date,
@@ -969,11 +975,11 @@ class CorrelationRegimeStrategy(Strategy):
             )
             return [
                 TradeSignal(
-                    symbol="SPY",
+                    symbol=equity_sym,
                     action=Action.BUY,
                     conviction=Conviction.MEDIUM,
                     target_weight=risk_on_weight,
-                    stop_loss=spy_price * 0.95,
+                    stop_loss=eq_price * 0.95,
                     reasoning=f"Correlation normal: {corr_now:.3f} <= {entry_thresh}",
                 )
             ]
