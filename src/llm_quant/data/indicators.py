@@ -168,9 +168,12 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     else:
         df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("intraday_return"))
 
-    # -- 20-day rolling high of close (for ATR breakout signals) ---------------
+    # -- 20-day rolling high of PREVIOUS closes (for ATR breakout signals) -----
+    # Shift by 1 to exclude today — breakout means today's close exceeds the
+    # highest close in the preceding 20 days (not including today).
     df = df.with_columns(
         pl.col("close")
+        .shift(1)
         .rolling_max(window_size=20, min_samples=20)
         .over("symbol")
         .alias("high_20"),
