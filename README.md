@@ -13,7 +13,75 @@ The unique angle: the LLM *is* the strategy, not hard-coded rules.
 5. **Execute** paper trades after pre-trade risk checks
 6. **Track** everything in DuckDB — trades, decisions, portfolio snapshots
 
-## Performance
+## Research Lab Results
+
+This system runs a **133-hypothesis quantitative research lab** — every strategy passes through a strict 5-gate robustness filter before any capital is committed.
+
+### The Funnel
+
+```
+133  hypotheses in scope (across 16 mandate categories)
+ 68  strategy variants backtested (5-year window, 2022-2026)
+ 11  passed all 5 robustness gates                           (16% pass rate)
+ 11  currently in paper trading
+  0  promoted to live capital
+```
+
+### 5-Gate Robustness Filter
+
+Every strategy must clear **all five** before paper trading:
+
+| Gate | Threshold | Purpose |
+|------|-----------|---------|
+| Sharpe Ratio | > 0.80 | Alpha exists and is meaningful |
+| Max Drawdown | < 15% | Portfolio-safe risk profile |
+| DSR (Deflated Sharpe) | >= 0.95 | Adjusts for multiple testing; p-value for alpha |
+| CPCV OOS/IS | >= 0.50 | Out-of-sample generalization (not curve-fit) |
+| Perturbation stability | >= 3/5 | Parameters are economically robust, not arbitrary |
+
+### Passing Strategies (11 of 68 tested)
+
+All 11 are in paper trading as of 2026-03-26. Promotion requires 30+ days of paper track record.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Mechanism |
+|---------|--------|-------|-----|-------------|-----------|
+| LQD-SPY credit lead | 1.250 | 12.4% | 0.9950 | 1.023 | IG bond → US equity |
+| AGG-SPY credit lead | 1.145 | 8.4% | 0.9938 | 1.039 | Total bond → US equity |
+| SPY overnight momentum | 1.043 | 8.7% | 0.9506 | 1.011 | Overnight gap microstructure |
+| AGG-QQQ credit lead | 1.080 | 11.2% | 0.9894 | 1.031 | Total bond → tech equity |
+| VCIT-QQQ credit lead | 1.037 | 14.5% | 0.9820 | 1.010 | Corp bond → tech equity |
+| LQD-QQQ credit lead | 1.023 | 13.7% | 0.9824 | 1.031 | IG bond → tech equity |
+| EMB-SPY credit lead | 1.005 | 9.1% | 0.9802 | 0.980 | EM sovereign → US equity |
+| HYG-SPY credit lead | 0.913 | 14.7% | 0.9650 | 1.111 | HY bond → US equity |
+| AGG-EFA credit lead | 0.860 | 10.3% | 0.9656 | 1.134 | Total bond → intl equity |
+| HYG-QQQ credit lead | 0.867 | 13.4% | 0.9606 | 1.050 | HY bond → tech equity |
+| SOXX-QQQ lead-lag | 0.861 | 14.4% | 0.9603 | 0.819 | Semis → tech equity |
+
+### Portfolio Correlation Reality
+
+10 of 11 passing strategies share the same underlying mechanism (credit-equity lead-lag).
+Running the equal-weight portfolio as 11 separate strategies overstates diversification:
+
+| Metric | Credit-only (10) | Full portfolio (11) |
+|--------|-----------------|---------------------|
+| Average pairwise correlation | 0.628 | 0.584 |
+| Effective independent N | 4.35 | 5.16 |
+| Estimated equal-weight Sharpe | ~2.0 | ~2.3 |
+
+The SPY overnight momentum strategy (C7) is the only mechanistically distinct passer —
+average correlation 0.386 with the credit-equity family.
+
+### What Gets Rejected and Why
+
+| Failure mode | Count | Examples |
+|-------------|-------|---------|
+| DSR < 0.95 (insufficient alpha after trial penalty) | ~18 | Correlation regime, VoV, XLU inverse |
+| MaxDD > 15% (2022 bear market too harsh) | ~12 | Factor rotation, asset rotation, pairs |
+| Sharpe < 0.80 (weak signal) | ~8 | Calendar effects, size rotation |
+| Perturbation unstable (over-fit parameters) | ~6 | SPY-TLT-GLD-BIL, L-series OHLCV |
+| Falsified (signal in wrong direction) | ~4 | Pre-FOMC TLT drift, turn-of-month |
+
+## Live Portfolio Performance
 
 | Metric | Value | Target |
 |--------|-------|--------|
@@ -25,6 +93,7 @@ The unique angle: the LLM *is* the strategy, not hard-coded rules.
 | Benchmark (60/40) | — | — |
 
 > Updated daily via [automated reports](reports/).
+> Research lab results updated 2026-03-26.
 
 ## Reports
 
