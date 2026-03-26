@@ -520,9 +520,7 @@ class ArbScanner:
                     for e in events
                     if e.category.lower() in [c.lower() for c in self.category_filter]
                 ]
-                logger.info(
-                    "After category filter: %d events", len(events)
-                )
+                logger.info("After category filter: %d events", len(events))
 
             for evt in events:
                 # Persist event → pm_markets
@@ -586,7 +584,9 @@ class ArbScanner:
                 scan_id=scan_id,
                 scan_type="kalshi_negrisk",
                 markets_scanned=n_events,
-                conditions_scanned=sum(len(e.markets) for e in events) if "events" in dir() else 0,
+                conditions_scanned=(
+                    sum(len(e.markets) for e in events) if "events" in dir() else 0
+                ),
                 opps_found=len(opps),
                 pairs_detected=0,
                 duration=(completed_at - started_at).total_seconds(),

@@ -176,20 +176,96 @@ def run_combinatorial_detection(
     print(f"\n  Combinatorial pairs found: {total_arb_pairs}")
 
 
+def run_kalshi_dry_run(args: argparse.Namespace) -> int:
+    """Dry-run mode for Kalshi: fetch and display without DB writes."""
+    from llm_quant.arb.kalshi_client import KalshiClient
+
+    print("DRY RUN — fetching Kalshi mutually exclusive events (no DB write)...")
+    client = KalshiClient()
+    events = client.fetch_negrisk_events()
+
+    cat_filter = args.category.lower() if args.category else None
+    if cat_filter:
+        events = [e for e in events if e.category.lower() == cat_filter]
+
+    print(f"\nMutually exclusive events loaded: {len(events)}")
+    print(
+        f"\n{'Event':<30} {'N':>3} {'SumYES':>8} {'Complement':>10} "
+        f"{'Net(3%)':>9} {'Vol24h':>10} Category"
+    )
+    print("-" * 82)
+
+    opps = []
+    for evt in sorted(events, key=lambda e: e.negrisk_complement, reverse=True):
+        net = evt.net_spread
+        flag = " *** ARB ***" if net > 0 else ""
+        print(
+            f"{evt.event_ticker:<30} {len(evt.markets):>3} "
+            f"{evt.sum_yes_ask:>8.3f} {evt.negrisk_complement:>10.3f} "
+            f"{net:>9.3f} {evt.total_volume_24h:>10.0f} "
+            f"{evt.category}{flag}"
+        )
+        print(f"  {evt.title[:70]}")
+        if net > 0:
+            opps.append(evt)
+
+    print(f"\nTotal ARB opportunities (net > 0): {len(opps)}")
+    if opps:
+        print("\n--- TOP OPPORTUNITIES ---")
+        for evt in opps[:5]:
+            print(f"\n  {evt.event_ticker}: {evt.title}")
+            print(
+                f"  Net spread: {evt.net_spread:.2%} | Conditions: {len(evt.markets)}"
+            )
+            print("  Conditions:")
+            for c in sorted(evt.markets, key=lambda x: -x.yes_ask)[:5]:
+                print(
+                    f"    {c.ticker}: YES_ask={c.yes_ask:.3f} "
+                    f"bid_ask_spread={c.bid_ask_spread:.3f} vol_24h={c.volume_24h:.0f}"
+                )
+    return 0
+
+
 def main() -> int:
     args = parse_args()
-
     category_filter = [args.category] if args.category else None
+    source_label = args.source.upper()
 
     print("\n" + "=" * 70)
-    print("  POLYMARKET ARBITRAGE SCANNER")
+    print(f"  PREDICTION MARKET ARB SCANNER — {source_label}")
     print(f"  Mode: {args.mode} | Category: {args.category or 'all'}")
     print(f"  Min spread: {args.min_spread:.0%} | Min volume: ${args.min_volume:,.0f}")
     print("=" * 70 + "\n")
 
+    # ── Kalshi path ──────────────────────────────────────────────────────
+    if args.source == "kalshi":
+        if args.dry_run:
+            return run_kalshi_dry_run(args)
+
+        args.db.parent.mkdir(parents=True, exist_ok=True)
+        scanner = ArbScanner(
+            db_path=args.db,
+            min_spread_pct=args.min_spread,
+            min_volume=args.min_volume,
+            category_filter=category_filter,
+            source="kalshi",
+        )
+        opps = scanner.run_kalshi_negrisk_scan(
+            min_spread=args.min_spread,
+            min_volume=args.min_volume,
+        )
+        print_opportunities(opps)
+        summary = scanner.get_scan_summary()
+        if summary:
+            print(
+                f"Scan history: {summary['total_scans']} scans, "
+                f"{summary['total_opps_detected']} total opportunities detected"
+            )
+        return 0
+
+    # ── Polymarket path ──────────────────────────────────────────────────
     if args.dry_run:
-        # Dry run: just fetch and parse, show stats
-        print("DRY RUN — fetching markets (no DB write)...")
+        print("DRY RUN — fetching Polymarket markets (no DB write)...")
         client = GammaClient()
         raw = client.fetch_all_active_markets(max_markets=args.max_markets)
         markets = client.parse_all_markets(raw)
@@ -205,7 +281,6 @@ def main() -> int:
         for cat, n in sorted(by_cat.items(), key=lambda x: -x[1]):
             print(f"  {cat:20s} {n:5d}")
 
-        # Show potential NegRisk opportunities without DB
         candidates = [m for m in negrisk if m.negrisk_complement > args.min_spread]
         if category_filter:
             candidates = [m for m in candidates if m.category in category_filter]
@@ -214,11 +289,12 @@ def main() -> int:
         )
         for m in candidates[:10]:
             print(
-                f"  {m.market_id[:20]} | complement={m.negrisk_complement:.3f} | {m.question[:50]}"
+                f"  {m.market_id[:20]} | complement={m.negrisk_complement:.3f}"
+                f" | {m.question[:50]}"
             )
         return 0
 
-    # Real scan
+    args.db.parent.mkdir(parents=True, exist_ok=True)
     scanner = ArbScanner(
         db_path=args.db,
         min_spread_pct=args.min_spread,
@@ -234,7 +310,6 @@ def main() -> int:
 
     print_opportunities(opps)
 
-    # Summary
     summary = scanner.get_scan_summary()
     if summary:
         print(

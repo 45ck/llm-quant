@@ -140,8 +140,46 @@ This determines which gate thresholds apply throughout the lifecycle.
 
 ---
 
+## Track C -- Niche Arbitrage
+
+**Purpose:** Capture structural mispricings with near-zero market beta.
+
+| Gate | Threshold |
+|------|-----------|
+| Sharpe | >= 1.5 |
+| Max Drawdown | < 10% |
+| DSR | >= 0.95 |
+| CPCV OOS/IS | > 0 |
+| Perturbation stability | >= 3/5 |
+| Beta to SPY | < 0.15 |
+| Min trades | >= 50 |
+
+**Benchmark:** Risk-free rate (3-month T-bill)
+
+**Return target:** Risk-free + 5-15% (absolute return)
+
+**Portfolio allocation:** 10-20% of total capital
+
+**Mandate:** `data/strategies/niche-arbitrage/mandate.yaml`
+
+**Full plan:** `docs/governance/track-c-plan.md`
+
+---
+
+## Portfolio Combination (Three Tracks)
+
+| Track | Allocation | Expected Sharpe | Beta |
+|-------|-----------|-----------------|------|
+| A (11 strategies) | 60% | ~1.35 | ~0.4 |
+| B (3-5 target) | 20% | ~1.5 | ~0.8 |
+| C (2-3 target) | 20% | ~2.0 | ~0.0 |
+| **Combined** | **100%** | **~2.0-2.5** | ~0.3 |
+
+---
+
 ## Version History
 
 | Version | Date | Change |
 |---------|------|--------|
-| 1.0 | 2026-03-26 | Initial dual-track framework. Track A = current 11 strategies. Track B = new aggressive alpha track with relaxed risk gates. |
+| 1.0 | 2026-03-26 | Initial dual-track framework. |
+| 2.0 | 2026-03-27 | Added Track C (Niche Arbitrage). |
