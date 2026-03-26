@@ -1832,6 +1832,123 @@ class YieldCurveRegimeStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# OHLCV Momentum Strategy (L2 / L4 series)
+# ---------------------------------------------------------------------------
+
+
+class OHLCVMomentumStrategy(Strategy):
+    """OHLCV-based momentum on high-volume conviction candles (L2/L4 series).
+
+    Modes:
+      - "conviction_candle" (L2): Enter when any of the last ``signal_lookback``
+        days had intraday_return > conviction_pct AND volume > vol_multiplier *
+        vol_sma_20. Maintains position as long as a recent signal exists; exits
+        when no conviction candle in the lookback window.
+      - "atr_breakout" (L4): Enter when close > high_20 + atr_mult * atr_14
+        AND volume > vol_multiplier * vol_sma_20.
+
+    Parameters (via StrategyConfig.parameters):
+      symbol (str, default "SPY"): Asset to trade.
+      mode (str, default "conviction_candle"): "conviction_candle" or "atr_breakout".
+      conviction_pct (float, default 0.01): Min intraday return for candle signal.
+      vol_multiplier (float, default 1.5): Volume must exceed this × vol_sma_20.
+      signal_lookback (int, default 5): Days to look back for conviction candle.
+      atr_mult (float, default 0.5): ATR multiplier for breakout threshold (L4 only).
+      target_weight (float, default 0.90): Position weight when in trade.
+    """
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        symbol: str = str(params.get("symbol", "SPY"))
+        mode: str = str(params.get("mode", "conviction_candle"))
+        conviction_pct: float = float(params.get("conviction_pct", 0.01))
+        vol_multiplier: float = float(params.get("vol_multiplier", 1.5))
+        signal_lookback: int = int(params.get("signal_lookback", 5))
+        atr_mult: float = float(params.get("atr_mult", 0.5))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        lookback = signal_lookback + 5
+        ind = (
+            indicators_df.filter(pl.col("symbol") == symbol).sort("date").tail(lookback)
+        )
+        price = prices.get(symbol, 0)
+        if len(ind) < signal_lookback or price <= 0:
+            return []
+
+        has_pos = symbol in portfolio.positions
+        in_signal = False
+
+        if mode == "conviction_candle":
+            # Any of the last signal_lookback days had a high-volume conviction candle
+            if "intraday_return" not in ind.columns or "vol_sma_20" not in ind.columns:
+                return []
+            recent = ind.tail(signal_lookback)
+            for row in recent.iter_rows(named=True):
+                ir = row.get("intraday_return")
+                vol = row.get("volume")
+                vsma = row.get("vol_sma_20")
+                if (
+                    ir is not None
+                    and vol is not None
+                    and vsma is not None
+                    and vsma > 0
+                    and ir > conviction_pct
+                    and vol > vol_multiplier * vsma
+                ):
+                    in_signal = True
+                    break
+
+        elif mode == "atr_breakout":
+            # Current day: close > high_20 + atr_mult * atr_14 AND high volume
+            if (
+                "high_20" not in ind.columns
+                or "atr_14" not in ind.columns
+                or "vol_sma_20" not in ind.columns
+            ):
+                return []
+            row = ind.tail(1).row(0, named=True)
+            h20 = row.get("high_20")
+            atr = row.get("atr_14")
+            vol = row.get("volume")
+            vsma = row.get("vol_sma_20")
+            close = row.get("close")
+            if all(v is not None for v in [h20, atr, vol, vsma, close]) and vsma > 0:
+                in_signal = close > h20 + atr_mult * atr and vol > vol_multiplier * vsma
+
+        if in_signal and not has_pos:
+            logger.info("OHLCVMomentum[%s]: ENTER %s on %s", mode, symbol, as_of_date)
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price * 0.95,
+                    reasoning=f"OHLCV {mode}: entry signal triggered",
+                )
+            ]
+        if not in_signal and has_pos:
+            logger.info("OHLCVMomentum[%s]: EXIT %s on %s", mode, symbol, as_of_date)
+            return [
+                TradeSignal(
+                    symbol=symbol,
+                    action=Action.CLOSE,
+                    conviction=Conviction.HIGH,
+                    target_weight=0.0,
+                    stop_loss=0.0,
+                    reasoning=f"OHLCV {mode}: signal window expired",
+                )
+            ]
+        return []
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -1851,6 +1968,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "asset_rotation": AssetRotationStrategy,
     "vix_regime": VixRegimeStrategy,
     "yield_curve_regime": YieldCurveRegimeStrategy,
+    "ohlcv_momentum": OHLCVMomentumStrategy,
 }
 
 

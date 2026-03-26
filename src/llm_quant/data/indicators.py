@@ -32,6 +32,9 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     * **macd_signal** -- 9-period EMA of the MACD line.
     * **macd_hist** -- MACD minus MACD signal.
     * **atr_14** -- 14-period Average True Range (Wilder's smoothing).
+    * **vol_sma_20** -- 20-day simple moving average of *volume*.
+    * **intraday_return** -- Same-day return: ``(close - open) / open``.
+    * **high_20** -- 20-day rolling maximum of *close* (for ATR breakout signals).
 
     Parameters
     ----------
@@ -64,6 +67,9 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
             "macd_signal",
             "macd_hist",
             "atr_14",
+            "vol_sma_20",
+            "intraday_return",
+            "high_20",
         )
         for col in indicator_names:
             if col not in df.columns:
@@ -83,6 +89,9 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
         "macd_signal",
         "macd_hist",
         "atr_14",
+        "vol_sma_20",
+        "intraday_return",
+        "high_20",
     ]
     existing = [c for c in indicator_cols if c in df.columns]
     if existing:
@@ -137,6 +146,35 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
 
     # -- ATR ------------------------------------------------------------------
     df = _compute_atr(df, period=14)
+
+    # -- Volume SMA (20-day) --------------------------------------------------
+    if "volume" in df.columns:
+        df = df.with_columns(
+            pl.col("volume")
+            .rolling_mean(window_size=20, min_samples=20)
+            .over("symbol")
+            .alias("vol_sma_20"),
+        )
+    else:
+        df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("vol_sma_20"))
+
+    # -- Intraday return (close vs open, causal) --------------------------------
+    if "open" in df.columns:
+        df = df.with_columns(
+            ((pl.col("close") - pl.col("open")) / pl.col("open")).alias(
+                "intraday_return"
+            ),
+        )
+    else:
+        df = df.with_columns(pl.lit(None).cast(pl.Float64).alias("intraday_return"))
+
+    # -- 20-day rolling high of close (for ATR breakout signals) ---------------
+    df = df.with_columns(
+        pl.col("close")
+        .rolling_max(window_size=20, min_samples=20)
+        .over("symbol")
+        .alias("high_20"),
+    )
 
     logger.info("Computed indicators for %d rows", len(df))
     return df
