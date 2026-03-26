@@ -1,0 +1,45 @@
+VOV-SPY-DEFENSIVE: Corrected Robustness Analysis (v2)
+============================================================
+Date: 2026-03-26
+Experiment ID: e5da7664
+Implementation fix: vix_symbol=VIX (was ^VIX), VoV tail limit removed
+
+BASE METRICS
+----------------------------------------
+Sharpe Ratio:    0.5386
+Max Drawdown:    22.98%
+DSR:             0.8656
+Total Trades:    10
+Total Return:    36.36%
+
+PERTURBATION ANALYSIS
+----------------------------------------
+  vov_window=20: sharpe=0.5836 max_dd=0.2111 (+8.3%) STABLE
+  vov_window=45: sharpe=0.5414 max_dd=0.1550 (+0.5%) STABLE
+  vov_percentile=0.70: sharpe=0.2982 max_dd=0.2104 (-44.6%) UNSTABLE
+  vov_percentile=0.90: sharpe=0.2426 max_dd=0.2472 (-55.0%) UNSTABLE
+  target_weight=0.70: sharpe=0.2664 max_dd=0.1676 (-50.5%) UNSTABLE
+  Result: 2/5 stable (FAIL >= 3/5)
+
+CPCV (6 groups, 2 test, 5-day purge)
+----------------------------------------
+  Mean OOS Sharpe: 0.7613
+  Std OOS Sharpe:  0.6421
+  Result: PASS (mean OOS > 0)
+
+GATE RESULTS
+----------------------------------------
+  [FAIL] Perturbation stability >= 60%
+  [PASS] CPCV mean OOS Sharpe > 0
+  [FAIL] DSR >= 0.95
+  [FAIL] MaxDD < 12%
+
+OVERALL VERDICT
+----------------------------------------
+FAIL -- gates not met: Perturbation stability >= 60%, DSR >= 0.95, MaxDD < 12%
+
+PRIMARY FAILURE: MaxDD=22.98% exceeds mandate threshold of 12%.
+VoV signal functional: Sharpe=0.539, trades=10
+Strategy does not reduce drawdown vs buy-and-hold SPY.
+Remedies: (1) tighten stop-loss, (2) add hedge, (3) revise mandate, (4) retire.
+DSR FAILURE: 0.8656 below 0.95 threshold.

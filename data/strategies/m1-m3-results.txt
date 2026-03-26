@@ -1,0 +1,158 @@
+================================================================================
+COMBINED ROBUSTNESS RESULTS: M1 and M3 Correlation Regime Hypotheses
+Generated: 2026-03-26
+================================================================================
+
+BENCHMARK (buy-and-hold SPY, 5yr period 2022-01-11 to 2026-03-25):
+  Total Return: 77.69%  Sharpe Ratio: 0.765
+  Period: 2022 bear market, 2023-2025 bull market, early 2026
+
+================================================================================
+STRATEGY M1: spy-gld-correlation-regime
+Hypothesis: SPY-GLD 20-day rolling corr < -0.05 signals risk-off.
+            Hold SPY only when correlation is non-negative.
+Family: corr_regime_spy_gld (trial 1 of 1)
+================================================================================
+
+--- BASE BACKTEST (1.0x cost, 2022-01-11 to 2026-03-25) ---
+  Sharpe: 0.5004  MaxDD: 10.62%  DSR: 0.8473  Trades: 48
+  Total Return: 14.88%  Annualized: 3.37%
+  Sortino: 0.743  Calmar: 0.318  WinRate: 25.0%  ProfitFactor: 1.78
+  Cost Sensitivity: 1.0x:0.500 | 1.5x:0.479 | 2.0x:0.457 | 3.0x:0.416
+
+--- PERTURBATION ANALYSIS ---
+  corr_window=10      : sharpe=0.9279  (+85.4%)  UNSTABLE
+  corr_window=30      : sharpe=0.9721  (+94.3%)  UNSTABLE
+  exit_thresh=0.0     : sharpe=0.8359  (+67.1%)  UNSTABLE
+  exit_thresh=-0.10   : sharpe=0.8027  (+60.4%)  UNSTABLE
+  weight=0.75         : sharpe=0.6294  (+25.8%)  STABLE
+  Stability: 1/5 stable (20%)
+  NOTE: All perturbations produce strictly better Sharpe than base.
+  The -0.05 threshold is suboptimal vs 0.0 or wider windows. NOT ROBUST.
+
+--- CPCV (6 groups, 2 test folds, 5-day purge) ---
+  Mean OOS Sharpe: 0.0484  Std: 0.0452  OOS/IS: 0.097 (target>=0.5)
+  Fold range: -0.034 to 0.112 (2 folds negative)
+
+--- GATE STATUS: M1 ---
+  Gate 1 -- Sharpe > benchmark (0.765):    FAIL  (0.500 < 0.765)
+  Gate 2 -- MaxDD < 15%:                   PASS  (10.62%)
+  Gate 3 -- DSR > 0.8:                     PASS  (0.847)
+  Gate 4 -- Perturbation stability >= 3/5: FAIL  (1/5 stable)
+  Gate 5 -- CPCV mean OOS Sharpe > 0:      PASS  (0.048 > 0)
+  Gate 6 -- CPCV OOS/IS Sharpe >= 0.5:    FAIL  (0.048/0.500 = 0.096)
+  Overall: FAIL (3 of 6 gates failed)
+
+================================================================================
+STRATEGY M3: spy-tlt-corr-sign-change
+Hypothesis: SPY-TLT 20-day corr sign flip (positive) signals diversification breakdown.
+            Hold SPY only when correlation is negative.
+Family: corr_regime_spy_tlt_sign (trial 1 of 1)
+================================================================================
+
+--- BASE BACKTEST (1.0x cost, 2022-01-11 to 2026-03-25) ---
+  Sharpe: 0.5552  MaxDD: 14.93% (7bps inside 15% limit)  DSR: 0.8765  Trades: 62
+  Total Return: 25.96%  Annualized: 5.67%
+  Sortino: 0.831  Calmar: 0.380  WinRate: 32.3%  ProfitFactor: 1.80
+  Cost Sensitivity: 1.0x:0.555 | 1.5x:0.539 | 2.0x:0.520 | 3.0x:0.485
+  NOTE: MaxDD exceeds 15% mandate at 3x cost (15.01%) -- no margin of safety.
+
+--- PERTURBATION ANALYSIS ---
+  corr_window=10      : sharpe=0.8325  (+49.9%)  UNSTABLE
+  corr_window=30      : sharpe=0.4062  (-26.8%)  STABLE
+  exit_thresh=0.05    : sharpe=0.6338  (+14.1%)  STABLE
+  exit_thresh=-0.05   : sharpe=0.9560  (+72.2%)  UNSTABLE
+  weight=0.75         : sharpe=0.6828  (+23.0%)  STABLE
+  Stability: 3/5 stable (60%)
+  NOTE: Sign-change at 0.0 is economically motivated. corr_window=30 degrades
+  modestly (-26.8%). exit_thresh=0.05 stable. corr_window=10 and exit_thresh=-0.05
+  produce superior IS Sharpe -- parameter-sensitive at tighter/shorter settings.
+
+--- CPCV (6 groups, 2 test folds, 5-day purge) ---
+  Mean OOS Sharpe: 0.0493  Std: 0.0357  OOS/IS: 0.089 (target>=0.5)
+  Fold range: 0.000 to 0.118 (all folds non-negative)
+  NOTE: All folds non-negative is a positive consistency signal,
+  but OOS/IS ratio of 0.088 is far below the 0.5 robustness threshold.
+
+--- GATE STATUS: M3 ---
+  Gate 1 -- Sharpe > benchmark (0.765):    FAIL  (0.555 < 0.765)
+  Gate 2 -- MaxDD < 15%:                   MARGINAL PASS (14.93%; fails at 3x cost)
+  Gate 3 -- DSR > 0.8:                     PASS  (0.877)
+  Gate 4 -- Perturbation stability >= 3/5: PASS  (3/5 stable)
+  Gate 5 -- CPCV mean OOS Sharpe > 0:      PASS  (0.049 > 0)
+  Gate 6 -- CPCV OOS/IS Sharpe >= 0.5:    FAIL  (0.049/0.555 = 0.088)
+  Overall: FAIL (2 of 6 gates failed, 1 marginal)
+
+================================================================================
+COMPARATIVE SUMMARY
+================================================================================
+
+  Metric                   M1 (SPY-GLD)   M3 (SPY-TLT)   Benchmark
+  -----------------------  -------------  -------------  ---------
+  Sharpe (IS, 1x cost)     0.500          0.555          0.765
+  Annualized Return        3.37%          5.67%          N/A
+  Max Drawdown             10.62%         14.93%         N/A
+  DSR                      0.847          0.877          N/A
+  Total Trades             48             62             N/A
+  Perturbation stable      1/5            3/5            N/A
+  CPCV mean OOS Sharpe     0.048          0.049          N/A
+  CPCV OOS/IS ratio        0.096          0.088          N/A
+
+================================================================================
+OVERALL VERDICT
+================================================================================
+
+BOTH STRATEGIES: NOT READY FOR PAPER TRADING
+Robustness gates not cleared for either hypothesis.
+
+REASONING:
+
+1. BENCHMARK UNDERPERFORMANCE (both): Neither beats SPY Sharpe (0.765).
+   Cash-holding during risk-off misses the 2023-2025 equity rally.
+   Both are too conservative in a trending bull market environment.
+
+2. LARGE IS-TO-OOS GAP (both): CPCV OOS Sharpe (~0.05) is ~9-10% of IS
+   Sharpe (~0.5). Performance concentrated in 2022 inflation shock.
+   Regime-specific signals, not all-weather alpha generators.
+
+3. M1 PERTURBATION INSTABILITY (1/5): All perturbations produce better IS.
+   The -0.05 threshold is locally suboptimal -- parameter not justified.
+
+4. M3 DRAWDOWN RISK: 14.93% MaxDD leaves no buffer. Breaches 15% at 3x cost.
+
+DIFFERENTIATED ASSESSMENT:
+
+  M3 (SPY-TLT sign change) is materially more compelling than M1:
+  - Higher Sharpe, DSR, better perturbation stability (3/5 vs 1/5)
+  - Stronger economic mechanism (documented 2022 inflation regime break)
+  - All CPCV folds non-negative (zero folds with negative OOS Sharpe)
+
+  M1 (SPY-GLD) is weak in current form. Fires at -0.05 boundary (noise);
+  parameterization strictly dominated by easily-reachable alternatives.
+
+RECOMMENDED NEXT STEPS:
+
+  For M3 -- conditional on further research:
+  - Extend to 10-year backtest (full interest rate cycles 2013-2026)
+  - Test hysteresis band (entry at -0.05, exit at +0.05) to reduce chop
+  - Add VIX filter to reduce false signals in low-vol regimes
+  - Decompose returns by year to confirm signal is not 2022-only artifact
+  - If extended analysis passes, consider paper trading at reduced size
+
+  For M1 -- deprioritize, reformulate if revived:
+  - Replace cash exit with long GLD (capture flight-to-safety return)
+  - Re-specify with corr_window=30 and threshold=0.0 (more stable)
+  - Current form sacrifices upside in inflation-driven bull markets
+
+LIFECYCLE STATUS:
+  M1 spy-gld-correlation-regime:
+    HALTED at ROBUSTNESS gate. Do not advance to paper trading.
+    Failed: Gate 1 (Sharpe < benchmark), Gate 4 (perturbation), Gate 6 (OOS gap)
+
+  M3 spy-tlt-corr-sign-change:
+    HALTED at ROBUSTNESS gate. Better candidate for follow-up research.
+    Failed: Gate 1 (Sharpe < benchmark), Gate 6 (OOS/IS gap)
+    Gate 2 (MaxDD) marginal -- fails under elevated cost assumptions.
+    Do not advance without addressing IS/OOS gap and drawdown margin.
+
+================================================================================

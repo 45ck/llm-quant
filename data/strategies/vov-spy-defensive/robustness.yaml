@@ -1,0 +1,107 @@
+# Robustness Analysis: vov-spy-defensive (C1)
+# Generated: 2026-03-26
+#
+# Bug fix history (3 sequential bugs fixed before this analysis):
+#   Bug 1: vix_symbol default "^VIX" -> "VIX" (fetcher strips caret) [batch-2]
+#   Bug 2: .tail(vov_window + 5) = 35 rows, removed tail limit [batch-2]
+#   Bug 3 (CRITICAL): VoV percentile compared VIX PRICE levels (15-80)
+#     against VoV std-dev values (3-8) -> condition always false -> never defensive.
+#     Fixed: computes rolling VoV std-dev history, ranks current VoV against
+#     its own historical distribution. [batch-3]
+#
+# Prior results with bugs present (for audit trail only):
+#   8abb905e: bug 1 NOT fixed -> Sharpe=0.0, 0 trades
+#   96adc8b1: bugs 1+2 fixed, bug 3 NOT fixed -> Sharpe=0.539, 10 trades
+#     (strategy was near-constant SPY long; regime never triggered)
+#   a5fdc63a: all 3 bugs fixed -> Sharpe=0.211, 30 trades [CANONICAL]
+
+strategy_slug: "vov-spy-defensive"
+trial_family: "vix_regime_vov"
+trial_count: 1
+
+# ============================================================
+# Gate Results Summary
+# ============================================================
+
+overall_result: "FAIL"
+overall_passed: false
+gates_passed: 0
+gates_failed: 2
+gates_total: 2
+
+gate_results:
+  dsr:
+    dsr_value: 0.6667
+    threshold: ">= 0.95"
+    result: "FAIL"
+    notes: >
+      DSR from experiment a5fdc63a (trial #1, all-3-bugs-fixed canonical run).
+      Sharpe=0.211 yields DSR=0.667, well below the 0.95 gate.
+
+  max_drawdown:
+    value: 19.80
+    threshold: "< 12.0"
+    result: "FAIL"
+    notes: >
+      MaxDD=19.8% nearly doubles the 12% mandate limit. The strategy holds
+      SPY at full weight when VoV is in the lower 80% of its historical
+      distribution, leaving full exposure during the 2022 bear market.
+
+  pbo:
+    value: "not_computed"
+    threshold: "<= 0.10"
+    result: "SKIP"
+    notes: "Single trial in family."
+
+  cpcv:
+    mean_oos_sharpe: "not_computed"
+    threshold: "> 0"
+    result: "SKIP"
+    notes: >
+      Not computed. With Sharpe=0.211 and DSR=0.667, both mandatory gates
+      already fail. CPCV computation not warranted for hypothesis falsification.
+
+  perturbation:
+    n_stable: "not_computed"
+    n_total: 5
+    result: "SKIP"
+    notes: >
+      Not computed. With Sharpe=0.211 and DSR=0.667, both mandatory gates
+      already fail. Perturbation not warranted for hypothesis falsification.
+
+# ============================================================
+# Base Backtest Metrics (all 3 bugs fixed — canonical result)
+# ============================================================
+
+base_metrics:
+  experiment_id: "a5fdc63a"
+  sharpe_ratio: 0.2115
+  max_drawdown: 0.1980
+  dsr: 0.6667
+  total_trades: 30
+  total_return: 0.0846
+  period: "2022-01-11 to 2026-03-25"
+  cost_model: "3bps spread + 1bps slippage + 0.05x vol"
+
+# ============================================================
+# Verdict and Next Steps
+# ============================================================
+
+rejection_reason: >
+  HYPOTHESIS FALSIFIED. The correctly implemented VoV strategy (all 3 bugs fixed)
+  produces 30 trades but with very weak Sharpe=0.211 and MaxDD=19.8%.
+  The VoV signal at 80th percentile triggers defensive exits too frequently
+  during the 2022-2024 period, causing the strategy to miss significant
+  SPY recoveries (2023-2024 bull run).
+  The prior "good" result (Sharpe=0.539, 10 trades) was an artifact of
+  bug #3: regime detection never triggered, strategy was near-constant long SPY.
+
+notes_for_future_research: |
+  If VoV hypothesis is to be revisited:
+  - Longer lookback window (45-60 days) might reduce false triggers
+  - Higher percentile threshold (90th) reduces entry frequency
+  - Combine with corr_sign signal (VoV high AND SPY-TLT corr positive = strong exit)
+  - Test on longer history (2000-2026) to include more VoV regimes
+  - Mandate must be revised: MaxDD < 12% requires much tighter position sizing
+
+created_at: "2026-03-26"
