@@ -22,18 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import logging
 
-import polars as pl
 import yaml
 
-from llm_quant.backtest.engine import BacktestEngine, CostModel
 from llm_quant.backtest.meta_label import (
-    apply_triple_barrier,
-    extract_features,
-    train_meta_labeler,
+    MetaLabelConfig,
+    MetaLabelFilter,
+    replay_lead_lag_signals,
 )
-from llm_quant.backtest.metrics import compute_sharpe
-from llm_quant.backtest.strategies import create_strategy
-from llm_quant.backtest.strategy import StrategyConfig
 from llm_quant.data.fetcher import fetch_ohlcv
 from llm_quant.data.indicators import compute_indicators
 
@@ -46,19 +41,14 @@ logging.basicConfig(level=logging.WARNING)
 STRATEGIES = [
     {
         "slug": "lqd-spy-credit-lead",
-        "cls": "lead_lag",
         "syms": ["LQD", "SPY"],
         "leader": "LQD",
         "follower": "SPY",
         "params": {
-            "leader_symbol": "LQD",
-            "follower_symbol": "SPY",
             "lag_days": 1,
             "signal_window": 5,
             "entry_threshold": 0.005,
             "exit_threshold": -0.005,
-            "target_weight": 0.8,
-            "rebalance_frequency_days": 5,
         },
     },
 ]
@@ -67,11 +57,12 @@ CUTOFF = date(2025, 1, 1)
 EMBARGO_DAYS = 10
 
 
-def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
+def run_analysis(strat_def: dict) -> dict:
     """Run full meta-labeling analysis for one strategy."""
     slug = strat_def["slug"]
     leader = strat_def["leader"]
     follower = strat_def["follower"]
+    params = strat_def["params"]
 
     print(f"\n{'=' * 70}")
     print(f"META-LABELING ANALYSIS: {slug}")
@@ -79,111 +70,54 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
 
     # 1. Fetch data
     print("\n1. Fetching data...", end="", flush=True)
-    # Include VIX for regime features
     all_syms = list(set(strat_def["syms"] + ["VIX"]))
     prices_df = fetch_ohlcv(all_syms, lookback_days=5 * 365)
     indicators_df = compute_indicators(prices_df)
     print(f" done ({len(prices_df)} rows)")
 
-    # 2. Run base strategy backtest to find signal dates
-    print("2. Running base strategy backtest...", end="", flush=True)
-    config = StrategyConfig(
-        name=strat_def["cls"],
-        rebalance_frequency_days=strat_def["params"].get("rebalance_frequency_days", 5),
-        parameters=strat_def["params"],
-    )
-    strategy = create_strategy(strat_def["cls"], config)
-    engine = BacktestEngine(strategy=strategy, initial_capital=100_000.0)
-    result = engine.run(
-        prices_df=prices_df,
+    # 2. Replay strategy signals (lightweight, no BacktestEngine)
+    print("2. Replaying lead-lag signals...", end="", flush=True)
+    all_signals = replay_lead_lag_signals(
         indicators_df=indicators_df,
-        slug=slug,
-        cost_model=CostModel(),
-        warmup_days=30,
-        cost_multiplier=1.0,
+        leader_symbol=leader,
+        follower_symbol=follower,
+        lag_days=params["lag_days"],
+        signal_window=params["signal_window"],
+        entry_threshold=params["entry_threshold"],
+        exit_threshold=params["exit_threshold"],
     )
-    base_sharpe = compute_sharpe(result.daily_returns, annualize=True)
-    print(f" Sharpe={base_sharpe:.3f}, Trades={len(result.trades)}")
+    entry_signals = [s for s in all_signals if s["action"] == "BUY"]
+    print(f" {len(entry_signals)} BUY signals, {len(all_signals)} total")
 
-    # 3. Extract signal entry dates from trades
-    print("3. Extracting entry signals...", end="", flush=True)
-    entry_trades = [
-        t for t in result.trades if t.action.lower() == "buy" and t.symbol == follower
-    ]
-    print(f" {len(entry_trades)} entries found")
-
-    if len(entry_trades) < 20:
-        print("   INSUFFICIENT ENTRIES — cannot train meta-labeler")
+    if len(entry_signals) < 20:
+        print("   INSUFFICIENT ENTRIES -- cannot train meta-labeler")
         return {"slug": slug, "status": "insufficient_data"}
 
-    # 4. Build labeled dataset
-    print("4. Building labeled dataset (triple-barrier)...")
-    features_list: list[dict[str, float]] = []
-    labels: list[int] = []
-    signal_dates: list[date] = []
-    trade_history: list[dict] = []
+    # 3. Build labeled dataset
+    print("3. Building labeled dataset (triple-barrier with high/low)...")
+    config = MetaLabelConfig(embargo_days=EMBARGO_DAYS)
+    mlf = MetaLabelFilter(config)
 
-    for trade in entry_trades:
-        trade_date = trade.date
+    dataset = mlf.build_labeled_dataset(
+        indicators_df=indicators_df,
+        prices_df=prices_df,
+        entry_signals=entry_signals,
+        leader_symbol=leader,
+        follower_symbol=follower,
+    )
 
-        # Compute leader return at signal time (approximate)
-        leader_data = (
-            indicators_df.filter(
-                (pl.col("symbol") == leader) & (pl.col("date") <= trade_date)
-            )
-            .sort("date")
-            .tail(6)
-        )
-        if len(leader_data) < 2:
-            continue
-        lc = leader_data["close"].to_list()
-        leader_ret = lc[-1] / lc[0] - 1.0 if lc[0] > 0 else 0.0
-
-        # Extract features
-        feats = extract_features(
-            signal_date=trade_date,
-            leader_symbol=leader,
-            follower_symbol=follower,
-            leader_return=leader_ret,
-            indicators_df=indicators_df,
-            prices_df=prices_df,
-            trade_history=trade_history,
-        )
-
-        # Apply triple-barrier label
-        label = apply_triple_barrier(
-            entry_date=trade_date,
-            symbol=follower,
-            prices_df=prices_df,
-            upper_pct=0.03,
-            lower_pct=0.05,
-            max_holding_days=10,
-        )
-
-        features_list.append(feats)
-        labels.append(label)
-        signal_dates.append(trade_date)
-
-        # Update trade history for rolling features
-        trade_history.append({"date": trade_date, "pnl": trade.pnl or 0.0})
-
+    labels = dataset["labels"]
+    n_labels = len(labels)
+    n_wins = sum(labels)
     print(
-        f"   {len(labels)} labeled entries "
-        f"({sum(labels)} wins, {len(labels) - sum(labels)} losses, "
-        f"win rate={sum(labels) / len(labels):.1%})"
+        f"   {n_labels} labeled entries "
+        f"({n_wins} wins, {n_labels - n_wins} losses, "
+        f"win rate={n_wins / n_labels:.1%})"
     )
 
-    # 5. Train meta-labeler
-    print("5. Training XGBoost meta-labeler...")
-    print(f"   Cutoff: {CUTOFF}, Embargo: {EMBARGO_DAYS} days")
-
-    model, ml_result = train_meta_labeler(
-        features_list=features_list,
-        labels=labels,
-        signal_dates=signal_dates,
-        cutoff_date=CUTOFF,
-        embargo_days=EMBARGO_DAYS,
-    )
+    # 4. Train meta-labeler
+    print(f"4. Training XGBoost meta-labeler (cutoff={CUTOFF})...")
+    ml_result = mlf.train(dataset, cutoff_date=CUTOFF)
 
     print("\n   --- TRAINING RESULTS ---")
     print(
@@ -201,13 +135,13 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
     # Overfit check
     gap = ml_result.train_accuracy - ml_result.test_accuracy
     if gap > 0.15:
-        print(f"   WARNING: train-test gap = {gap:.1%} — LIKELY OVERFIT")
+        print(f"   WARNING: train-test gap = {gap:.1%} -- LIKELY OVERFIT")
     elif gap > 0.05:
         print(f"   CAUTION: train-test gap = {gap:.1%}")
     else:
         print(f"   OK: train-test gap = {gap:.1%}")
 
-    # 6. Feature importance
+    # 5. Feature importance
     print("\n   --- FEATURE IMPORTANCE (XGBoost gain) ---")
     for fname, score in list(ml_result.feature_importance.items())[:10]:
         print(f"   {fname:<35} {score:.4f}")
@@ -217,13 +151,12 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
         for fname, score in list(ml_result.shap_importance.items())[:10]:
             print(f"   {fname:<35} {score:.6f}")
 
-    # 7. Skeptic's minimum validation
+    # 6. Skeptic's minimum validation
     print("\n   --- SKEPTIC'S VALIDATION ---")
 
     auc_pass = ml_result.test_auc > 0.55
     print(f"   AUC > 0.55: {'PASS' if auc_pass else 'FAIL'} ({ml_result.test_auc:.3f})")
 
-    # Check if top feature is >50% of total
     fi_vals = list(ml_result.feature_importance.values())
     concentrated = fi_vals[0] > 0.5 * sum(fi_vals) if fi_vals else False
     print(f"   Feature concentration: {'WARNING' if concentrated else 'OK'}")
@@ -234,13 +167,18 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
     overall = auc_pass and not overfit and not concentrated
     print(f"\n   OVERALL: {'PROCEED WITH CAUTION' if overall else 'KILL'}")
 
-    # 8. Save results
+    # 7. Save model artifact
+    artifact_dir = Path(f"data/strategies/{slug}/meta-label")
+    mlf.save(artifact_dir)
+    print(f"\n   Model saved to {artifact_dir}")
+
+    # 8. Build result dict
     return {
         "slug": slug,
-        "base_sharpe": round(base_sharpe, 4),
-        "total_entries": len(entry_trades),
-        "labeled_entries": len(labels),
-        "label_win_rate": round(sum(labels) / len(labels), 4),
+        "total_signals": len(all_signals),
+        "entry_signals": len(entry_signals),
+        "labeled_entries": n_labels,
+        "label_win_rate": round(n_wins / n_labels, 4),
         "cutoff_date": str(CUTOFF),
         "ml_result": {
             "train_accuracy": round(ml_result.train_accuracy, 4),
@@ -264,7 +202,6 @@ def run_analysis(strat_def: dict) -> dict:  # noqa: PLR0915
 
 
 def main() -> None:
-
     all_results = []
     for strat in STRATEGIES:
         result = run_analysis(strat)
