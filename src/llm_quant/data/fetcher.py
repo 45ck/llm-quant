@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # Symbols not listed here are sent to Yahoo Finance as-is.
 YAHOO_SYMBOL_MAP: dict[str, str] = {
     "VIX": "^VIX",
+    "VIX3M": "^VIX3M",
 }
 
 # Reverse map: Yahoo ticker -> internal symbol (for tagging stored rows).

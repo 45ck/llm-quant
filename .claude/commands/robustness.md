@@ -34,6 +34,43 @@ Display a summary:
 
 ### Slug provided (e.g., "momentum-rotation") --> Run robustness analysis
 
+**Step 0: Detect strategy track (Track A/B vs Track C structural arb)**
+
+Track C strategies use different gates (paper persistence + fill rate, not DSR/CPCV).
+Check if the slug is a Track C structural arb strategy:
+
+```bash
+cd E:/llm-quant && PYTHONPATH=src python -c "
+import sys
+slug = '$ARGUMENTS'.strip()
+TRACK_C_PREFIXES = ('pm-arb-', 'cef-', 'funding-')
+is_track_c = any(slug.startswith(p) for p in TRACK_C_PREFIXES)
+print('TRACK_C' if is_track_c else 'TRACK_AB')
+print(slug)
+"
+```
+
+**If TRACK_C → run the Track C gate and stop (do not run DSR/CPCV/PBO steps below):**
+
+```bash
+cd E:/llm-quant && PYTHONPATH=src python scripts/run_track_c_robustness.py \
+    --slug $ARGUMENTS --db data/arb.duckdb
+```
+
+This script:
+- Routes `pm-arb-*` slugs to `PaperArbGate` (4 gates: persistence, fill_rate, capacity, days_elapsed)
+- Routes `cef-*` slugs to the CEF backtest gate (Sharpe, MaxDD, beta, persistence)
+- Routes `funding-*` slugs to the funding rate gate (annualized spread, fill rate, exchanges)
+- Writes `data/strategies/{slug}/robustness-result.yaml` in the standard promote-compatible format
+- Exits 0 (PROMOTE), 1 (REJECT), or 2 (CONTINUE_PAPER)
+
+For Track C strategies, the robustness gate IS the 30-day paper track record.
+DSR/CPCV/PBO do not apply — deductive arb has no in-sample overfitting risk.
+
+**If TRACK_AB → continue with Step 1 below.**
+
+---
+
 **Step 1: Verify prerequisites**
 
 Check that at least 2 backtest experiments exist:

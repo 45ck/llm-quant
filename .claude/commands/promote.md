@@ -17,6 +17,70 @@ If a slug is provided (e.g., `/promote sma_spy`), use it. Otherwise, ask which s
 
 ---
 
+### Step 0: Detect Track C structural arb strategies
+
+Track C strategies (PM arb, CEF discount, funding rate) use different promotion criteria.
+DSR/CPCV/PBO do not apply to deductive arb — use the paper gate instead.
+
+```bash
+cd E:/llm-quant && python -c "
+slug = '$ARGUMENTS'.strip()
+TRACK_C_PREFIXES = ('pm-arb-', 'cef-', 'funding-')
+print('TRACK_C' if any(slug.startswith(p) for p in TRACK_C_PREFIXES) else 'TRACK_AB')
+"
+```
+
+**If TRACK_C → use the Track C promotion checklist below and skip Steps 1-3.**
+
+#### Track C Promotion Checklist
+
+Read the robustness result:
+```bash
+cat data/strategies/$ARGUMENTS/robustness-result.yaml 2>/dev/null || echo "No robustness result — run /robustness $ARGUMENTS first"
+```
+
+Track C promotion requires ALL of:
+```markdown
+## Strategy Promotion Checklist — {slug} (Track C)
+
+### Hard Vetoes (structural arb specific)
+- [ ] PaperArbGate overall_passed == true  (or equivalent CEF/funding gate)
+- [ ] Gate 1 Persistence >= 0.50  (opportunities present in >= 50% of scan sessions)
+- [ ] Gate 2 Fill Rate >= 0.80     (>= 80% of opportunities are fillable at detected spread)
+- [ ] Gate 3 Capacity <= 0.10      (Kelly position < 10% of average market volume)
+- [ ] Gate 4 Days Elapsed >= 30    (30-calendar-day track record satisfied)
+
+### No DSR/CPCV/PBO required for structural arb
+- DSR not applicable — deductive alpha has no in-sample overfitting risk
+- PBO not applicable — no parameter selection across competing configurations
+- CPCV not applicable — no backtest from which OOS Sharpe can be split
+
+### Kill Switches (Track C specific)
+- [ ] Spread collapse switch configured (alert if spread drops below 1/3 of detection threshold)
+- [ ] Counterparty switch configured (Kalshi API connectivity check)
+- [ ] Beta breach switch configured (portfolio beta to SPY < 0.15)
+- [ ] Exchange outage switch (for funding rate strategies)
+
+### Log the promotion:
+```bash
+cd E:/llm-quant && PYTHONPATH=src python -c "
+import duckdb; from datetime import datetime
+db = duckdb.connect('data/llm_quant.duckdb')
+db.execute(\"\"\"CREATE TABLE IF NOT EXISTS strategy_changelog (
+    id INTEGER, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    change_type VARCHAR, description TEXT, outcome VARCHAR, details TEXT)\"\"\")
+db.execute(\"INSERT INTO strategy_changelog (change_type, description, outcome, details) VALUES (?, ?, ?, ?)\",
+    ['track_c_promotion', 'Track C promotion review for $ARGUMENTS', 'pending',
+     f'Review at {datetime.now().isoformat()}'])
+print('Logged.'); db.close()
+"
+```
+```
+
+**If TRACK_AB → continue with Step 1 below.**
+
+---
+
 ### Step 1: Machine-Enforced Gate Checks
 
 Run the automated promotion gate. This checks all thresholds from the research lifecycle artifacts.

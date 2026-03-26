@@ -214,6 +214,14 @@ asset_class = "volatility"
 tradeable = false
 
 [[assets]]
+symbol = "VIX3M"
+name = "3-Month VIX (for reference only)"
+category = "volatility"
+sector = "volatility"
+asset_class = "volatility"
+tradeable = false
+
+[[assets]]
 symbol = "BTC-USD"
 name = "Bitcoin"
 category = "crypto"

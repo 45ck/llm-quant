@@ -1264,15 +1264,32 @@ class PairsRatioStrategy(Strategy):
     Computes ratio = price_a / price_b and fits Bollinger Bands. Trades mean
     reversion: when ratio is stretched above upper band, buy the underperformer
     (symbol_b); when below lower band, buy the outperformer (symbol_a).
-    Exits when ratio returns within 0.5 sigma of the mean.
+    Exits when ratio returns within exit_z sigma of the mean.
 
     Parameters (via StrategyConfig.parameters):
       symbol_a (str): Numerator asset (default "ETH-USD").
       symbol_b (str): Denominator asset (default "BTC-USD").
-      bb_window (int, default 20): Bollinger Band lookback.
+      bb_window (int, default 20): Bollinger Band lookback (single-window mode).
       bb_std (float, default 2.0): Band width in standard deviations.
+      exit_z (float, default 0.5): Exit when |z| < this threshold.
       target_weight (float, default 0.90): Position weight when in trade.
+      consensus_windows (list[int], optional): When set, compute BB z-scores for
+        each window and require a majority (>= ceil(N/2)) to agree on direction
+        before entering or exiting. Overrides bb_window for multi-window mode.
+        Example: [60, 90, 120] — at least 2 of 3 windows must agree.
     """
+
+    @staticmethod
+    def _bb_z(ratios: list[float], window: int) -> float | None:
+        """Compute z-score of current ratio vs BB for the given window."""
+        if len(ratios) < window:
+            return None
+        w_ratios = ratios[-window:]
+        mean_r = sum(w_ratios) / window
+        std_r = (sum((r - mean_r) ** 2 for r in w_ratios) / window) ** 0.5
+        if std_r == 0:
+            return None
+        return (ratios[-1] - mean_r) / std_r
 
     def generate_signals(  # noqa: PLR0911
         self,
@@ -1287,57 +1304,79 @@ class PairsRatioStrategy(Strategy):
         bb_window: int = int(params.get("bb_window", 20))
         bb_std: float = float(params.get("bb_std", 2.0))
         tgt_weight: float = float(params.get("target_weight", 0.90))
+        exit_z: float = float(params.get("exit_z", 0.5))
+
+        # Multi-window consensus mode: list of window sizes.
+        raw_cw = params.get("consensus_windows", None)
+        if raw_cw is not None:
+            windows: list[int] = [int(w) for w in raw_cw]
+        else:
+            windows = [bb_window]
+        max_window = max(windows)
 
         a_data = (
             indicators_df.filter(pl.col("symbol") == symbol_a)
             .sort("date")
-            .tail(bb_window + 2)
+            .tail(max_window + 2)
         )
         b_data = (
             indicators_df.filter(pl.col("symbol") == symbol_b)
             .sort("date")
-            .tail(bb_window + 2)
+            .tail(max_window + 2)
         )
 
         min_len = min(len(a_data), len(b_data))
-        if min_len < bb_window:
+        if min_len < max_window:
             return []
 
         a_prices = a_data["close"].to_list()[-min_len:]
         b_prices = b_data["close"].to_list()[-min_len:]
 
         ratios = [a_prices[i] / b_prices[i] for i in range(min_len) if b_prices[i] > 0]
-        if len(ratios) < bb_window:
+        if len(ratios) < max_window:
             return []
 
-        window_ratios = ratios[-bb_window:]
-        mean_r = sum(window_ratios) / bb_window
-        std_r = (sum((r - mean_r) ** 2 for r in window_ratios) / bb_window) ** 0.5
-        if std_r == 0:
+        # Compute z-scores and tally votes across all windows.
+        z_scores: list[float] = []
+        votes_buy_b = 0  # ratio stretched up → buy symbol_b
+        votes_buy_a = 0  # ratio stretched down → buy symbol_a
+        votes_exit = 0  # ratio reverted → exit
+
+        for w in windows:
+            z = self._bb_z(ratios, w)
+            if z is None:
+                continue
+            z_scores.append(z)
+            if z > bb_std:
+                votes_buy_b += 1
+            elif z < -bb_std:
+                votes_buy_a += 1
+            if abs(z) < exit_z:
+                votes_exit += 1
+
+        if not z_scores:
             return []
 
-        current_ratio = ratios[-1]
-        z_score = (current_ratio - mean_r) / std_r
-        upper = mean_r + bb_std * std_r
-        lower = mean_r - bb_std * std_r
+        n_valid = len(z_scores)
+        majority = (n_valid + 1) // 2  # ceil(N/2) — majority threshold
 
         has_a = symbol_a in portfolio.positions
         has_b = symbol_b in portfolio.positions
-
         price_a = prices.get(symbol_a, 0)
         price_b = prices.get(symbol_b, 0)
+        z_now = z_scores[-1]
 
-        # Ratio stretched up: symbol_a expensive relative to symbol_b → buy symbol_b
-        if current_ratio > upper and not has_b and not has_a:
+        # Ratio stretched up: symbol_a expensive → buy symbol_b
+        if votes_buy_b >= majority and not has_b and not has_a:
             if price_b <= 0:
                 return []
             logger.info(
-                "PairsRatio: BUY %s on %s (ratio=%.4f > upper=%.4f, z=%.2f)",
+                "PairsRatio: BUY %s on %s (z=%.2f, %d/%d windows agree)",
                 symbol_b,
                 as_of_date,
-                current_ratio,
-                upper,
-                z_score,
+                z_now,
+                votes_buy_b,
+                n_valid,
             )
             return [
                 TradeSignal(
@@ -1346,21 +1385,24 @@ class PairsRatioStrategy(Strategy):
                     conviction=Conviction.MEDIUM,
                     target_weight=tgt_weight,
                     stop_loss=price_b * 0.90,
-                    reasoning=f"Ratio stretched up: z={z_score:.2f}, buy {symbol_b}",
+                    reasoning=(
+                        f"Ratio stretched up: z={z_now:.2f}"
+                        f" ({votes_buy_b}/{n_valid} windows), buy {symbol_b}"
+                    ),
                 )
             ]
 
-        # Ratio stretched down: symbol_a cheap relative to symbol_b → buy symbol_a
-        if current_ratio < lower and not has_a and not has_b:
+        # Ratio stretched down: symbol_b expensive → buy symbol_a
+        if votes_buy_a >= majority and not has_a and not has_b:
             if price_a <= 0:
                 return []
             logger.info(
-                "PairsRatio: BUY %s on %s (ratio=%.4f < lower=%.4f, z=%.2f)",
+                "PairsRatio: BUY %s on %s (z=%.2f, %d/%d windows agree)",
                 symbol_a,
                 as_of_date,
-                current_ratio,
-                lower,
-                z_score,
+                z_now,
+                votes_buy_a,
+                n_valid,
             )
             return [
                 TradeSignal(
@@ -1369,13 +1411,15 @@ class PairsRatioStrategy(Strategy):
                     conviction=Conviction.MEDIUM,
                     target_weight=tgt_weight,
                     stop_loss=price_a * 0.90,
-                    reasoning=f"Ratio stretched down: z={z_score:.2f}, buy {symbol_a}",
+                    reasoning=(
+                        f"Ratio stretched down: z={z_now:.2f}"
+                        f" ({votes_buy_a}/{n_valid} windows), buy {symbol_a}"
+                    ),
                 )
             ]
 
-        # Mean reversion exit: ratio returns to within 0.5 sigma of mean
-        exit_z = 0.5
-        if abs(z_score) < exit_z and (has_a or has_b):
+        # Mean-reversion exit: majority windows within exit_z of mean
+        if votes_exit >= majority and (has_a or has_b):
             return [
                 TradeSignal(
                     symbol=sym,
@@ -1383,7 +1427,10 @@ class PairsRatioStrategy(Strategy):
                     conviction=Conviction.HIGH,
                     target_weight=0.0,
                     stop_loss=0.0,
-                    reasoning=f"Pairs ratio reverted: z={z_score:.2f}",
+                    reasoning=(
+                        f"Pairs ratio reverted: z={z_now:.2f}"
+                        f" ({votes_exit}/{n_valid} windows)"
+                    ),
                 )
                 for sym in [symbol_a, symbol_b]
                 if sym in portfolio.positions
@@ -1620,10 +1667,14 @@ class VixRegimeStrategy(Strategy):
       - "vov": VIX 30-day rolling std dev above percentile_threshold → exit.
       - "level": VIX level above vix_threshold → defensive.
       - "vix_spike": Single-day VIX % change above spike_threshold → contrarian entry.
+      - "term_structure": Long equity when VIX term structure is in contango
+        (VIX3M/VIX > contango_threshold). Harvests volatility risk premium.
+        Cash when backwardated (VIX3M/VIX < contango_threshold = stressed regime).
 
     Parameters:
-      mode (str, default "level"): "vov", "level", or "vix_spike".
-      vix_symbol (str, default "^VIX"): VIX ticker.
+      mode (str, default "level"): "vov", "level", "vix_spike", or "term_structure".
+      vix_symbol (str, default "VIX"): Short-term VIX ticker (internal symbol).
+      vix3m_symbol (str, default "VIX3M"): 3-month VIX ticker for term_structure mode.
       equity_symbol (str, default "SPY"): Asset to trade.
       vix_threshold (float, default 25.0): VIX level for "level" mode.
       vov_window (int, default 30): Rolling window for VoV.
@@ -1631,6 +1682,9 @@ class VixRegimeStrategy(Strategy):
       spike_threshold (float, default 0.20): 1-day VIX % rise for spike mode.
       spike_exit_vix (float, default 20.0): Exit vix_spike position when VIX
         drops below this level (fear subsided, bounce captured).
+      contango_threshold (float, default 1.05): VIX3M/VIX ratio above which
+        the term structure is considered contango (long equity). Default 1.05
+        means 3-month vol must exceed spot vol by 5% to confirm contango.
       target_weight (float, default 0.90): Position weight in favourable regime.
     """
 
@@ -1720,6 +1774,32 @@ class VixRegimeStrategy(Strategy):
                     )
                 ]
             return []
+        elif mode == "term_structure":
+            # VIX term structure: contango (VIX3M > VIX) → long equity
+            # Backwardation (VIX3M <= VIX * threshold) → cash/defensive
+            vix3m_sym: str = str(params.get("vix3m_symbol", "VIX3M"))
+            contango_thresh: float = float(params.get("contango_threshold", 1.05))
+            vix3m_data = indicators_df.filter(pl.col("symbol") == vix3m_sym).sort(
+                "date"
+            )
+            if len(vix3m_data) < 5 or vix_now <= 0:
+                return []
+            vix3m_now = vix3m_data["close"].to_list()[-1]
+            if vix3m_now <= 0:
+                return []
+            ratio = vix3m_now / vix_now
+            # Contango: VIX3M > VIX * threshold → risk-on, long equity
+            # Backwardation or flat: VIX3M <= VIX * threshold → risk-off, cash
+            defensive = ratio < contango_thresh
+            logger.debug(
+                "VIX term structure: VIX3M=%.2f VIX=%.2f"
+                " ratio=%.3f thresh=%.2f defensive=%s",
+                vix3m_now,
+                vix_now,
+                ratio,
+                contango_thresh,
+                defensive,
+            )
         else:
             return []
 
