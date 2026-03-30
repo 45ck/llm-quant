@@ -40,3 +40,10 @@ List the warnings and their implications. Recommend caution — reduced position
 - Full control matrix: `docs/governance/control-matrix.md`
 - Model promotion policy: `docs/governance/model-promotion-policy.md`
 - Governance config: `config/governance.toml`
+
+### After governance scan
+
+If this is the first governance check of the day, generate today's daily report:
+```bash
+cd E:/llm-quant && PYTHONPATH=src python scripts/generate_report.py daily
+```

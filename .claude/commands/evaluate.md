@@ -329,3 +329,12 @@ Evaluation is the only lifecycle stage that runs continuously. It monitors deplo
 - A retired strategy is not a failure — it is the system working correctly. Edges decay. The failure is not retiring when you should.
 - Always check the hypothesis falsification criteria — if the hypothesis is falsified, the strategy has no theoretical basis regardless of recent P&L
 - Record every evaluation — the history of evaluations is itself informative (deteriorating trend across evaluations is a signal)
+
+### Step 9: Generate daily report (if not already done today)
+
+After evaluation, ensure today's daily report exists:
+```bash
+cd E:/llm-quant && PYTHONPATH=src python scripts/generate_report.py daily
+```
+
+This ensures every evaluation session leaves an auditable trail.
