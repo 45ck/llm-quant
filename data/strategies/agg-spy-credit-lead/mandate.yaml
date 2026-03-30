@@ -1,0 +1,41 @@
+# Mandate: agg-spy-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1: Cross-Asset Information Flow
+
+slug: agg-spy-credit-lead
+track: A
+created: 2026-03-30
+status: research
+benchmark: "60/40 SPY/TLT"
+target_sharpe: 0.8
+target_max_dd: 0.15
+target_cagr_min: 0.15
+target_cagr_max: 0.25
+mechanism_family: 1  # Cross-Asset Information Flow
+
+universe:
+  signal: AGG
+  equity: SPY
+  defensive: CASH
+
+objective: >
+  Use aggregate bond returns (AGG 5-day return) as a leading indicator for SPY
+  equity direction. Investment-grade credit stress predicts equity drawdown by
+  1-5 days; healthy credit predicts equity participation.
+
+mechanism: >
+  Broad investment-grade bond markets (AGG) aggregate price credit risk before
+  equity markets reprice earnings expectations. AGG rising signals healthy broad
+  credit conditions; AGG falling signals emerging credit stress that precedes
+  equity risk-off. Mechanism documented in Philippon (2009) and Adrian et al. (2012).
+
+benchmark_rationale: >
+  Credit-regime strategy should beat passive 60/40 by avoiding equity drawdowns
+  during credit stress periods while participating in equity rallies.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+approved_at: 2026-03-30
+approved_by: quant-researcher

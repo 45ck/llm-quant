@@ -1,0 +1,49 @@
+# Hypothesis: emb-spy-credit-lead
+
+slug: emb-spy-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  EMB (iShares JP Morgan EM Bond ETF) 5-day return is a leading indicator for
+  SPY equity direction. Holding SPY when EMB has gained >= 0.5% over 5 days
+  (global risk appetite healthy) and exiting to cash when EMB has dropped
+  >= -0.5% (global risk-off) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: emerging market sovereign bonds denominated in
+  USD reflect global risk appetite, dollar funding conditions, and cross-border
+  capital flows. EMB selling signals global risk-off that precedes US equity
+  weakness — a different information source than domestic IG/HY credit.
+  If EMB leads SPY, the mechanism captures a global credit-equity channel
+  distinct from the domestic credit channel in LQD/HYG variants.
+
+testable_prediction: >
+  IF EMB 5-day return is < -0.5% (global risk-off / EM credit stress signal),
+  THEN SPY return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day SPY return is not significantly negative after EMB stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: EMB
+  equity_etf: SPY
+  lookback_days: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  forward_return_horizon: 5
+
+data_requirements:
+  - EMB daily OHLCV (2007-present)
+  - SPY daily OHLCV (2007-present)
+
+anti_overfitting_notes: >
+  Threshold 0.5% matches HYG threshold — both are high-beta credit instruments
+  with similar weekly volatility profiles. EMB has EM political/FX noise so
+  the broader 0.5% threshold avoids false signals. No in-sample optimization.

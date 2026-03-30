@@ -1,0 +1,48 @@
+# Hypothesis: hyg-qqq-credit-lead
+
+slug: hyg-qqq-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  HYG (high-yield corporate bond ETF) 5-day return is a leading indicator for
+  QQQ equity direction. Holding QQQ when HYG has gained >= 0.5% over 5 days
+  (risk appetite healthy) and exiting to cash when HYG has dropped >= -0.5%
+  (risk-off signal) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: high-yield bonds are the most equity-like segment
+  of fixed income and lead equity markets most sharply during risk cycle turns.
+  QQQ is the most risk/growth-sensitive major equity index. The HYG-QQQ pairing
+  combines the most sensitive credit signal with the most sensitive equity target —
+  expected to amplify the Family 1 lead-lag effect relative to LQD-SPY.
+
+testable_prediction: >
+  IF HYG 5-day return is < -0.5% (risk-off / high-yield stress signal),
+  THEN QQQ return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day QQQ return is not significantly negative after HYG stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: HYG
+  equity_etf: QQQ
+  lookback_days: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  forward_return_horizon: 5
+
+data_requirements:
+  - HYG daily OHLCV (2007-present)
+  - QQQ daily OHLCV (2007-present)
+
+anti_overfitting_notes: >
+  Same thresholds as HYG-SPY (0.5%) and LQD-QQQ (0.5%) to avoid pair-specific
+  parameter optimization. Threshold is economically motivated by HYG's weekly
+  noise floor. No in-sample optimization. Template from lqd-spy-credit-lead.

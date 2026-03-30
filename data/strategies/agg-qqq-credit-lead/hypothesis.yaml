@@ -1,0 +1,48 @@
+# Hypothesis: agg-qqq-credit-lead
+
+slug: agg-qqq-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  AGG (broad investment-grade bond ETF) 5-day return is a leading indicator for
+  QQQ (Nasdaq-100) equity direction. Holding QQQ when AGG has gained >= 0.3% over
+  5 days (credit healthy) and exiting to cash when AGG has dropped >= -0.3% (credit
+  stress) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: broad bond markets aggregate credit risk pricing
+  faster than equity markets. QQQ is more rate-sensitive and growth-levered than SPY,
+  so credit stress signals may have a stronger predictive effect on QQQ vs SPY.
+  AGG falling → emerging credit stress → early warning of growth equity risk-off.
+
+testable_prediction: >
+  IF AGG 5-day return is < -0.3% (credit stress signal),
+  THEN QQQ return over the next 3 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 3-day QQQ return is not significantly negative after AGG stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: AGG
+  equity_etf: QQQ
+  lookback_days: 5
+  entry_threshold: 0.003
+  exit_threshold: -0.003
+  forward_return_horizon: 3
+
+data_requirements:
+  - AGG daily OHLCV (2010-present)
+  - QQQ daily OHLCV (2010-present)
+
+anti_overfitting_notes: >
+  Parameters chosen from economic theory (credit leads equity ~1-5 days).
+  Same thresholds as agg-spy-credit-lead to avoid parameter dredging across pairs.
+  No in-sample optimization. Template derived from lqd-spy-credit-lead
+  (Sharpe=1.250, DSR=0.9950, all gates pass).

@@ -1,0 +1,42 @@
+# Mandate: hyg-spy-5d-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1: Cross-Asset Information Flow
+
+slug: hyg-spy-5d-credit-lead
+track: A
+created: 2026-03-30
+status: research
+benchmark: "60/40 SPY/TLT"
+target_sharpe: 0.8
+target_max_dd: 0.15
+target_cagr_min: 0.15
+target_cagr_max: 0.25
+mechanism_family: 1  # Cross-Asset Information Flow
+
+universe:
+  signal: HYG
+  equity: SPY
+  defensive: CASH
+
+objective: >
+  Use high-yield corporate bond returns (HYG 5-day return) as a leading indicator
+  for SPY equity direction. High-yield credit stress precedes equity drawdown by
+  1-5 days; healthy HYG signals equity participation.
+
+mechanism: >
+  High-yield bonds are the most equity-like segment of fixed income — they embed
+  both credit risk and equity-like risk appetite. HYG moves reflect institutional
+  risk appetite before that risk appetite shifts equity prices. Spread widening
+  in HYG precedes equity risk-off by 1-5 days. The 5-day window is explicitly used
+  here (hence "5d" in the slug) to match HYG's weekly momentum cycle.
+
+benchmark_rationale: >
+  High-yield credit regime strategy should beat passive 60/40 by capturing
+  leading risk-appetite signals from the most risk-sensitive credit segment.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+approved_at: 2026-03-30
+approved_by: quant-researcher

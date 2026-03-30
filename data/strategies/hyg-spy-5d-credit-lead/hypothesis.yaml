@@ -1,0 +1,49 @@
+# Hypothesis: hyg-spy-5d-credit-lead
+
+slug: hyg-spy-5d-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  HYG (high-yield corporate bond ETF) 5-day return is a leading indicator for
+  SPY equity direction. Holding SPY when HYG has gained >= 0.5% over 5 days
+  (credit healthy / risk-on) and exiting to cash when HYG has dropped >= -0.5%
+  (credit stress / risk-off) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: high-yield bonds are the most equity-like credit
+  instrument. HYG reflects institutional risk appetite with a 1-5 day lead over
+  equity repricing. Spread widening in HYG (HYG falling) signals imminent equity
+  risk-off; spread tightening (HYG rising) signals equity participation. The 5-day
+  signal window ("5d") reduces noise while capturing weekly credit regime shifts.
+
+testable_prediction: >
+  IF HYG 5-day return is < -0.5% (spread widening / risk-off signal),
+  THEN SPY return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day SPY return is not significantly negative after HYG stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: HYG
+  equity_etf: SPY
+  lookback_days: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  forward_return_horizon: 5
+
+data_requirements:
+  - HYG daily OHLCV (2007-present)
+  - SPY daily OHLCV (2007-present)
+
+anti_overfitting_notes: >
+  5-day window explicitly in strategy name — economically motivated by weekly
+  credit cycle. Threshold at 0.5% matches HYG's typical weekly noise floor.
+  No in-sample optimization. Template derived from lqd-spy-credit-lead
+  (Sharpe=1.250, DSR=0.9950, all gates pass).

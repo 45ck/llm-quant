@@ -1,0 +1,50 @@
+# Hypothesis: spy-overnight-momentum
+
+slug: spy-overnight-momentum
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  SPY prior-day overnight return (close_{t-1} to open_t) is a positive predictor
+  of SPY intraday return on day t (open_t to close_t). Holding SPY at open when
+  overnight return is positive and remaining flat when negative generates
+  Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  The overnight return anomaly: institutional order flow, earnings announcements,
+  and macro news concentrate during after-hours and pre-market sessions. Positive
+  overnight gaps reflect informed buying that has directional persistence into the
+  intraday session. The signal captures whether overnight information flow is
+  net bullish (hold intraday) or net bearish (stay flat). Family 8: non-credit
+  lead-lag — price-based information flow rather than credit conditions.
+
+testable_prediction: >
+  IF SPY overnight return (close_{t-1} to open_t) is > 0,
+  THEN SPY intraday return (open_t to close_t) will be positive with p > 0.52.
+  Measured by: binomial test on intraday return sign conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Intraday SPY return is not significantly positive after positive overnight (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs (2x daily for open/close fills)
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  ticker: SPY
+  signal: overnight_return  # close_{t-1} to open_t
+  signal_threshold: 0.0     # any positive overnight return
+  hold_days: 1              # intraday only (buy open, sell close same day)
+  entry_type: open
+  exit_type: close
+
+data_requirements:
+  - SPY daily OHLCV with open prices (2004-present, for overnight = prior_close to open)
+  - Requires accurate open price data (no adjusted-open issues)
+
+anti_overfitting_notes: >
+  Signal threshold = 0.0 is the natural zero-crossing — no optimization possible.
+  Hold period = 1 intraday is dictated by the mechanism (not a tunable parameter).
+  Literature precedent: Lou et al. (2019), Barclay & Hendershott (2003).
+  No parameter dredging. Single signal, single rule.

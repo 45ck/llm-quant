@@ -1,0 +1,50 @@
+# Hypothesis: agg-efa-credit-lead
+
+slug: agg-efa-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  AGG (broad investment-grade bond ETF) 5-day return is a leading indicator for
+  EFA (MSCI EAFE international developed equity) direction. Holding EFA when AGG
+  has gained >= 0.3% over 5 days (US credit healthy, global risk-on) and exiting
+  to cash when AGG has dropped >= -0.3% (credit stress) generates Sharpe > 0.8
+  with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: US fixed income markets are the deepest, most liquid
+  in the world and function as the global risk-free rate anchor. When AGG falls, USD
+  credit conditions tighten — this propagates to international equity markets as global
+  capital repositions toward USD safe assets. EFA (Europe, Asia, Far East) is exposed
+  to this capital flow channel. If the mechanism holds cross-border, it confirms
+  Family 1 is a structural global mechanism, not a US domestic artifact.
+
+testable_prediction: >
+  IF AGG 5-day return is < -0.3% (US credit stress signal),
+  THEN EFA return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day EFA return is not significantly negative after AGG stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: AGG
+  equity_etf: EFA
+  lookback_days: 5
+  entry_threshold: 0.003
+  exit_threshold: -0.003
+  forward_return_horizon: 5
+
+data_requirements:
+  - AGG daily OHLCV (2010-present)
+  - EFA daily OHLCV (2010-present)
+
+anti_overfitting_notes: >
+  Same thresholds as AGG-SPY (0.3%) — EFA has similar vol to SPY on a daily basis.
+  FX noise in EFA may reduce signal clarity; this is a hypothesis to be tested,
+  not assumed. No in-sample optimization. Template from lqd-spy-credit-lead.

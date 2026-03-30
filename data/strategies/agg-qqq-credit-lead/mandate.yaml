@@ -1,0 +1,43 @@
+# Mandate: agg-qqq-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1: Cross-Asset Information Flow
+
+slug: agg-qqq-credit-lead
+track: A
+created: 2026-03-30
+status: research
+benchmark: "60/40 SPY/TLT"
+target_sharpe: 0.8
+target_max_dd: 0.15
+target_cagr_min: 0.15
+target_cagr_max: 0.25
+mechanism_family: 1  # Cross-Asset Information Flow
+
+universe:
+  signal: AGG
+  equity: QQQ
+  defensive: CASH
+
+objective: >
+  Use aggregate bond returns (AGG 5-day return) as a leading indicator for QQQ
+  (Nasdaq-100) equity direction. Broad investment-grade credit stress predicts
+  tech/growth equity drawdown by 1-5 days.
+
+mechanism: >
+  Credit markets price default risk before equity markets reprice earnings expectations.
+  AGG reflects broad credit conditions; QQQ (tech/growth) is rate-sensitive and tends
+  to amplify credit-cycle signals. When AGG falls (credit stress), QQQ's higher beta
+  to risk appetite means drawdowns are faster and deeper than SPY. The AGG→QQQ
+  lead-lag may be stronger than AGG→SPY due to QQQ's rate sensitivity.
+
+benchmark_rationale: >
+  AGG-QQQ strategy should beat 60/40 by exiting QQQ during broad credit stress
+  periods. QQQ's higher Sharpe potential vs SPY makes this pair attractive if the
+  lead-lag holds.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+approved_at: 2026-03-30
+approved_by: quant-researcher

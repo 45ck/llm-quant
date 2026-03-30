@@ -1,0 +1,44 @@
+# Mandate: spy-overnight-momentum
+# Non-Credit Lead-Lag — Family 8
+
+slug: spy-overnight-momentum
+track: A
+created: 2026-03-30
+status: research
+benchmark: "60/40 SPY/TLT"
+target_sharpe: 0.8
+target_max_dd: 0.15
+target_cagr_min: 0.15
+target_cagr_max: 0.25
+mechanism_family: 8  # Non-Credit Lead-Lag
+
+universe:
+  signal: SPY_OVERNIGHT_RETURN
+  equity: SPY
+  defensive: CASH
+
+objective: >
+  Exploit the SPY overnight return momentum anomaly: when SPY gaps up at the open
+  (positive overnight return from prior close to current open), hold SPY intraday
+  for that session and exit at close. When overnight return is negative, stay flat.
+
+mechanism: >
+  The overnight return anomaly documents that a significant portion of long-run
+  equity returns accrues during after-hours sessions (Lou et al. 2019, Barclay &
+  Hendershott 2003). Positive overnight gaps reflect institutional order flow,
+  earnings surprises, and macro news that has directional persistence into the
+  intraday session. The signal is the prior close-to-open return; the holding
+  period is strictly intraday (open to close).
+
+benchmark_rationale: >
+  Overnight momentum is a distinct mechanism from credit lead-lag (Family 1).
+  Classification under Family 8 (Non-Credit Lead-Lag) recognizes a different
+  information channel: price-based order flow rather than credit conditions.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.90
+
+approved_at: 2026-03-30
+approved_by: quant-researcher

@@ -1,0 +1,49 @@
+# Hypothesis: vcit-qqq-credit-lead
+
+slug: vcit-qqq-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  VCIT (intermediate-term investment-grade corporate bond ETF) 5-day return is a
+  leading indicator for QQQ equity direction. Holding QQQ when VCIT has gained
+  >= 0.4% over 5 days (credit healthy) and exiting to cash when VCIT has dropped
+  >= -0.4% (credit stress) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: intermediate corporate bonds (5-10yr) reflect
+  credit conditions for investment-grade issuers in the belly of the curve.
+  VCIT's 5-10yr duration segment is particularly sensitive to growth expectations
+  and corporate credit health — qualities that overlap with QQQ's growth-sector
+  composition. VCIT falling → intermediate credit stress → early warning of
+  QQQ growth equity risk-off.
+
+testable_prediction: >
+  IF VCIT 5-day return is < -0.4% (intermediate credit stress signal),
+  THEN QQQ return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day QQQ return is not significantly negative after VCIT stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: VCIT
+  equity_etf: QQQ
+  lookback_days: 5
+  entry_threshold: 0.004
+  exit_threshold: -0.004
+  forward_return_horizon: 5
+
+data_requirements:
+  - VCIT daily OHLCV (2010-present)
+  - QQQ daily OHLCV (2010-present)
+
+anti_overfitting_notes: >
+  Threshold 0.4% between AGG (0.3%) and LQD/HYG (0.5%) — reflects VCIT's
+  intermediate volatility relative to those ETFs. No in-sample optimization.
+  Template derived from lqd-spy-credit-lead (Sharpe=1.250, DSR=0.9950).

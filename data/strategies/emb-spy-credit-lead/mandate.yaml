@@ -1,0 +1,42 @@
+# Mandate: emb-spy-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1
+
+mandate_id: "emb-spy-credit-lead-M1"
+strategy_slug: "emb-spy-credit-lead"
+created_at: "2026-03-30"
+
+objective: >
+  Use emerging market bond returns (EMB 5-day return) as a leading indicator
+  for SPY equity direction. Emerging market debt is the highest-risk segment of
+  sovereign fixed income and may lead global equity risk appetite cycles.
+
+mechanism: >
+  EMB (iShares JP Morgan EM Bond ETF) captures EM sovereign credit conditions
+  denominated in USD. EM bonds are highly sensitive to global risk appetite,
+  USD strength, and capital flow cycles. EMB selling → global risk-off →
+  precedes broad equity weakness including SPY. This tests whether the
+  credit lead-lag mechanism extends to EM sovereign debt as a signal source.
+  Expected to have a noisier signal than LQD given EM-specific political/FX risk.
+
+universe:
+  equity: "SPY"
+  signal: "EMB"
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  EM credit signal should add diversifying information vs US IG/HY credit signals
+  — different credit cycle dynamics. Measures global risk appetite vs. domestic.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+track: "A"
+mechanism_family: 1
+trial_family: "credit_lead_lag"
+family_trial_number: 8
+
+approved_at: "2026-03-30"
+approved_by: "quant-researcher"

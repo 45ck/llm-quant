@@ -1,0 +1,48 @@
+# Hypothesis: lqd-qqq-credit-lead
+
+slug: lqd-qqq-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  LQD (investment-grade corporate bond ETF) 5-day return is a leading indicator
+  for QQQ (Nasdaq-100) equity direction. Holding QQQ when LQD has gained >= 0.5%
+  over 5 days (credit healthy) and exiting to cash when LQD has dropped >= -0.5%
+  (credit stress) generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: LQD tracks investment-grade corporate bonds,
+  many issued by QQQ-constituent companies (Apple, Microsoft, Alphabet).
+  Shared-issuer overlap means LQD prices corporate credit risk before equity
+  markets reprice earnings expectations for the same companies. LQD falling
+  → corporate credit stress → early warning of QQQ risk-off.
+
+testable_prediction: >
+  IF LQD 5-day return is < -0.5% (investment-grade credit stress signal),
+  THEN QQQ return over the next 5 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 5-day QQQ return is not significantly negative after LQD stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: LQD
+  equity_etf: QQQ
+  lookback_days: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  forward_return_horizon: 5
+
+data_requirements:
+  - LQD daily OHLCV (2002-present)
+  - QQQ daily OHLCV (2002-present)
+
+anti_overfitting_notes: >
+  Same parameters as lqd-spy-credit-lead (entry=0.5%, exit=-0.5%, 5d window)
+  to avoid parameter dredging across equity pairs. Only the equity target changes.
+  lqd-spy-credit-lead passed all gates (Sharpe=1.250, DSR=0.9950, CPCV=1.023).

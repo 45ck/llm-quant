@@ -1,0 +1,42 @@
+# Mandate: lqd-qqq-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1
+
+mandate_id: "lqd-qqq-credit-lead-M1"
+strategy_slug: "lqd-qqq-credit-lead"
+created_at: "2026-03-30"
+
+objective: >
+  Use investment-grade corporate bond returns (LQD 5-day return) as a leading
+  indicator for QQQ equity direction. Direct analog to the validated lqd-spy
+  strategy with QQQ as the equity follower.
+
+mechanism: >
+  Identical mechanism to lqd-spy-credit-lead (validated, Sharpe=1.25). This is
+  a universe expansion replacing SPY with QQQ. LQD credit health signal should
+  apply to the Nasdaq-100 — credit conditions drive both equity indices, but QQQ
+  may exhibit stronger signal response due to its concentration in financially
+  sensitive growth sectors. The core credit-leads-equity mechanism (Philippon 2009,
+  Adrian et al. 2012) applies across equity indices.
+
+universe:
+  equity: "QQQ"
+  signal: "LQD"
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Nearest analog to the validated lqd-spy strategy. QQQ substitution tests
+  whether the credit signal is index-specific or index-agnostic.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+track: "A"
+mechanism_family: 1
+trial_family: "credit_lead_lag"
+family_trial_number: 5
+
+approved_at: "2026-03-30"
+approved_by: "quant-researcher"

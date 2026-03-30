@@ -1,0 +1,44 @@
+# Mandate: vcit-qqq-credit-lead
+# Fixed Income / Credit Cycle Signals — Family 1
+
+mandate_id: "vcit-qqq-credit-lead-M1"
+strategy_slug: "vcit-qqq-credit-lead"
+created_at: "2026-03-30"
+
+objective: >
+  Use intermediate-term investment-grade corporate bond returns (VCIT 5-day
+  return) as a leading indicator for QQQ equity direction. VCIT focuses on
+  the 5-10 year corporate maturity range — intermediate duration, high credit
+  quality, and a different rate sensitivity profile than LQD.
+
+mechanism: >
+  VCIT (Vanguard Intermediate-Term Corporate Bond ETF) captures credit
+  conditions in the belly of the corporate curve (5-10yr). This duration
+  range is particularly sensitive to growth expectations and credit spreads.
+  When VCIT rises, intermediate corporate credit is healthy — a positive
+  leading signal for growth-oriented equities (QQQ). Same Family 1
+  mechanism with a different segment of the credit curve as the signal.
+
+universe:
+  equity: "QQQ"
+  signal: "VCIT"
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Tests whether intermediate corporate credit signal leads QQQ better than
+  the long-duration LQD signal. Different duration exposure = different
+  information content.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.80
+
+track: "A"
+mechanism_family: 1
+trial_family: "credit_lead_lag"
+family_trial_number: 6
+
+approved_at: "2026-03-30"
+approved_by: "quant-researcher"

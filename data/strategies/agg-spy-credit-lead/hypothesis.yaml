@@ -1,0 +1,49 @@
+# Hypothesis: agg-spy-credit-lead
+
+slug: agg-spy-credit-lead
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  AGG (broad investment-grade bond ETF) 5-day return is a leading indicator for
+  SPY equity direction. Holding SPY when AGG has gained >= 0.3% over 5 days
+  (credit healthy) and exiting to cash when AGG has dropped >= -0.3% (credit stress)
+  generates Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  Cross-asset information flow: broad bond markets aggregate credit risk pricing
+  faster than equity markets. AGG rising → healthy broad credit conditions → equity
+  likely to follow. AGG falling → emerging credit stress → early warning of equity
+  risk-off by 1-5 days. AGG covers investment-grade Treasuries, agencies, and
+  corporates, making it a broad-market credit health barometer.
+
+testable_prediction: >
+  IF AGG daily return is negative by > 1 std dev (spread widening proxy),
+  THEN SPY return over the next 3 days will be negative with p > 0.55.
+  Measured by: t-test on forward return distribution conditional on signal.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Forward 3-day SPY return is not significantly negative after AGG stress (p > 0.05)
+  2. Sharpe < 0.3 after transaction costs
+  3. Effect disappears in post-2020 subsample (structural break)
+  4. DSR < 0.95 or CPCV OOS/IS <= 0
+
+parameters:
+  signal_etf: AGG
+  equity_etf: SPY
+  lookback_days: 5
+  entry_threshold: 0.003
+  exit_threshold: -0.003
+  forward_return_horizon: 3
+
+data_requirements:
+  - AGG daily OHLCV (2010-present)
+  - SPY daily OHLCV (2010-present)
+
+anti_overfitting_notes: >
+  Parameters chosen from economic theory (credit leads equity ~1-5 days per literature).
+  Threshold set at 0.3% matching AGG's typical daily noise floor.
+  No in-sample optimization of lookback or threshold. Template derived from
+  lqd-spy-credit-lead which passed all robustness gates (Sharpe=1.250, DSR=0.9950).
