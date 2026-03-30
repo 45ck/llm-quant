@@ -221,6 +221,7 @@ class AssetEntry(BaseModel):
     sector: str
     asset_class: str = "equity"  # equity, crypto, forex
     tradeable: bool = True
+    cftc_code: str | None = None  # 6-digit CFTC code for COT overlay (GLD, SLV, USO)
 
 
 # Backward-compatible alias

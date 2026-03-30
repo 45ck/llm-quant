@@ -190,6 +190,7 @@ name = "Gold"
 category = "commodity"
 sector = "precious_metals"
 asset_class = "commodity"
+cftc_code = "088691"
 
 [[assets]]
 symbol = "SLV"
@@ -197,6 +198,7 @@ name = "Silver"
 category = "commodity"
 sector = "precious_metals"
 asset_class = "commodity"
+cftc_code = "084691"
 
 [[assets]]
 symbol = "USO"
@@ -204,6 +206,7 @@ name = "Crude Oil"
 category = "commodity"
 sector = "energy"
 asset_class = "commodity"
+cftc_code = "067651"
 
 [[assets]]
 symbol = "VIX"
