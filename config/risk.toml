@@ -148,6 +148,20 @@ max_scalar = 2.0           # cap at 2x leverage
 min_scalar = 0.1           # floor at 10% of base size
 enabled = true
 
+# =============================================================================
+# CVaR — Filtered Historical Simulation (Barone-Adesi 1999)
+# GARCH(1,1)-filtered residuals rescaled to current vol.
+# Fallback: EWMA-weighted historical simulation (lambda=0.94).
+# Enforcement: proportional scaling, NOT binary block (except > 2× limit).
+# =============================================================================
+
+[cvar]
+confidence_level = 0.95   # 95% CVaR (Expected Shortfall)
+lookback_days = 504        # 2 years of trading days
+ewma_lambda = 0.94         # RiskMetrics decay factor for EWMA fallback
+n_bootstrap = 1000         # bootstrap samples for confidence interval
+cvar_limit_pct = 0.05      # max 5% 1-day portfolio CVaR; > 2× triggers hard block
+
 [execution_costs]
 us_equity_bps = 4      # 2-6 bps round-trip (SPY, QQQ, sector ETFs)
 international_bps = 12 # 7-18 bps (EFA, VGK, EWJ)

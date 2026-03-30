@@ -551,6 +551,117 @@ def check_portfolio_correlation_dcc(
     )
 
 
+def check_cvar_limit(
+    portfolio_returns: "pl.Series",
+    proposed_trade_size: float,
+) -> RiskCheckResult:
+    """Check CVaR constraint using Filtered Historical Simulation.
+
+    Runs :class:`~llm_quant.risk.cvar.FhsCvarEstimator` on the portfolio
+    return series and returns a scaling recommendation when CVaR exceeds
+    the configured limit.
+
+    Enforcement is **proportional** (CPPI-style), not binary:
+    - ``cvar_95 > 2 × cvar_limit_pct``: FAIL (hard block — extreme tail risk)
+    - ``cvar_95 > cvar_limit_pct``: WARNING with scaling recommendation
+    - ``cvar_95 <= cvar_limit_pct``: PASS
+
+    Parameters
+    ----------
+    portfolio_returns:
+        Polars Series of daily portfolio returns (most recent last).
+        Typically 504 days (2 years) for reliable FHS estimates.
+    proposed_trade_size:
+        Proposed trade size as a fraction of NAV (informational — used in
+        the scaling message to give an actionable recommendation).
+
+    Returns
+    -------
+    RiskCheckResult
+        - ``passed=False`` when CVaR exceeds 2× limit (hard block).
+        - ``passed=True`` with WARNING message when 1×–2× limit (scale down).
+        - ``passed=True`` when within limit (clean pass).
+        ``current_value`` carries the CVaR estimate; ``limit_value`` is the
+        configured limit.
+    """
+    import polars as pl  # noqa: PLC0415 — deferred to avoid circular import
+
+    from llm_quant.risk.cvar import CvarConfig, FhsCvarEstimator  # noqa: PLC0415
+
+    if not isinstance(portfolio_returns, pl.Series) or len(portfolio_returns) < 30:
+        return RiskCheckResult(
+            passed=True,
+            rule="cvar_limit",
+            message=(
+                "CVaR check skipped: insufficient return history "
+                f"({len(portfolio_returns) if isinstance(portfolio_returns, pl.Series) else 0} obs, need >= 30)."
+            ),
+            current_value=0.0,
+            limit_value=CvarConfig().cvar_limit_pct,
+        )
+
+    try:
+        config = CvarConfig()
+        estimator = FhsCvarEstimator(config)
+        result = estimator.estimate(portfolio_returns)
+    except Exception:  # noqa: BLE001
+        logger.warning("CVaR estimation failed — check skipped.", exc_info=True)
+        return RiskCheckResult(
+            passed=True,
+            rule="cvar_limit",
+            message="CVaR estimation failed — check skipped (advisory).",
+            current_value=0.0,
+            limit_value=CvarConfig().cvar_limit_pct,
+        )
+
+    limit = config.cvar_limit_pct
+    cvar = result.cvar_95
+    sf = result.scaling_factor
+    scaled_size = proposed_trade_size * sf
+
+    hard_block_threshold = 2.0 * limit
+
+    if cvar > hard_block_threshold:
+        return RiskCheckResult(
+            passed=False,
+            rule="cvar_limit",
+            message=(
+                f"[{result.method_used}] CVaR {cvar:.2%} exceeds hard limit "
+                f"({hard_block_threshold:.2%} = 2× {limit:.2%}). "
+                f"Worst stress scenario: {result.worst_stress_scenario} "
+                f"({result.stress_cvar:.2%}). Trade blocked."
+            ),
+            current_value=cvar,
+            limit_value=hard_block_threshold,
+        )
+
+    if cvar > limit:
+        return RiskCheckResult(
+            passed=True,
+            rule="cvar_limit",
+            message=(
+                f"[{result.method_used}] CVaR {cvar:.2%} > limit {limit:.2%}. "
+                f"Scale position to {sf:.0%} of proposed size "
+                f"(proposed {proposed_trade_size:.2%} → recommended {scaled_size:.2%}). "
+                f"CI: [{result.cvar_ci_lower:.2%}, {result.cvar_ci_upper:.2%}]. "
+                f"Worst stress: {result.worst_stress_scenario} ({result.stress_cvar:.2%})."
+            ),
+            current_value=cvar,
+            limit_value=limit,
+        )
+
+    return RiskCheckResult(
+        passed=True,
+        rule="cvar_limit",
+        message=(
+            f"[{result.method_used}] CVaR {cvar:.2%} within limit {limit:.2%}. "
+            f"CI: [{result.cvar_ci_lower:.2%}, {result.cvar_ci_upper:.2%}]."
+        ),
+        current_value=cvar,
+        limit_value=limit,
+    )
+
+
 def check_drawdown_limit(
     current_nav: float,
     peak_nav: float,

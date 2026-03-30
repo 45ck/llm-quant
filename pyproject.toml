@@ -32,6 +32,7 @@ dependencies = [
     "pyyaml>=6.0.0",
     "numpy>=1.26.0",
     "empyrical-reloaded>=0.5.5",
+    "alphalens-reloaded>=0.4.6",
     "arch>=7.0",
     "Riskfolio-Lib>=6.0",
     "hmmlearn>=0.3.0",
