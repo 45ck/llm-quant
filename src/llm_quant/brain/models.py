@@ -5,6 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from llm_quant.signals.tsmom import TsmomSignal
 
 
 class Action(StrEnum):
@@ -114,3 +118,5 @@ class MarketContext:
     # Task llm-quant-773: HMM regime detection confidence
     regime_confidence: float = 0.0  # HMM state probability (0–1)
     hmm_regime_fallback: bool = True  # True if HMM fell back to heuristic
+    # Task llm-quant-rbu: multi-lookback TSMOM signals (symbol → TsmomSignal)
+    tsmom_signals: dict[str, "TsmomSignal"] | None = None

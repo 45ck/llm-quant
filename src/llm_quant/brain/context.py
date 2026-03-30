@@ -534,6 +534,70 @@ def _get_hmm_regime(
         return None, 0.5, True
 
 
+def _get_tsmom_signals(
+    conn: duckdb.DuckDBPyConnection,
+    symbols: list[str],
+) -> "dict[str, Any] | None":
+    """Compute multi-lookback TSMOM signals for all universe symbols.
+
+    Fetches 252+ days of close prices from market_data_daily, computes
+    blended 3-lookback TSMOM signals with vol scaling, and returns a dict
+    of {symbol: TsmomSignal}.  Returns None on any failure or when price
+    data is unavailable.
+
+    Requires at least 253 rows per symbol (252 lookback + 1 current) for
+    full signal coverage; symbols with fewer rows receive partial signals.
+    """
+    if not symbols:
+        return None
+
+    try:
+        import polars as pl  # noqa: PLC0415
+
+        from llm_quant.signals.tsmom import TsmomCalculator  # noqa: PLC0415
+
+        placeholders = ", ".join(["?"] * len(symbols))
+        rows = conn.execute(
+            f"""
+            SELECT symbol, date, close
+            FROM market_data_daily
+            WHERE symbol IN ({placeholders})
+              AND close IS NOT NULL
+            ORDER BY symbol, date
+            """,
+            symbols,
+        ).fetchall()
+
+        if not rows:
+            logger.warning("TSMOM: no price history found for universe symbols")
+            return None
+
+        prices_df = pl.DataFrame(
+            rows,
+            schema={"symbol": pl.Utf8, "date": pl.Date, "close": pl.Float64},
+            orient="row",
+        )
+
+        calc = TsmomCalculator()
+        sig_list = calc.compute_batch(prices_df)
+
+        result = {sig.symbol: sig for sig in sig_list}
+        logger.info(
+            "TSMOM signals computed for %d / %d symbols "
+            "(long=%d, short=%d, flat=%d)",
+            len(result),
+            len(symbols),
+            sum(1 for s in sig_list if s.direction == "long"),
+            sum(1 for s in sig_list if s.direction == "short"),
+            sum(1 for s in sig_list if s.direction == "flat"),
+        )
+        return result if result else None
+
+    except Exception:
+        logger.warning("TSMOM signal computation failed; skipping", exc_info=True)
+        return None
+
+
 def _get_cot_crowding(
     universe_symbols: list[str],
     cot_stale: bool = False,
@@ -795,6 +859,9 @@ def build_market_context(
             asset.symbol, asset.asset_class
         )
 
+    # llm-quant-rbu: multi-lookback TSMOM signals with vol scaling
+    tsmom_signals = _get_tsmom_signals(conn, universe_symbols)
+
     from datetime import datetime
 
     today = datetime.now(tz=UTC).date()
@@ -821,6 +888,7 @@ def build_market_context(
         execution_costs=execution_costs if execution_costs else None,
         regime_confidence=round(regime_confidence, 4),
         hmm_regime_fallback=hmm_regime_fallback,
+        tsmom_signals=tsmom_signals,
     )
 
     logger.info(

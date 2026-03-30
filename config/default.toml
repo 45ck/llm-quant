@@ -27,3 +27,11 @@ credit_spread_silent_stress_vix_cap = 20.0  # VIX must be below this for silent_
 hmm_lookback_days = 130
 hmm_confidence_threshold = 0.65
 hmm_enabled = true
+
+[tsmom]
+lookbacks = [21, 63, 252]
+blend_weights = [0.333, 0.333, 0.334]
+vol_target = 0.12
+vol_window = 126
+max_vol_scalar = 2.0
+flat_threshold = 0.2
