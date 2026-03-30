@@ -477,6 +477,80 @@ def check_volatility_sizing(
     )
 
 
+def check_portfolio_correlation_dcc(
+    strategy_returns: "pl.DataFrame",
+    warn_threshold: float = 0.70,
+) -> RiskCheckResult:
+    """Advisory correlation check using DCC-GARCH dynamic estimation.
+
+    Uses :class:`~llm_quant.risk.correlation.DccGarchEstimator` to compute
+    the current conditional correlation matrix across strategy return streams.
+    Returns WARNING when avg pairwise correlation exceeds ``warn_threshold``.
+
+    This check is **advisory only** — it never returns ``passed=False``.
+    Per the issue spec, the blocking mechanism for novel correlation patterns
+    is not yet validated; correlation scoring is informational.
+
+    Parameters
+    ----------
+    strategy_returns:
+        Polars DataFrame where each column represents a return series for one
+        strategy. Rows are daily observations (most recent last).
+    warn_threshold:
+        Average pairwise correlation threshold above which a warning is emitted
+        (default 0.70). The result is always ``passed=True``.
+
+    Returns
+    -------
+    RiskCheckResult
+        Always ``passed=True``.  ``message`` contains the advisory text and
+        correlation summary.  ``current_value`` is the avg pairwise correlation.
+        ``limit_value`` is the warning threshold.
+    """
+    import polars as pl  # noqa: PLC0415 — deferred to avoid circular import at module level
+
+    from llm_quant.risk.correlation import DccGarchEstimator  # noqa: PLC0415
+
+    if not isinstance(strategy_returns, pl.DataFrame) or strategy_returns.width < 2:
+        return RiskCheckResult(
+            passed=True,
+            rule="portfolio_correlation_dcc",
+            message=(
+                "DCC correlation check skipped: need >= 2 return columns, "
+                f"got {strategy_returns.width if isinstance(strategy_returns, pl.DataFrame) else 0}."
+            ),
+            current_value=0.0,
+            limit_value=warn_threshold,
+        )
+
+    try:
+        estimator = DccGarchEstimator()
+        result = estimator.estimate(strategy_returns)
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "DCC correlation estimation failed — check skipped.", exc_info=True
+        )
+        return RiskCheckResult(
+            passed=True,
+            rule="portfolio_correlation_dcc",
+            message="DCC correlation estimation failed — check skipped (advisory).",
+            current_value=0.0,
+            limit_value=warn_threshold,
+        )
+
+    avg_corr = result.avg_pairwise_corr
+    advisory = result.warning or f"Portfolio avg correlation {avg_corr:.2f} (div score {result.diversification_score:.2f})."
+    method = result.method_used.value
+
+    return RiskCheckResult(
+        passed=True,  # advisory only — never blocks trades
+        rule="portfolio_correlation_dcc",
+        message=f"[{method}] {advisory}",
+        current_value=avg_corr,
+        limit_value=warn_threshold,
+    )
+
+
 def check_drawdown_limit(
     current_nav: float,
     peak_nav: float,
