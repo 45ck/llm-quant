@@ -42,7 +42,7 @@ TRADING_DAYS = 252
 
 STRATEGY_EXPERIMENTS: dict[str, str] = {
     "soxx-qqq-lead-lag": "57fba00d",
-    "lqd-spy-credit-lead": "b0588e6d",
+    "lqd-spy-credit-lead": "6225bd8a",
     "agg-spy-credit-lead": "66bec9a0",
     "hyg-spy-5d-credit-lead": "1736ac56",
     "agg-qqq-credit-lead": "eaf37299",
