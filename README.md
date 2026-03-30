@@ -1,8 +1,8 @@
 # llm-quant
 
-LLM-powered systematic trading research program running **two parallel alpha tracks** — a conservative base (Defensive Alpha) and a high-return research track (Aggressive Alpha). Claude acts as portfolio manager, researcher, and quant analyst.
+LLM-powered systematic trading research program running **four parallel alpha tracks** across US equities, fixed income, commodities, crypto, and forex. Claude acts as portfolio manager, researcher, and quant analyst over a $100k paper trading portfolio spanning 39 tradeable assets.
 
-## Dual-Track Research Program
+## Four-Track Research Program
 
 ```
 Track A — Defensive Alpha      Track B — Aggressive Alpha
@@ -11,10 +11,18 @@ Target: 15-25% CAGR            Target: 40-80% CAGR
 MaxDD gate: < 15%              MaxDD gate: < 30%
 Sharpe gate: > 0.80            Sharpe gate: > 1.0
 Portfolio weight: 70%          Portfolio weight: 30%
-Status: 11 strategies active   Status: research phase
+Status: 11 strategies paper    Status: research phase
+
+Track C — Structural Arb       Track D — Sprint Alpha
+─────────────────────────      ────────────────────────────
+Target: risk-free + alpha      Target: 60-120% CAGR
+MaxDD gate: < 10%              MaxDD gate: < 40%
+Sharpe gate: > 1.50            Sharpe gate: > 0.80
+Benchmark: T-bills             Benchmark: 100% TQQQ
+Status: research (4/17 gates)  Status: experimental (backtest)
 ```
 
-**Integrity gates are the same on both tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
+**Integrity gates are the same on all tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
 anti-overfitting controls, not risk controls, and are non-negotiable.
 
 See [research-tracks.md](docs/governance/research-tracks.md),
@@ -23,21 +31,22 @@ See [research-tracks.md](docs/governance/research-tracks.md),
 
 ## How It Works
 
-1. **Fetch** daily OHLCV data for 39 liquid US ETFs + crypto via Yahoo Finance
-2. **Compute** technical indicators (SMA, RSI, MACD, ATR, rolling correlation) using Polars
-3. **Send** market context + portfolio state to Claude as a structured prompt
+1. **Fetch** daily OHLCV + macro data (FRED, COT, FOMC) for 39 liquid assets via Yahoo Finance
+2. **Compute** indicators (SMA, RSI, MACD, ATR, TSMOM) + regime detection (HMM, inflation 2x2) using Polars
+3. **Send** market context + portfolio state + regime signals to Claude as a structured prompt
 4. **Receive** JSON trade decisions with regime analysis and per-signal reasoning
-5. **Execute** paper trades after pre-trade risk checks (7 automated limits)
+5. **Execute** paper trades after pre-trade risk checks (14 automated limits + CVaR constraints)
 6. **Track** everything in DuckDB — trades, decisions, portfolio snapshots, hash chain
 
 ## Research Lab Results
 
-This system runs a **133-hypothesis quantitative research lab** — every strategy passes through a 5-gate robustness filter before any capital is committed.
+This system runs a **133-hypothesis quantitative research lab** across 8 mechanism families — every strategy passes through a 5-gate robustness filter before any capital is committed.
 
 ### The Funnel (Track A)
 
 ```
-133  hypotheses in scope (across 16 mandate categories)
+133  hypotheses in scope (across 8 mechanism families)
+ 94  strategy directories with lifecycle artifacts
  68  strategy variants backtested (5-year window, 2022-2026)
  11  passed all 5 robustness gates                           (16% pass rate)
  11  currently in paper trading
@@ -46,13 +55,13 @@ This system runs a **133-hypothesis quantitative research lab** — every strate
 
 ### Gate Comparison by Track
 
-| Gate | Track A (Defensive) | Track B (Aggressive) | Purpose |
-|------|---------------------|---------------------|---------|
-| Sharpe Ratio | > 0.80 | > 1.00 | Alpha exists and is meaningful |
-| Max Drawdown | < 15% | < 30% | Portfolio-safe risk profile |
-| DSR (Deflated Sharpe) | >= 0.95 | >= 0.95 | Anti-overfitting — same on both tracks |
-| CPCV OOS/IS | > 0 | > 0 | Out-of-sample generalization — same on both tracks |
-| Perturbation stability | >= 3/5 | >= 3/5 | Parameter robustness — same on both tracks |
+| Gate | Track A | Track B | Track C | Track D | Purpose |
+|------|---------|---------|---------|---------|---------|
+| Sharpe Ratio | > 0.80 | > 1.00 | > 1.50 | > 0.80 | Alpha meaningful |
+| Max Drawdown | < 15% | < 30% | < 10% | < 40% | Risk profile |
+| DSR | >= 0.95 | >= 0.95 | >= 0.95 | >= 0.90 | Anti-overfitting |
+| CPCV OOS/IS | > 0 | > 0 | > 0 | > 0 | OOS generalization |
+| Perturbation | >= 3/5 | >= 3/5 | >= 3/5 | >= 3/5 | Parameter robustness |
 
 ### Passing Strategies (11 of 68 tested)
 
@@ -84,7 +93,9 @@ Running the equal-weight portfolio as 11 separate strategies overstates diversif
 | Estimated equal-weight Sharpe | ~2.0 | ~2.3 |
 
 The SPY overnight momentum strategy (C7) is the only mechanistically distinct passer —
-average correlation 0.386 with the credit-equity family.
+average correlation 0.386 with the credit-equity family. GLD-SLV v4 has the lowest correlation
+(avg rho = 0.051) but **fails 2/3 fraud detectors** — mechanism inversion shows it captures
+momentum, not mean-reversion. Do not promote until signal logic is reworked.
 
 ### What Gets Rejected and Why
 
@@ -108,7 +119,7 @@ average correlation 0.386 with the credit-equity family.
 | Benchmark | — | 60/40 SPY/TLT | 100% SPY |
 
 > Updated daily via [automated reports](reports/).
-> Research lab results updated 2026-03-26.
+> Research lab results updated 2026-03-31.
 
 ## Reports
 
@@ -178,29 +189,57 @@ pq trades
 
 ```
 src/llm_quant/
-├── cli.py          # Typer CLI (pq command)
-├── config.py       # Pydantic config from TOML
-├── data/           # Market data pipeline
-│   ├── fetcher.py  # Yahoo Finance downloader
-│   ├── store.py    # DuckDB read/write layer
-│   ├── indicators.py # SMA, RSI, MACD, ATR
-│   └── universe.py # ETF universe management
-├── brain/          # LLM integration
-│   ├── engine.py   # Claude API signal engine
-│   ├── prompts.py  # Jinja2 prompt templates
-│   ├── parser.py   # JSON response parser
-│   ├── context.py  # Market context builder
-│   └── models.py   # Domain dataclasses
-├── trading/        # Paper trading
-│   ├── portfolio.py # Portfolio state
-│   ├── executor.py # Trade execution
-│   ├── ledger.py   # Trade logging
-│   └── performance.py # Metrics (Sharpe, drawdown)
-├── risk/           # Pre-trade risk
-│   ├── manager.py  # Risk check orchestrator
-│   └── limits.py   # Individual limit checks
+├── cli.py              # Typer CLI (pq command)
+├── config.py           # Pydantic config from TOML
+├── data/               # Market data pipeline
+│   ├── fetcher.py      # Yahoo Finance downloader
+│   ├── store.py        # DuckDB read/write layer
+│   ├── indicators.py   # SMA, RSI, MACD, ATR + realized variance + vol scalar
+│   ├── universe.py     # ETF universe management
+│   ├── fred_fetcher.py # FRED macro data (T10Y2Y, UNRATE, CPI, breakevens)
+│   └── cot_fetcher.py  # CFTC Commitments of Traders (156-week lookback)
+├── brain/              # LLM integration
+│   ├── engine.py       # Claude API signal engine
+│   ├── prompts.py      # Jinja2 prompt templates
+│   ├── parser.py       # JSON response parser
+│   ├── context.py      # Market context builder (credit, VIX, COT, TSMOM, regime)
+│   └── models.py       # Domain dataclasses
+├── regime/             # Market regime detection
+│   ├── hmm.py          # 2-state HMM (risk_on/risk_off) — Nystrup et al.
+│   └── inflation.py    # 2x2 growth/inflation matrix (Bridgewater framework)
+├── signals/            # Signal generation
+│   └── tsmom.py        # Multi-lookback TSMOM with vol scaling (21/63/252d)
+├── analysis/           # Signal analysis
+│   └── ic_analysis.py  # alphalens IC/ICIR/decay analysis
+├── backtest/           # Strategy backtesting
+│   ├── engine.py       # Core backtest engine with meta-filters + vol targeting
+│   ├── robustness.py   # 8-gate robustness: DSR, CPCV, perturbation, MinTRL
+│   └── walk_forward.py # Anchored + rolling walk-forward validation (WF-OOS/IS gate)
+├── trading/            # Paper trading
+│   ├── portfolio.py    # Portfolio state
+│   ├── executor.py     # Trade execution with vol scaling
+│   ├── ledger.py       # Trade logging
+│   └── performance.py  # Metrics via empyrical (Sharpe, Sortino, drawdown, Calmar)
+├── risk/               # Pre-trade risk (14 checks)
+│   ├── manager.py      # Risk check orchestrator (Track A/B/C/D aware)
+│   ├── limits.py       # Individual limit checks + ATR sizing + CVaR
+│   ├── correlation.py  # DCC-GARCH dynamic correlation (EWMA fallback)
+│   └── cvar.py         # Filtered Historical Simulation CVaR + stress scenarios
+├── surveillance/       # Post-trade governance (7 detectors + kill switches)
+│   ├── scanner.py      # Full surveillance scan
+│   ├── track_c_detectors.py  # Track C kill switches (5 types)
+│   └── track_d_monitor.py    # Track D hold period + VIX + beta decay monitors
+├── arb/                # Structural arbitrage (Track C)
+│   ├── detector.py     # Polymarket/Kalshi arb detection
+│   ├── scanner.py      # Multi-venue arb scanner
+│   ├── funding_rates.py # Crypto perpetual funding rate capture
+│   └── gamma_client.py # Polymarket CLOB API client
+├── nlp/                # Text/NLP signals (Family 6)
+│   ├── text_classifier.py  # Claude-powered sentence classification
+│   ├── edgar_fetcher.py    # SEC EDGAR 10-K/MD&A extraction
+│   └── fomc_fetcher.py     # FOMC minutes hedging language scorer
 └── db/
-    └── schema.py   # DuckDB schema
+    └── schema.py       # DuckDB schema + hash chain integrity
 ```
 
 ## Research Methodology
@@ -216,9 +255,11 @@ Statistical rigor follows institutional standards documented in
 - **Spec freeze before backtest** — Hypothesis pre-registered, no HARKing
 - **Append-only experiment registry** — Every trial recorded, no selective reporting
 
-Current implementation gaps tracked in
-[docs/research/implementation-gaps.md](docs/research/implementation-gaps.md):
-shuffled signal fraud detector (P1, **now implemented** in `robustness.py`), HRP portfolio weights (P2), volatility targeting (P2), portfolio correlation gate (P2), marginal SR contribution gate (P2).
+Previously tracked implementation gaps are now mostly resolved:
+shuffled signal fraud detector (**implemented**), HRP portfolio weights (**implemented** via Riskfolio-Lib),
+volatility targeting (**implemented** via 126d realized variance), portfolio correlation gate (**implemented**
+via DCC-GARCH), marginal SR contribution gate (**implemented**), walk-forward validation (**implemented**),
+CVaR constraints (**implemented** via Filtered Historical Simulation).
 
 Portfolio construction mathematics and the path to extreme Sharpe documented in
 [docs/research/extreme-sharpe-playbook.md](docs/research/extreme-sharpe-playbook.md):
@@ -228,26 +269,31 @@ three paths (breadth, uncorrelated stack, leverage), correlation reality table, 
 
 All config lives in `config/`:
 
-- **`default.toml`** — General settings (model, capital, lookback)
-- **`universe.toml`** — ETF universe (39 symbols across equities, bonds, commodities, crypto)
-- **`risk.toml`** — Risk limits — Track A (default) and `[track_b]` section
+- **`default.toml`** — General settings, regime config, TSMOM, market context
+- **`universe.toml`** — ETF universe (39 symbols, CFTC codes, COT eligibility flags)
+- **`risk.toml`** — Risk limits (Track A/B/C/D), ATR params, execution costs, vol scaling, CVaR
+- **`governance.toml`** — Surveillance thresholds, kill switch parameters
+- **`macro-briefing.md`** — Structured macro context for regime assessment
 - **`prompts/`** — Jinja2 templates for the Claude PM persona
 
 ## Risk Constraints
 
-Every trade passes through pre-trade risk checks. Limits differ by track:
+Every trade passes through 14 pre-trade risk checks. Limits differ by track:
 
-| Limit | Track A | Track B |
-|-------|---------|---------|
-| Max single trade | 2% of NAV | 3% of NAV |
-| Max position weight | 10% of NAV | 15% of NAV |
-| Max gross exposure | 200% of NAV | 200% of NAV |
-| Max net exposure | 100% of NAV | 100% of NAV |
-| Max sector concentration | 30% | 30% |
-| Min cash reserve | 5% of NAV | 3% of NAV |
-| Max drawdown circuit breaker | 15% | 30% |
-| Stop-loss required | Yes | Yes |
-| Max trades per session | 5 | 5 |
+| Limit | Track A | Track B | Track C | Track D |
+|-------|---------|---------|---------|---------|
+| Max single trade | 2% NAV | 3% NAV | $2,000 | 5% NAV |
+| Max position weight | 10% NAV | 15% NAV | — | 30-50% NAV |
+| Max gross exposure | 200% NAV | 200% NAV | — | — |
+| Max sector concentration | 30% | 30% | — | — |
+| Min cash reserve | 5% NAV | 3% NAV | — | — |
+| Max drawdown circuit breaker | 15% | 30% | 10% | 40% |
+| Stop-loss required | Yes | Yes | — | Yes |
+| Max hold period | — | — | — | 5 days |
+| ATR-based sizing | Yes | Yes | — | Yes |
+| CVaR constraint (95%) | 5% | 5% | — | — |
+| DCC-GARCH correlation | Advisory | Advisory | — | — |
+| Vol scaling (12% target) | Yes | Yes | — | — |
 
 ## Cost
 
@@ -255,12 +301,19 @@ Claude Sonnet at ~$0.01 per daily signal call. Running daily for a year costs ro
 
 ## Tech Stack
 
-- **Polars** — Fast DataFrames (no pandas)
+- **Polars** — Fast DataFrames (no pandas in core — pandas only at library boundaries)
 - **DuckDB** — Embedded analytics database
 - **yfinance** — Market data
-- **anthropic** — Claude API
+- **anthropic** — Claude API (Sonnet for signals, Opus for research)
 - **Typer + Rich** — Beautiful CLI
 - **Pydantic** — Config validation
+- **empyrical-reloaded** — Performance metrics (Sharpe, Sortino, Calmar, drawdown)
+- **hmmlearn** — Hidden Markov Model regime detection
+- **arch** — GARCH volatility modeling + DCC correlation
+- **Riskfolio-Lib** — Hierarchical Risk Parity portfolio construction
+- **alphalens-reloaded** — Signal IC/ICIR analysis
+- **quantstats** — Tearsheet generation
+- **scipy** — Ward linkage (HRP), bootstrap CI (CVaR)
 
 ## Testing
 
