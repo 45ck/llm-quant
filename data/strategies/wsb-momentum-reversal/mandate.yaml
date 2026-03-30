@@ -1,0 +1,14 @@
+slug: wsb-momentum-reversal
+track: B
+created: 2026-03-30
+status: hypothesis
+benchmark: SPY
+target_sharpe: 0.8
+target_max_dd: 0.25
+mechanism_family: 7
+universe: [SPY, QQQ, GME, AMC, BBBY]
+description: >
+  Reddit WSB mention spike (>3sigma) predicts mean-reverting -5% returns over 20 days.
+rationale: >
+  Retail hype-driven price spikes systematically revert. GameStop mechanics
+  demonstrated that coordinated retail buying creates temporary mispricing.

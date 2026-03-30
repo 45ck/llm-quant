@@ -1,0 +1,31 @@
+slug: tenk-riskfactor-bloat
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Firms with above-median year-over-year growth in 10-K risk factor word count
+  experience negative excess returns over the subsequent 6-12 months.
+mechanism: >
+  Legal counsel adds risk factor language defensively when aware of emerging
+  litigation, regulatory, or operational risks. Risk factor bloat is a
+  revealed risk signal from the firm's own legal team.
+testable_prediction: >
+  IF risk factor word count grows > 15% YoY (above cross-sectional median)
+  THEN 12-month forward excess return is negative.
+  Measured by IC between risk factor growth rank and forward return.
+falsification: >
+  Hypothesis is FALSE if:
+  1. IC between risk factor growth and 12m return is not significantly negative
+  2. Regulatory changes (e.g., new SEC rules) explain all word count growth
+  3. Effect disappears when controlling for sector and market cap
+parameters:
+  signal: risk_factor_word_count_yoy_growth
+  growth_threshold: 0.15
+  rebalance_frequency: annual
+  holding_period_months: 12
+data_requirements:
+  - 10-K risk factor sections from SEC EDGAR (2005-present)
+  - Stock returns
+anti_overfitting_notes: >
+  15% threshold is the historical cross-sectional median growth rate.
+  Annual rebalance. No parameter search performed.

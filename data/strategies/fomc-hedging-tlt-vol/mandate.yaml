@@ -1,0 +1,14 @@
+slug: fomc-hedging-tlt-vol
+track: A
+created: 2026-03-30
+status: hypothesis
+benchmark: SPY/TLT 60-40
+target_sharpe: 0.6
+target_max_dd: 0.15
+mechanism_family: 6
+universe: [TLT]
+description: >
+  High FOMC minutes hedging language density predicts increased 5-day TLT volatility.
+rationale: >
+  Fed uncertainty language (using fomc_fetcher.py hedging word detection) forecasts
+  bond market volatility. When Fed uses more hedging words, rate path is uncertain.

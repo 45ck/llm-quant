@@ -1,0 +1,14 @@
+slug: ceo-narcissism-short
+track: A
+created: 2026-03-30
+status: hypothesis
+benchmark: SPY/TLT 60-40
+target_sharpe: 0.5
+target_max_dd: 0.20
+mechanism_family: 6
+universe: [SPY, QQQ]
+description: >
+  High CEO letter I/we pronoun ratio predicts 12m stock underperformance.
+rationale: >
+  Chatterjee & Hambrick (2007): CEO narcissism (proxied by first-person pronoun
+  usage) correlates with strategic grandiosity and volatile performance.

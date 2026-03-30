@@ -1,0 +1,32 @@
+slug: fomc-hedging-tlt-vol
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  High hedging language density in FOMC minutes predicts elevated TLT realized
+  volatility over the subsequent 5 trading days.
+mechanism: >
+  FOMC hedging language (e.g., "might", "could", "uncertain") signals genuine
+  policy uncertainty. When the Fed is uncertain about its own next action,
+  bond markets exhibit higher volatility as traders reprice rate expectations.
+testable_prediction: >
+  IF FOMC minutes hedging word density is in top tertile
+  THEN TLT 5-day realized volatility exceeds its 63-day median by > 20%.
+  Measured by regression of 5d RV on hedging density, controlling for VIX.
+falsification: >
+  Hypothesis is FALSE if:
+  1. No significant relationship between hedging density and TLT vol
+  2. VIX subsumes the predictive power entirely
+  3. Effect is contemporaneous only (markets price it at release, no forward signal)
+parameters:
+  signal: fomc_hedging_density
+  forward_horizon: 5
+  vol_measure: realized_5d
+  hedging_words: 12  # from fomc_fetcher.py
+data_requirements:
+  - FOMC minutes text (from fomc_fetcher.py, already implemented)
+  - TLT daily OHLCV
+  - VIX daily (control variable)
+anti_overfitting_notes: >
+  Hedging word list is fixed (12 words from fomc_fetcher.py). 5-day horizon
+  aligns with inter-meeting policy uncertainty window. No threshold optimization.

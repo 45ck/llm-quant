@@ -1,0 +1,15 @@
+slug: tenk-readability-momentum
+track: A
+created: 2026-03-30
+status: hypothesis
+benchmark: SPY/TLT 60-40
+target_sharpe: 0.6
+target_max_dd: 0.20
+mechanism_family: 6
+universe: [SPY, QQQ]
+description: >
+  10-K readability (Flesch-Kincaid) inversely predicts 12m stock return.
+  Harder to read filings correlate with worse future outcomes.
+rationale: >
+  Obfuscation hypothesis (Li 2008, Loughran & McDonald 2014): firms with poor
+  performance use complex language to obscure bad results from investors.

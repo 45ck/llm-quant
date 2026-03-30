@@ -1,0 +1,35 @@
+slug: wsb-momentum-reversal
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Stocks experiencing a WSB mention spike (>3 standard deviations above
+  30-day baseline) exhibit mean-reverting returns of approximately -5%
+  over the subsequent 20 trading days.
+mechanism: >
+  Retail coordinated buying creates temporary demand-driven price spikes.
+  When retail interest fades, prices revert to fundamental values.
+  Short-selling friction delays the correction by ~5-20 days.
+testable_prediction: >
+  IF daily WSB mention count > 3sigma above 30-day rolling mean
+  THEN 20-day forward return < -3% with probability > 0.55.
+  Measured by t-test on conditional 20-day returns.
+falsification: >
+  Hypothesis is FALSE if:
+  1. Mean 20d return after spike is not significantly negative
+  2. Effect only applies to GME/AMC (not generalizable)
+  3. Short borrow cost exceeds expected return (not tradeable)
+  4. Signal frequency < 5 per year (insufficient for statistical power)
+parameters:
+  signal: wsb_mention_zscore
+  signal_threshold_std: 3.0
+  baseline_window: 30
+  hold_days: 20
+  direction: short
+data_requirements:
+  - Reddit WSB daily mention counts per ticker
+  - Stock daily OHLCV
+  - Short borrow rate data (optional, for cost adjustment)
+anti_overfitting_notes: >
+  3sigma threshold from standard anomaly detection. 20-day hold from microstructure
+  literature on retail-driven reversal timing. No parameter optimization.

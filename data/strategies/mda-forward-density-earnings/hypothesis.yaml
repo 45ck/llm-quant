@@ -1,0 +1,30 @@
+slug: mda-forward-density-earnings
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Firms with high forward-looking sentence density in MD&A section of their
+  most recent 10-K experience positive earnings surprises in the next quarter.
+mechanism: >
+  Managers with genuine positive private information are more willing to commit
+  to forward-looking statements. Forward guidance density is a revealed preference
+  signal of managerial confidence.
+testable_prediction: >
+  IF forward-looking sentence ratio in MD&A is in top quartile
+  THEN next quarterly earnings surprise > 0 with probability > 0.55.
+  Measured by logistic regression predicting earnings beat from NLP density.
+falsification: >
+  Hypothesis is FALSE if:
+  1. No significant relationship between FLS density and earnings surprise
+  2. Effect reverses sign in bear markets (managers bluff during downturns)
+  3. IC with 1-quarter forward return < 0.03
+parameters:
+  signal: forward_looking_sentence_ratio
+  section: md_and_a
+  rebalance: quarterly
+data_requirements:
+  - 10-K MD&A sections from SEC EDGAR
+  - Quarterly earnings surprise data
+anti_overfitting_notes: >
+  Uses existing nlp/text_classifier.py forward-looking sentence detection.
+  Quarterly rebalance matches filing frequency.

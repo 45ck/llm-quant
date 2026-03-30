@@ -1,0 +1,29 @@
+slug: tenk-boilerplate-short
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Firms with high cosine similarity between consecutive years' 10-K MD&A
+  sections underperform peers over the next 12 months.
+mechanism: >
+  High inter-year similarity implies minimal substantive disclosure update.
+  Managers of poorly performing firms recycle prior language rather than
+  providing new, actionable information.
+testable_prediction: >
+  IF cosine similarity between year T and T-1 MD&A is in top quintile
+  THEN 12-month forward return is below sector median.
+  Measured by IC between similarity rank and forward return.
+falsification: >
+  Hypothesis is FALSE if:
+  1. IC between similarity and 12m return is not significantly negative
+  2. Regulated industries (banking) show same pattern (boilerplate is regulatory)
+  3. Effect disappeared post-2015 (increased SEC plain English requirements)
+parameters:
+  signal: yoy_mda_cosine_similarity
+  rebalance_frequency: annual
+  embedding_model: tfidf
+data_requirements:
+  - 10-K MD&A (current year + prior year) from SEC EDGAR
+  - Stock returns
+anti_overfitting_notes: >
+  TF-IDF cosine similarity is parameter-free. Annual rebalance.

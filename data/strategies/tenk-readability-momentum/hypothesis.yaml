@@ -1,0 +1,32 @@
+slug: tenk-readability-momentum
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Stocks with low 10-K readability (high Flesch-Kincaid grade level) underperform
+  those with high readability over the subsequent 12 months.
+mechanism: >
+  Obfuscation hypothesis: managers of poorly performing firms use complex language
+  in mandatory filings to reduce information transparency. Investors with limited
+  processing capacity underreact to obscured negative information.
+testable_prediction: >
+  IF a firm's 10-K Flesch-Kincaid grade level is in the top quintile (hardest to read)
+  THEN its 12-month forward return will be below the cross-sectional median
+  with probability > 0.55.
+  Measured by IC between readability rank and forward 12m return.
+falsification: >
+  Hypothesis is FALSE if:
+  1. IC between readability and 12m return is not significantly negative (p > 0.05)
+  2. Effect disappears in large-cap universe (more analyst coverage = faster pricing)
+  3. Sharpe < 0.3 after annual rebalancing costs
+parameters:
+  signal: flesch_kincaid_grade_level
+  rebalance_frequency: annual
+  holding_period_months: 12
+  universe_filter: Russell_3000
+data_requirements:
+  - 10-K filings from SEC EDGAR (2005-present)
+  - Stock returns (CRSP or Yahoo Finance)
+anti_overfitting_notes: >
+  Signal is directly from raw text metric (no optimization). Annual rebalance
+  aligns with filing frequency. No threshold tuning.

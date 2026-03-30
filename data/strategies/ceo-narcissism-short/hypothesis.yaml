@@ -1,0 +1,28 @@
+slug: ceo-narcissism-short
+version: 1
+created: 2026-03-30
+status: untested
+statement: >
+  Firms whose CEO annual shareholder letters have a high I/we pronoun ratio
+  underperform peers over the subsequent 12 months.
+mechanism: >
+  CEO narcissism manifests in self-referential language. Narcissistic CEOs
+  make riskier acquisitions, overpay, and deliver more volatile earnings.
+testable_prediction: >
+  IF CEO letter I/we ratio is in top decile (most self-referential)
+  THEN 12-month forward return underperforms sector median by > 2%.
+  Measured by t-test on excess returns conditional on I/we ratio decile.
+falsification: >
+  Hypothesis is FALSE if:
+  1. Mean excess return is not significantly negative (p > 0.10)
+  2. Effect does not survive sector-neutral construction
+  3. Signal has zero IC with any forward return horizon
+parameters:
+  signal: ceo_letter_i_we_ratio
+  rebalance_frequency: annual
+  holding_period_months: 12
+data_requirements:
+  - CEO shareholder letters (proxy statements, annual reports)
+  - Stock returns by firm
+anti_overfitting_notes: >
+  Binary pronoun count metric. No threshold optimization. Annual signal.

@@ -1,0 +1,14 @@
+slug: tenk-riskfactor-bloat
+track: A
+created: 2026-03-30
+status: hypothesis
+benchmark: SPY/TLT 60-40
+target_sharpe: 0.5
+target_max_dd: 0.20
+mechanism_family: 6
+universe: [SPY, QQQ]
+description: >
+  Year-over-year growth in 10-K risk factor section word count predicts downside returns.
+rationale: >
+  Kravet & Muslu (2013): risk factor section expansion reflects legal defensiveness
+  and anticipation of adverse outcomes.

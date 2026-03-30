@@ -1,0 +1,52 @@
+slug: fomc-pre-drift-spy
+version: 1
+created: 2026-03-30
+status: untested
+
+statement: >
+  SPY returns in the 24 hours before FOMC announcements are significantly positive
+  and exceed unconditional expected returns, conditioned on VIX < 25 and Fed in
+  neutral or cutting rate cycle.
+
+mechanism: >
+  Risk premium resolution: uncertainty about Fed policy creates demand for hedges
+  before FOMC. As announcement approaches, uncertainty resolves and hedges are
+  unwound, creating predictable buying pressure. Structural microstructure effect,
+  not a prediction about announcement outcome.
+
+testable_prediction: >
+  IF today is 1 business day before a scheduled FOMC announcement
+  AND VIX < 25 AND most recent Fed action was cut or hold
+  THEN SPY return from today close to tomorrow close will be positive
+  with probability > 0.55 and mean excess return > 0.3%.
+  Measured by binomial test on 50+ pre-FOMC observations.
+
+falsification: >
+  Hypothesis is FALSE if:
+  1. Mean pre-FOMC 1d return is not significantly positive (p > 0.05)
+  2. Effect disappears after 2018 (arbitraged away post-publication)
+  3. Hike cycle conditioning does not restore the effect
+  4. Sharpe < 0.3 after accounting for 8 trades/year limited sample
+
+prior_evidence:
+  - paper: "Lucca, Moench (2015) Pre-FOMC Announcement Drift"
+    finding: "4.5x average return in 24h window vs other days (1994-2011)"
+    concern: "Published 2015, potentially arbitraged away"
+  - paper: "Cieslak, Morse, Vissing-Jorgensen (2019)"
+    finding: "Effect persists via stock market-Fed communication channel"
+
+parameters:
+  signal: fomc_eve
+  condition_vix_max: 25
+  condition_rate_cycle: [neutral, cutting]
+  hold_days: 1
+
+data_requirements:
+  - SPY daily OHLCV (2000-present)
+  - FOMC meeting calendar (federalreserve.gov)
+  - VIX daily
+  - Fed funds rate changes (FRED FEDFUNDS)
+
+anti_overfitting_notes: >
+  Only 2 conditioning variables. VIX=25 from standard stress literature.
+  Rate cycle is binary. 8 trades/year over 15 years = ~120 observations.
