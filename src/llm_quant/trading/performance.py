@@ -10,8 +10,24 @@ import logging
 import math
 from datetime import date as date_type
 
+import sys
+import types
+
 import duckdb
+import pandas as pd
 import polars as pl
+
+# empyrical imports pandas_datareader at module level for benchmark fetching, but
+# pandas_datareader 0.9/0.10 breaks on pandas 3.x (deprecate_kwarg signature change).
+# We only use empyrical's stats functions, not its data-fetching helpers, so we
+# stub the broken sub-module before importing empyrical to avoid the ImportError.
+if "pandas_datareader" not in sys.modules:
+    _pdr_stub = types.ModuleType("pandas_datareader")
+    _pdr_data_stub = types.ModuleType("pandas_datareader.data")
+    sys.modules["pandas_datareader"] = _pdr_stub
+    sys.modules["pandas_datareader.data"] = _pdr_data_stub
+
+import empyrical  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -262,35 +278,44 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
         daily_returns_list = list(zip(dates_col, rets_col, strict=True))
 
         if returns_df.height >= 2:
-            mean_ret: float = returns_df["daily_return"].mean()  # type: ignore[assignment]
-            std_ret: float = returns_df["daily_return"].std()  # type: ignore[assignment]
+            # Convert Polars Series to pandas Series with datetime index for empyrical
+            returns_pd = pd.Series(
+                returns_df["daily_return"].to_list(),
+                index=pd.to_datetime(returns_df["date"].to_list()),
+                dtype=float,
+            )
 
-            if std_ret is not None and std_ret > 0.0:
-                sharpe_ratio = (mean_ret / std_ret) * math.sqrt(_TRADING_DAYS)
+            raw_sharpe = empyrical.sharpe_ratio(
+                returns_pd, risk_free=0.0, annualization=_TRADING_DAYS
+            )
+            sharpe_ratio = float(raw_sharpe) if raw_sharpe is not None and not math.isnan(raw_sharpe) else 0.0
 
-            # Sortino ratio: downside deviation from negative returns only
-            neg_returns = returns_df.filter(pl.col("daily_return") < 0.0)[
-                "daily_return"
-            ]
-            if neg_returns.len() > 0:
-                downside_dev: float = neg_returns.std()  # type: ignore[assignment]
-                if downside_dev is not None and downside_dev > 0.0:
-                    sortino_ratio = (mean_ret / downside_dev) * math.sqrt(_TRADING_DAYS)
+            raw_sortino = empyrical.sortino_ratio(
+                returns_pd, required_return=0.0, annualization=_TRADING_DAYS
+            )
+            if raw_sortino is not None and not math.isnan(raw_sortino) and not math.isinf(raw_sortino):
+                sortino_ratio = float(raw_sortino)
 
     # ------------------------------------------------------------------
     # 3. Maximum drawdown
     # ------------------------------------------------------------------
     max_drawdown: float = 0.0
+    _empyrical_returns_pd: pd.Series | None = None  # reused in section 3b
 
     if snap_df.height >= 2:
-        dd_df = snap_df.with_columns(
-            pl.col("nav").cum_max().alias("peak")
-        ).with_columns(
-            ((pl.col("nav") - pl.col("peak")) / pl.col("peak")).alias("drawdown")
+        # Build returns series — empyrical expects pandas Series with datetime index
+        _dd_df = snap_df.with_columns(
+            (pl.col("nav") / pl.col("nav").shift(1) - 1.0).alias("daily_return")
+        ).drop_nulls("daily_return")
+        _empyrical_returns_pd = pd.Series(
+            _dd_df["daily_return"].to_list(),
+            index=pd.to_datetime(_dd_df["date"].to_list()),
+            dtype=float,
         )
-        min_dd: float = dd_df["drawdown"].min()  # type: ignore[assignment]
-        if min_dd is not None:
-            max_drawdown = min_dd  # negative value (or zero)
+        raw_mdd = empyrical.max_drawdown(_empyrical_returns_pd)
+        # empyrical returns a negative value (or zero); preserve sign for downstream
+        if raw_mdd is not None and not math.isnan(raw_mdd):
+            max_drawdown = float(raw_mdd)
 
     # ------------------------------------------------------------------
     # 3b. Annualised return & Calmar ratio
@@ -301,8 +326,12 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
     if trading_days >= 2 and initial_capital > 0.0:
         annualized_return = (1.0 + total_return) ** (_TRADING_DAYS / trading_days) - 1.0
 
-        if max_drawdown != 0.0:
-            calmar_ratio = annualized_return / abs(max_drawdown)
+        if _empyrical_returns_pd is not None and len(_empyrical_returns_pd) >= 2:
+            raw_calmar = empyrical.calmar_ratio(
+                _empyrical_returns_pd, annualization=_TRADING_DAYS
+            )
+            if raw_calmar is not None and not math.isnan(raw_calmar) and not math.isinf(raw_calmar):
+                calmar_ratio = float(raw_calmar)
 
     # ------------------------------------------------------------------
     # 4. Trade-level statistics
