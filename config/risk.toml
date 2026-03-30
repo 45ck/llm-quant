@@ -134,6 +134,20 @@ max_funding_rate_pct = 0.50          # funding > 50 bps/day → funding reversal
 # "Entering XYZ costs ~N bps round-trip. Expected daily alpha must exceed this."
 # =============================================================================
 
+# =============================================================================
+# VOLATILITY SCALING — realized-variance-based position sizing adjustment
+# Scales BUY notionals so each position targets the same annualized vol.
+# Low-vol assets get a scalar > 1 (larger position); high-vol assets < 1.
+# Scalar is clipped to [min_scalar, max_scalar] to prevent extreme leverage.
+# =============================================================================
+
+[volatility_scaling]
+target_vol = 0.12          # 12% annualized target vol per position
+lookback_days = 126        # 6-month realized variance window
+max_scalar = 2.0           # cap at 2x leverage
+min_scalar = 0.1           # floor at 10% of base size
+enabled = true
+
 [execution_costs]
 us_equity_bps = 4      # 2-6 bps round-trip (SPY, QQQ, sector ETFs)
 international_bps = 12 # 7-18 bps (EFA, VGK, EWJ)

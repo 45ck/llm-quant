@@ -13,6 +13,74 @@ import polars as pl
 logger = logging.getLogger(__name__)
 
 
+def compute_realized_variance(
+    prices: pl.Series,
+    window: int = 126,
+) -> pl.Series:
+    """Compute annualized realized variance from a price series.
+
+    Uses log returns and a rolling variance window, annualized by 252 trading
+    days.  The first ``window`` values will be null (insufficient history).
+
+    Parameters
+    ----------
+    prices:
+        Series of asset prices (must be positive and ordered chronologically).
+    window:
+        Rolling window length in trading days (default: 126 ≈ 6 months).
+
+    Returns
+    -------
+    pl.Series
+        Annualized realized variance (dimensionless fraction²), same length as
+        *prices*.  Values for the warm-up period are null.
+    """
+    log_ret = (prices / prices.shift(1)).log()
+    rolling_var = log_ret.rolling_var(window_size=window, min_samples=window)
+    annualized = rolling_var * 252
+    return annualized.alias("realized_variance")
+
+
+def compute_vol_scalar(
+    prices: pl.Series,
+    target_vol: float = 0.12,
+    window: int = 126,
+    max_scalar: float = 2.0,
+) -> pl.Series:
+    """Compute a volatility scalar for position sizing.
+
+    Scales position sizes so that every position targets the same annualized
+    volatility contribution.  A low-vol asset gets a scalar > 1 (larger
+    position); a high-vol asset gets a scalar < 1 (smaller position).
+
+    The scalar is clipped to [0.1, max_scalar] to prevent extreme leverage or
+    near-zero allocations.
+
+    Parameters
+    ----------
+    prices:
+        Series of asset prices (positive, chronological order).
+    target_vol:
+        Target annualized volatility per position (default: 0.12 = 12%).
+    window:
+        Lookback window in trading days for realized variance (default: 126).
+    max_scalar:
+        Upper cap on the scalar — prevents excessive leverage on very low-vol
+        assets (default: 2.0 = 2x base size).
+
+    Returns
+    -------
+    pl.Series
+        Vol scalar series, clipped to [0.1, max_scalar].  Null where
+        realized variance is null (warm-up period).
+    """
+    realized_var = compute_realized_variance(prices, window=window)
+    realized_vol = realized_var.sqrt()
+    raw_scalar = pl.Series([target_vol] * len(realized_vol)) / realized_vol
+    clipped = raw_scalar.clip(lower_bound=0.1, upper_bound=max_scalar)
+    return clipped.alias("vol_scalar")
+
+
 def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     """Add technical-indicator columns to an OHLCV DataFrame.
 

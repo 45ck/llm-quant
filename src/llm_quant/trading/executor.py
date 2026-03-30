@@ -49,6 +49,7 @@ def execute_signals(
     signals: list[TradeSignal],
     prices: dict[str, float],
     nav: float,
+    vol_scalars: dict[str, float] | None = None,
 ) -> list[ExecutedTrade]:
     """Execute a batch of trade signals against *portfolio*.
 
@@ -66,6 +67,12 @@ def execute_signals(
         Latest prices keyed by symbol.
     nav:
         Portfolio NAV **before** this batch (used for weight calculations).
+    vol_scalars:
+        Optional mapping of symbol → volatility scalar (from
+        ``compute_vol_scalar``).  When provided, BUY notionals are multiplied
+        by the scalar before final sizing, so that each position targets the
+        same annualized volatility contribution.  Scalars should already be
+        clipped to [0.1, 2.0].  Defaults to 1.0 (no scaling) when absent.
 
     Returns
     -------
@@ -88,8 +95,15 @@ def execute_signals(
 
         trade: ExecutedTrade | None = None
 
+        # Resolve vol scalar for this symbol (1.0 = no adjustment)
+        vol_scalar: float = 1.0
+        if vol_scalars is not None and signal.action == Action.BUY:
+            vol_scalar = vol_scalars.get(symbol, 1.0)
+            if vol_scalar != 1.0:
+                logger.info("Vol scalar applied: %.2f for %s", vol_scalar, symbol)
+
         if signal.action == Action.BUY:
-            trade = _execute_buy(portfolio, signal, price, nav)
+            trade = _execute_buy(portfolio, signal, price, nav, vol_scalar=vol_scalar)
         elif signal.action == Action.SELL:
             trade = _execute_sell(portfolio, signal, price, nav)
         elif signal.action == Action.CLOSE:
@@ -125,9 +139,20 @@ def _execute_buy(
     signal: TradeSignal,
     price: float,
     nav: float,
+    vol_scalar: float = 1.0,
 ) -> ExecutedTrade | None:
-    """Buy (or add to) a position."""
-    target_notional = signal.target_weight * nav
+    """Buy (or add to) a position.
+
+    Parameters
+    ----------
+    vol_scalar:
+        Volatility scalar from ``compute_vol_scalar``.  Multiplied into the
+        proposed notional before share calculation, so low-vol assets receive
+        larger positions and high-vol assets receive smaller ones relative to
+        the base signal weight.  Clipped externally to [0.1, 2.0].
+        Defaults to 1.0 (no adjustment).
+    """
+    target_notional = signal.target_weight * nav * vol_scalar
     current_notional = 0.0
 
     existing = portfolio.positions.get(signal.symbol)
