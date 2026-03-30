@@ -28,6 +28,7 @@ performance:
   total_return: 0.0
   total_trades: 0
 
+# Paper trading gate criteria (must pass ALL before /promote)
 gate_criteria:
   min_days: 30
   min_trades: 10
@@ -35,18 +36,83 @@ gate_criteria:
   max_drawdown_limit: 0.15
   slippage_drift_limit: 5.0
 
-incidents: []
-daily_log: []
+# Operations checklist
+operations_tested:
+  data_fetching: true           # confirmed via yfinance fetch 2026-03-30
+  indicator_computation: true   # 5-day LQD returns computed and validated
+  signal_generation: true       # exit signal correctly fired day 1 (LQD -1.20%)
+  risk_checks: false            # no trades triggered yet
+  trade_execution: false        # no trades triggered yet
+  portfolio_persistence: false  # not yet tested
+  hash_chain_integrity: false   # not yet tested
+  performance_reporting: true   # NAV tracking confirmed
 
+incidents: []
+
+# Daily snapshots (append as paper trading proceeds)
+daily_log:
+  - date: "2026-03-26"
+    day_number: 1
+    position: "flat"
+    nav: 100000.00
+    daily_pnl: 0.00
+    daily_return_pct: 0.0
+    # Signal inputs
+    lqd_price: 107.88
+    lqd_5d_return: -0.0120   # -1.20%
+    spy_price: 645.09
+    # Signal evaluation
+    signal: "exit"
+    signal_reason: "LQD 5d return -1.20% <= -0.5% exit threshold"
+    position_change: "none (initiated flat, exit confirms no entry)"
+    # Benchmark context
+    spy_daily_return: -0.0179  # SPY -1.79%
+    regime_note: "Risk-off. LQD leading indicator negative. Credit stress. Strategy correctly flat."
+
+  - date: "2026-03-27"
+    day_number: 2
+    position: "flat"
+    nav: 100000.00
+    daily_pnl: 0.00
+    daily_return_pct: 0.0
+    # Signal inputs
+    lqd_price: 107.62
+    lqd_5d_return: -0.0021   # -0.21%
+    spy_price: 634.09
+    # Signal evaluation
+    signal: "neutral"
+    signal_reason: "LQD 5d return -0.21% — between -0.5% and +0.5% thresholds, no action"
+    position_change: "none (maintaining flat)"
+    # Benchmark context
+    spy_daily_return: -0.0171  # SPY -1.71%
+    regime_note: "LQD drift narrowing but still below entry threshold. SPY fell 1.71%. Cash preserved capital."
+
+  # 2026-03-28: Saturday (market closed)
+  # 2026-03-29: Sunday (market closed)
+
+  - date: "2026-03-30"
+    day_number: 3
+    position: "pending"
+    nav: null
+    daily_pnl: null
+    daily_return_pct: null
+    lqd_5d_return: null
+    signal: "pending_eod"
+    signal_reason: "Awaiting end-of-day data"
+    regime_note: "Update after market close."
+
+# Gate evaluation
 gate_evaluation:
-  days_active: 0
+  days_active: 2
   gate_passed: null
-  evaluated_at: null
+  evaluated_at: "2026-03-30"
   notes: >
     Paper trading initialized 2026-03-26. Strategy: LQD 5-day return as
-    leading indicator for SPY. Signal evaluated every 5 trading days.
-    Entry: LQD 5d return >= 0.5%. Exit: LQD 5d return <= -0.5%.
-    Position: SPY at 80% weight. Use /paper lqd-spy-credit-lead to update.
+    leading indicator for SPY. Entry: LQD 5d >= +0.5%. Exit: LQD 5d <= -0.5%.
+    Day 1: LQD 5d -1.20% → exit signal → flat. Day 2: LQD 5d -0.21% → neutral
+    → flat. Credit environment deteriorating (LQD under pressure). Strategy
+    correctly flat while SPY fell 1.79% and 1.71%. Capital preservation intact.
+    2/30 days, 0/10 trades. Entry signal requires credit recovery (LQD 5d >= +0.5%).
 
 created_at: "2026-03-26"
-updated_at: "2026-03-26"
+updated_at: "2026-03-30"

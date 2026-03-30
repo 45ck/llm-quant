@@ -39,21 +39,86 @@ gate_criteria:
   max_drawdown_limit: 0.15  # Must not exceed mandate constraint live
   slippage_drift_limit: 5.0  # Max 5bps drift from modeled slippage
 
+# Operations checklist
+operations_tested:
+  data_fetching: true           # confirmed via yfinance fetch 2026-03-30
+  indicator_computation: true   # 5-day returns computed and validated
+  signal_generation: true       # signal correctly stayed flat in risk-off
+  risk_checks: false            # no trades triggered yet
+  trade_execution: false        # no trades triggered yet
+  portfolio_persistence: false  # not yet tested
+  hash_chain_integrity: false   # not yet tested
+  performance_reporting: true   # NAV tracking confirmed
+
 # Incidents log (fill in as they occur)
 incidents: []
 
 # Daily snapshots (append as paper trading proceeds)
-daily_log: []
+daily_log:
+  - date: "2026-03-26"
+    day_number: 1
+    position: "flat"
+    nav: 100000.00
+    daily_pnl: 0.00
+    daily_return_pct: 0.0
+    # Signal inputs
+    soxx_price: 328.85
+    soxx_5d_return: -0.0334   # -3.34%
+    qqq_price: 573.79
+    # Signal evaluation
+    signal: "no_entry"
+    signal_reason: "SOXX 5d return -3.34% < 2% threshold"
+    position_change: "none (initiated flat)"
+    # Benchmark context
+    spy_daily_return: -0.0179  # SPY -1.79%
+    qqq_daily_return: -0.0239  # QQQ -2.39%
+    regime_note: "Risk-off. Broad market selloff. Strategy correctly flat."
+
+  - date: "2026-03-27"
+    day_number: 2
+    position: "flat"
+    nav: 100000.00
+    daily_pnl: 0.00
+    daily_return_pct: 0.0
+    # Signal inputs
+    soxx_price: 323.48
+    soxx_5d_return: -0.0272   # -2.72%
+    qqq_price: 562.58
+    # Signal evaluation
+    signal: "no_entry"
+    signal_reason: "SOXX 5d return -2.72% < 2% threshold"
+    position_change: "none"
+    # Benchmark context
+    spy_daily_return: -0.0171  # SPY -1.71%
+    qqq_daily_return: -0.0195  # QQQ -1.95%
+    regime_note: "Continued risk-off. Strategy flat preserved capital vs QQQ -1.95%."
+
+  # 2026-03-28: Saturday (market closed)
+  # 2026-03-29: Sunday (market closed)
+
+  - date: "2026-03-30"
+    day_number: 3
+    position: "pending"
+    nav: null
+    daily_pnl: null
+    daily_return_pct: null
+    soxx_5d_return: null
+    signal: "pending_eod"
+    signal_reason: "Awaiting end-of-day data"
+    regime_note: "Update after market close."
 
 # Gate evaluation (filled in when paper period completes)
 gate_evaluation:
-  days_active: 0
+  days_active: 2
   gate_passed: null
-  evaluated_at: null
+  evaluated_at: "2026-03-30"
   notes: >
     Paper trading initialized 2026-03-26. Strategy: SOXX→QQQ lead-lag with
     5-day lag. Leader SOXX 5d return ≥2% → enter QQQ at 90% weight.
-    Run /paper soxx-qqq-lead-lag to view status and update performance.
+    Days 1-2: Flat in cash. Risk-off regime, SOXX 5d return deeply negative
+    (-3.34%, -2.72%). Strategy correctly avoided QQQ which fell 2.39% and
+    1.95% on those days. Capital preservation working as designed.
+    2/30 days, 0/50 trades. Continue monitoring.
 
 created_at: "2026-03-26"
-updated_at: "2026-03-26"
+updated_at: "2026-03-30"
