@@ -30,10 +30,36 @@ The objective function: **maximize CAGR subject to relaxed drawdown tolerance, u
 - **Relaxed risk gates**: max drawdown < 30% (vs 15% in Track A), Sharpe > 1.0 minimum (vs 0.80)
 - **Universe expansion**: leveraged ETFs (TQQQ/UPRO), crypto (BTC/ETH), concentrated sector rotation
 
+### Track D — Sprint Alpha (experimental leveraged re-expression track)
+The objective function: **maximize CAGR via leveraged re-expression of proven Family 1 and Family 8 signals using 3x ETFs.**
+
+- **Identity**: Sprint Alpha — takes validated signals from Track A/B and re-expresses them through 3x leveraged vehicles
+- **Universe**: TQQQ, UPRO, SOXL, TMF, TLTW (no unleveraged substitutes — the leverage is the strategy)
+- **Primary benchmark**: 100% TQQQ buy-and-hold (the monster baseline to beat)
+- **Gate criteria**: Sharpe >= 0.80, MaxDD < 40%, DSR >= 0.90, CPCV OOS/IS > 0
+- **Return target**: 60-120% annualized CAGR (gross, before beta decay drag)
+- **Position sizing**: max 30-50% per position — leveraged ETFs require concentration to overcome drag
+- **Holding period**: max 5 calendar days per position — beta decay and volatility drag accelerate beyond this
+- **Key risks**: beta decay (3x ETF returns diverge from 3x index over multi-day holds), volatility drag (variance kills compounding), path dependency (sequential drawdowns are asymmetrically destructive), liquidity risk on TLTW/SOXL
+- **Status**: experimental — 2 strategies in backtest phase, not yet in paper trading
+
+### Track C — Structural Arbitrage (research track)
+The objective function: **capture market-neutral returns from structural pricing inefficiencies — PM arb, CEF discount capture, and funding rate strategies.**
+
+- **Identity**: structural arbitrage — exploits durable structural mispricings rather than forecasting market direction
+- **Universe**: Polymarket/Kalshi prediction markets + top 50 equity CEFs + crypto perpetuals (funding rate capture)
+- **Primary benchmark**: risk-free rate (T-bills) — these are market-neutral strategies; any positive alpha above T-bills is the mandate
+- **Gate criteria**: Sharpe >= 1.5, MaxDD < 10%, Beta to SPY < 0.15, Min 50 trades (statistical significance)
+- **Position sizing**: max $2,000 per trade — exchange concentration risk requires strict per-venue limits
+- **Kill switches**: exchange outage/API errors, funding rate reversal (3 consecutive negative 8h periods), spread collapse (7d avg < 25% of 30d baseline), beta breach (>0.15 to SPY), cross-strategy correlation spike (>0.30 with Track A)
+- **Status**: 4 of 17 mandate gates implemented — NOT ready for production. Research phase only.
+
 ### Portfolio Allocation Target
 - Track A strategies: 70% of capital (stable base, high Sharpe)
 - Track B strategies: 30% of capital (high-variance upside)
-- Combined target: asymmetric return profile — limited downside from A, leveraged upside from B
+- Track C strategies: 0% of capital — research phase, no production allocation until all 17 gates pass
+- Track D strategies: 0% of capital until paper trading gate passes (experimental)
+- Combined target: asymmetric return profile — limited downside from A, leveraged upside from B/D
 
 ## Trading Philosophy
 
@@ -128,7 +154,17 @@ The `/trade` command runs the full autonomous trading cycle:
 - Max drawdown gate relaxed to 30% (from 15%)
 - Min Sharpe gate raised to 1.0 (from 0.80) to compensate for higher risk
 
-**Both tracks:**
+**Track D (Sprint Alpha — experimental):**
+- Max 5% of NAV per trade, 30-50% per position (leveraged ETFs only: TQQQ/UPRO/SOXL/TMF/TLTW)
+- Max holding period: 5 calendar days — forced exit regardless of signal state
+- DSR >= 0.90 and CPCV OOS/IS > 0 required — integrity gates non-negotiable
+- Max drawdown gate: 40% (accepts large drawdowns given extreme return potential)
+- Min Sharpe gate: 0.80 (lower than Track B — leverage multiplies both signal and noise)
+- Kill condition: MAR (CAGR/MaxDD) < 1.0 after 90 days of paper trading triggers automatic retirement
+- Rebalancing: weekly for trend signals, daily check for risk-off triggers (VIX spike, regime flip)
+- Not eligible for capital allocation until paper trading gate passes
+
+**All tracks:**
 - Anti-overfitting discipline unchanged — see `docs/governance/alpha-hunting-framework.md`
 - Kill chain screening before full lifecycle: Hunt → Validate → Stress → Combine
 

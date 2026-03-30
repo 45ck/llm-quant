@@ -18,6 +18,18 @@ from llm_quant.surveillance.detectors import (
     check_regime_drift,
     check_risk_drift,
 )
+from llm_quant.surveillance.track_c_detectors import (
+    check_beta_drift,
+    check_cross_strategy_correlation,
+    check_exchange_health,
+    check_funding_rate_reversal,
+    check_spread_compression,
+)
+from llm_quant.surveillance.track_d_monitor import (
+    check_track_d_beta_decay,
+    check_track_d_hold_periods,
+    check_track_d_vix_regime,
+)
 from llm_quant.surveillance.models import (
     SeverityLevel,
     SurveillanceCheck,
@@ -49,6 +61,16 @@ class SurveillanceScanner:
             ("process_drift", check_process_drift),
             ("operational_health", check_operational_health),
             ("kill_switches", check_kill_switches),
+            # Track C — Structural Arbitrage kill-switch detectors
+            ("track_c_exchange_health", check_exchange_health),
+            ("track_c_spread_compression", check_spread_compression),
+            ("track_c_funding_rate_reversal", check_funding_rate_reversal),
+            ("track_c_beta_drift", check_beta_drift),
+            ("track_c_cross_strategy_correlation", check_cross_strategy_correlation),
+            # Track D — Leveraged ETF daily risk monitors
+            ("track_d_hold_periods", check_track_d_hold_periods),
+            ("track_d_vix_regime", check_track_d_vix_regime),
+            ("track_d_beta_decay", check_track_d_beta_decay),
         ]
 
         for name, detector_fn in detectors:

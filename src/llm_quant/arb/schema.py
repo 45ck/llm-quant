@@ -132,12 +132,35 @@ CREATE TABLE IF NOT EXISTS pm_executions (
 );
 """
 
+_KALSHI_COMBINATORIAL_PAIRS_DDL = """
+CREATE TABLE IF NOT EXISTS kalshi_combinatorial_pairs (
+    pair_id          VARCHAR PRIMARY KEY,
+    ticker_a         VARCHAR NOT NULL,
+    ticker_b         VARCHAR NOT NULL,
+    event_ticker_a   VARCHAR NOT NULL,
+    event_ticker_b   VARCHAR NOT NULL,
+    title_a          VARCHAR,
+    title_b          VARCHAR,
+    dependency_type  VARCHAR,
+    claude_confidence DOUBLE,
+    expected_direction VARCHAR,
+    price_constraint VARCHAR,
+    price_a          DOUBLE,
+    price_b          DOUBLE,
+    implied_arb_spread DOUBLE,
+    is_arb           BOOLEAN,
+    reasoning        VARCHAR,
+    detected_at      VARCHAR
+);
+"""
+
 _ALL_DDL = [
     _PM_MARKETS_DDL,
     _PM_CONDITIONS_DDL,
     _PM_NEGRISK_GROUPS_DDL,
     _PM_ARB_OPPORTUNITIES_DDL,
     _PM_COMBINATORIAL_PAIRS_DDL,
+    _KALSHI_COMBINATORIAL_PAIRS_DDL,
     _PM_SCAN_LOG_DDL,
     _PM_EXECUTIONS_DDL,
 ]

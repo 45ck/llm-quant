@@ -62,11 +62,75 @@ class RiskLimits(BaseModel):
     require_stop_loss: bool = True
     default_stop_loss_pct: float = 0.05
     max_drawdown_pct: float = 0.15  # Portfolio drawdown circuit breaker
+    # ATR-calibrated stop-loss multipliers
+    atr_stop_multiplier: float = 2.0          # 2x ATR for equities (Turtle Traders)
+    atr_stop_multiplier_crypto: float = 2.5   # wider for crypto overnight gaps
+    atr_stop_multiplier_commodity: float = 2.5  # wider for volatile commodities
+    # ATR-based position sizing
+    target_risk_pct: float = 0.01    # fraction of NAV to risk per trade
+    deviation_buffer: float = 0.20   # buffer before triggering rebalance alert
+    atr_period: int = 14             # ATR lookback for equities / fixed income
+    atr_period_crypto: int = 7       # shorter ATR lookback for crypto
     # Per-asset-class overrides (crypto is more volatile, forex less so)
     crypto_max_position_weight: float = 0.05
     crypto_default_stop_loss_pct: float = 0.15
     forex_max_position_weight: float = 0.08
     forex_default_stop_loss_pct: float = 0.03
+
+
+class TrackBLimits(BaseModel):
+    """Risk limits for Track B — Aggressive Alpha strategies."""
+
+    max_position_weight: float = 0.15
+    max_trade_size: float = 0.03
+    max_gross_exposure: float = 2.0
+    max_net_exposure: float = 1.0
+    max_sector_concentration: float = 0.30
+    max_trades_per_session: int = 5
+    min_cash_reserve: float = 0.03
+    require_stop_loss: bool = True
+    default_stop_loss_pct: float = 0.08
+    atr_stop_multiplier: float = 2.0
+    atr_stop_multiplier_crypto: float = 3.0
+    atr_stop_multiplier_commodity: float = 2.5
+    target_risk_pct: float = 0.015
+    deviation_buffer: float = 0.25
+    max_drawdown_pct: float = 0.30
+    crypto_max_position_weight: float = 0.08
+    crypto_default_stop_loss_pct: float = 0.20
+    leveraged_etf_max_position_weight: float = 0.10
+
+
+class TrackCLimits(BaseModel):
+    """Risk limits for Track C — Structural Arb / Event-Driven strategies.
+
+    Near-zero-beta arb strategies sit between Track A (defensive) and Track B
+    (aggressive).  They allow wider single-leg sizing because legs partially
+    offset each other, but enforce a tight *net* exposure cap to preserve
+    market-neutrality.  A higher cash reserve supports event-driven staging.
+    """
+
+    max_position_weight: float = 0.20           # 20% per strategy
+    max_trade_size: float = 0.05                # 5% per trade
+    max_gross_exposure: float = 2.0             # 200% (both legs summed)
+    max_net_exposure: float = 0.30              # 30% — enforces near-zero beta
+    max_sector_concentration: float = 0.30
+    max_exchange_concentration: float = 0.25    # 25% on any single exchange
+    max_trades_per_session: int = 5
+    min_cash_reserve: float = 0.10              # 10% — hold dry powder for events
+    require_stop_loss: bool = True
+    default_stop_loss_pct: float = 0.05
+    atr_stop_multiplier: float = 2.0
+    atr_stop_multiplier_crypto: float = 2.5
+    atr_stop_multiplier_commodity: float = 2.5
+    target_risk_pct: float = 0.01
+    deviation_buffer: float = 0.20
+    max_drawdown_pct: float = 0.10              # 10% — tighter; drawdown signals leg break
+
+    # Kill-switch thresholds (Track C-specific)
+    max_beta_to_spy: float = 0.25               # rolling-30d SPY beta limit
+    min_spread_bps: float = 5.0                 # spread collapse threshold (bps)
+    max_funding_rate_pct: float = 0.50          # funding reversal threshold (bps/day)
 
 
 class RegimeDriftConfig(BaseModel):
@@ -179,6 +243,8 @@ class AppConfig(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     data: DataConfig = Field(default_factory=DataConfig)
     risk: RiskLimits = Field(default_factory=RiskLimits)
+    track_b: TrackBLimits = Field(default_factory=TrackBLimits)
+    track_c: TrackCLimits = Field(default_factory=TrackCLimits)
     universe: UniverseConfig = Field(default_factory=UniverseConfig)
     governance: GovernanceConfig = Field(default_factory=GovernanceConfig)
 
@@ -197,6 +263,8 @@ def load_config(config_dir: Path | None = None) -> AppConfig:
     llm_data: dict = {}
     data_data: dict = {}
     risk_data: dict = {}
+    track_b_data: dict = {}
+    track_c_data: dict = {}
     universe_data: dict = {}
 
     # Load default.toml
@@ -212,6 +280,8 @@ def load_config(config_dir: Path | None = None) -> AppConfig:
     if risk_path.exists():
         raw = _load_toml(risk_path)
         risk_data = raw.get("limits", {})
+        track_b_data = raw.get("track_b", {})
+        track_c_data = raw.get("track_c", {})
 
     # Load universe.toml
     universe_path = config_dir / "universe.toml"
@@ -242,6 +312,8 @@ def load_config(config_dir: Path | None = None) -> AppConfig:
         llm=LLMConfig(**llm_data),
         data=DataConfig(**data_data),
         risk=RiskLimits(**risk_data),
+        track_b=TrackBLimits(**track_b_data),
+        track_c=TrackCLimits(**track_c_data),
         universe=UniverseConfig(**universe_data),
         governance=GovernanceConfig(**governance_data),
     )

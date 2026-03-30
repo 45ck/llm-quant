@@ -541,7 +541,7 @@ class ArbScanner:
                 min_cond_vol = evt.min_condition_volume
 
                 # Volume check: each condition must be individually fillable
-                if min_cond_vol < min_volume and total_vol < min_volume:
+                if min_cond_vol < min_volume or total_vol < min_volume:
                     logger.debug(
                         "Kalshi %s: skipped (vol=%.0f < threshold %.0f)",
                         evt.event_ticker,
@@ -585,7 +585,7 @@ class ArbScanner:
                 scan_type="kalshi_negrisk",
                 markets_scanned=n_events,
                 conditions_scanned=(
-                    sum(len(e.markets) for e in events) if "events" in dir() else 0
+                    sum(len(e.markets) for e in events) if "events" in locals() else 0
                 ),
                 opps_found=len(opps),
                 pairs_detected=0,

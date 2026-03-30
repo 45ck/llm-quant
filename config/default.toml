@@ -15,3 +15,10 @@ fetch_timeout = 30
 
 [logging]
 level = "INFO"
+
+[market_context]
+# Task 4a1: adaptive VIX regime classification window (trading days)
+vix_regime_percentile_window = 252
+# Task ev8: credit spread thresholds for silent stress detection
+credit_spread_silent_stress_zscore = 1.5   # z-score above which credit is elevated
+credit_spread_silent_stress_vix_cap = 20.0  # VIX must be below this for silent_stress=True

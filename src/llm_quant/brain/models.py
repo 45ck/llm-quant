@@ -95,3 +95,19 @@ class MarketContext:
     vix: float = 0.0
     yield_spread: float = 0.0
     spy_trend: str = "neutral"
+    # Task ev8: credit spread stress indicator
+    credit_spread_oas: float | None = None
+    credit_spread_zscore: float | None = None
+    silent_stress: bool = False
+    # Task 4a1: adaptive VIX regime classification
+    vix_regime_thresholds: tuple[float, float] = (20.0, 25.0)
+    market_regime: MarketRegime = MarketRegime.TRANSITION
+    # Task vts: 126-day VIX percentile rank
+    vix_percentile_126d: float = 50.0
+    # Task llm-quant-56k: COT crowding overlay (symbol → signal string)
+    # Signals: "crowded_long" | "crowded_short" | "neutral"
+    # Applied Friday-published data on Monday open only; confirmation/warning,
+    # never an independent trade signal.
+    cot_crowding: dict[str, str] | None = None
+    # Task llm-quant-bbt: execution cost lookup (symbol → round-trip bps)
+    execution_costs: dict[str, float] | None = None

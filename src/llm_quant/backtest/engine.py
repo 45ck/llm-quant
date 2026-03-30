@@ -36,6 +36,38 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Meta-filter configuration (rule-based signal filters)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MetaFilterConfig:
+    """Configuration for rule-based signal filters applied after signal generation.
+
+    These filters wrap the three functions in meta_label.py:
+    - regime_filter: suppress BUY entries when VIX is elevated
+    - signal_strength_weight: scale position size by leader-return magnitude
+    - ensemble_vote: require N strategies to agree before acting
+
+    All filters are opt-in (disabled by default) and backward-compatible.
+    SELL/CLOSE signals bypass regime_filter and ensemble_vote (exits always pass).
+    """
+
+    # Regime filter
+    regime_filter_enabled: bool = False
+    vix_threshold: float = 25.0  # suppress BUY when VIX > this level
+
+    # Signal strength weighting
+    signal_strength_enabled: bool = False
+    signal_strength_scale: float = 0.01  # leader_return divisor (0.01 = 1%)
+    signal_strength_cap: float = 2.0  # cap multiplier at this value
+
+    # Ensemble vote (multi-strategy agreement gate)
+    ensemble_vote_enabled: bool = False
+    ensemble_min_votes: int = 2  # number of BUY signals required to proceed
+
+
+# ---------------------------------------------------------------------------
 # Cost model
 # ---------------------------------------------------------------------------
 
@@ -209,6 +241,7 @@ class BacktestEngine:
     5. Stop-loss enforcement at each day's close
     6. Cost multiplier stress tests (1x, 1.5x, 2x, 3x)
     7. Append-only experiment registry
+    8. Optional volatility targeting (scale positions to match target annualized vol)
     """
 
     def __init__(
@@ -220,6 +253,10 @@ class BacktestEngine:
         risk_checks_enabled: bool = False,
         risk_manager: Any = None,
         ml_gate: Any = None,
+        meta_filter: MetaFilterConfig | None = None,
+        volatility_target: float | None = None,
+        vol_target_window: int = 20,
+        vol_target_max_scale: float = 2.0,
     ) -> None:
         self.strategy = strategy
         self.data_dir = data_dir or "data"
@@ -227,6 +264,15 @@ class BacktestEngine:
         self.risk_checks_enabled = risk_checks_enabled
         self.risk_manager = risk_manager
         self.ml_gate = ml_gate  # optional MLGate instance; None = disabled
+        self.meta_filter = meta_filter  # optional rule-based signal filters
+
+        # Volatility targeting
+        # When set (e.g. 0.15 = 15% annualized), the engine scales each signal's
+        # target_weight so that realized portfolio vol tracks the target.
+        # Scale = vol_target / realized_vol, capped at vol_target_max_scale.
+        self.volatility_target = volatility_target
+        self.vol_target_window = vol_target_window
+        self.vol_target_max_scale = vol_target_max_scale
 
     def run(
         self,
@@ -377,6 +423,18 @@ class BacktestEngine:
                             gate_decision.regime_label,
                             gate_decision.confidence,
                         )
+
+            # Rule-based meta-filters: regime, strength, ensemble
+            if self.meta_filter is not None and strategy_signals:
+                strategy_signals = self._apply_meta_filters(
+                    strategy_signals, causal_indicators, current_date
+                )
+
+            # Volatility targeting: scale BUY signal weights to match target vol
+            if self.volatility_target is not None and strategy_signals:
+                strategy_signals = self._apply_vol_scaling_to_signals(
+                    strategy_signals, nav_series
+                )
 
             # Deduplicate: stop-loss takes priority over strategy for same symbol
             stop_symbols = {s.symbol for s in stop_signals}
@@ -823,6 +881,265 @@ class BacktestEngine:
             if len(returns) > 0:
                 result[symbol] = float(returns.std())
         return result
+
+    def _compute_vol_scale(
+        self,
+        nav_series: list[float],
+        vol_target: float,
+        window: int = 20,
+        max_scale: float = 2.0,
+        trading_days_per_year: int = 252,
+    ) -> float:
+        """Compute volatility scaling factor for the current day.
+
+        Uses rolling *window*-day realized volatility of portfolio returns to
+        compute a scale factor such that:
+            scaled_vol ≈ vol_target
+
+        Parameters
+        ----------
+        nav_series : list[float]
+            NAV history up to and including today (not including current day yet).
+        vol_target : float
+            Annualized target volatility (e.g. 0.15 for 15%).
+        window : int
+            Rolling lookback in trading days for realized vol estimate.
+        max_scale : float
+            Maximum leverage multiplier (cap on Scale to prevent excess leverage).
+        trading_days_per_year : int
+            Annualization factor for daily vol.
+
+        Returns
+        -------
+        float
+            Scale factor in (0, max_scale]. Returns 1.0 when insufficient history.
+        """
+        if len(nav_series) < window + 1:
+            return 1.0
+
+        # Compute daily returns from the last *window* observations
+        recent_nav = nav_series[-(window + 1):]
+        daily_returns = [
+            recent_nav[i] / recent_nav[i - 1] - 1.0
+            for i in range(1, len(recent_nav))
+            if recent_nav[i - 1] != 0
+        ]
+        if len(daily_returns) < 5:
+            return 1.0
+
+        arr = [r for r in daily_returns if not math.isnan(r)]
+        if len(arr) < 5:
+            return 1.0
+
+        mean_r = sum(arr) / len(arr)
+        variance = sum((r - mean_r) ** 2 for r in arr) / (len(arr) - 1)
+        realized_daily_vol = math.sqrt(variance)
+
+        if realized_daily_vol == 0:
+            return 1.0
+
+        realized_ann_vol = realized_daily_vol * math.sqrt(trading_days_per_year)
+        scale = vol_target / realized_ann_vol
+
+        # Cap scale to prevent excessive leverage
+        scale = min(scale, max_scale)
+        scale = max(scale, 0.01)  # floor to avoid zero allocation
+
+        return scale
+
+    def _apply_vol_scaling_to_signals(
+        self,
+        signals: list,
+        nav_series: list[float],
+    ) -> list:
+        """Scale target_weight of BUY signals by the vol-targeting factor.
+
+        CLOSE and SELL signals are not modified (exit logic should not be
+        filtered by vol-targeting).
+
+        Parameters
+        ----------
+        signals : list[TradeSignal]
+            List of signals to potentially scale.
+        nav_series : list[float]
+            Current NAV history (used to compute rolling vol).
+
+        Returns
+        -------
+        list[TradeSignal]
+            New list with adjusted target_weight on BUY signals.
+        """
+        from llm_quant.brain.models import Action, TradeSignal
+
+        if self.volatility_target is None or not signals:
+            return signals
+
+        scale = self._compute_vol_scale(
+            nav_series=nav_series,
+            vol_target=self.volatility_target,
+            window=self.vol_target_window,
+            max_scale=self.vol_target_max_scale,
+        )
+
+        if scale == 1.0:
+            return signals
+
+        logger.debug(
+            "Vol-targeting: scale=%.3f (target=%.2f%%)",
+            scale,
+            self.volatility_target * 100,
+        )
+
+        result = []
+        for sig in signals:
+            if sig.action == Action.BUY:
+                # Clamp scaled weight at 1.0 (no more than 100% in one position)
+                new_weight = min(sig.target_weight * scale, 1.0)
+                scaled = TradeSignal(
+                    symbol=sig.symbol,
+                    action=sig.action,
+                    conviction=sig.conviction,
+                    target_weight=new_weight,
+                    stop_loss=sig.stop_loss,
+                    reasoning=sig.reasoning,
+                )
+                result.append(scaled)
+            else:
+                result.append(sig)
+
+        return result
+
+    def _apply_meta_filters(
+        self,
+        signals: list[TradeSignal],
+        causal_indicators: pl.DataFrame,
+        current_date: date,
+    ) -> list[TradeSignal]:
+        """Apply rule-based meta-filters to strategy signals.
+
+        Filters operate on the full signal list:
+        - regime_filter: drops BUY signals when VIX is above threshold
+        - signal_strength_weight: scales target_weight of BUY signals by leader magnitude
+        - ensemble_vote: drops BUY signals when fewer than min_votes BUYs exist
+
+        SELL/CLOSE signals always pass — exits are never blocked by meta-filters.
+
+        Parameters
+        ----------
+        signals : list[TradeSignal]
+            Raw signals from the strategy (post-ML gate if enabled).
+        causal_indicators : pl.DataFrame
+            Indicators filtered to dates <= current_date.
+        current_date : date
+            The current trading date (used for indicator lookup).
+
+        Returns
+        -------
+        list[TradeSignal]
+            Filtered (and possibly weight-adjusted) signals.
+        """
+        cfg = self.meta_filter
+        if cfg is None:
+            return signals
+
+        from llm_quant.backtest.meta_label import (
+            ensemble_vote,
+            regime_filter,
+            signal_strength_weight,
+        )
+
+        # --- Regime filter ---
+        if cfg.regime_filter_enabled:
+            # Look up VIX on current_date from indicators
+            vix_rows = causal_indicators.filter(
+                (pl.col("symbol") == "VIX") & (pl.col("date") == current_date)
+            )
+            vix_level: float | None = None
+            if len(vix_rows) > 0 and "close" in vix_rows.columns:
+                vix_level = float(vix_rows["close"][0])
+            elif "vix_level" in causal_indicators.columns:
+                vix_rows2 = causal_indicators.filter(pl.col("date") == current_date)
+                if len(vix_rows2) > 0:
+                    vix_level = float(vix_rows2["vix_level"][0])
+
+            if vix_level is not None and not regime_filter(vix_level, cfg.vix_threshold):
+                n_buys = sum(1 for s in signals if s.action == Action.BUY)
+                if n_buys:
+                    logger.debug(
+                        "regime_filter: suppressing %d BUY(s) on %s (VIX=%.1f > %.1f)",
+                        n_buys,
+                        current_date,
+                        vix_level,
+                        cfg.vix_threshold,
+                    )
+                signals = [s for s in signals if s.action != Action.BUY]
+
+        # --- Ensemble vote ---
+        if cfg.ensemble_vote_enabled:
+            buy_signals = [s for s in signals if s.action == Action.BUY]
+            non_buy = [s for s in signals if s.action != Action.BUY]
+            vote_map = {s.symbol: s.action.value for s in buy_signals}
+            if not ensemble_vote(vote_map, cfg.ensemble_min_votes):
+                logger.debug(
+                    "ensemble_vote: %d BUY(s) below min_votes=%d on %s — suppressed",
+                    len(buy_signals),
+                    cfg.ensemble_min_votes,
+                    current_date,
+                )
+                signals = non_buy
+            else:
+                signals = non_buy + buy_signals
+
+        # --- Signal strength weighting ---
+        if cfg.signal_strength_enabled:
+            # Look up leader_return from indicators on current_date
+            # Use strategy's leader_symbol parameter if available
+            leader_symbol = getattr(self.strategy, "leader_symbol", None) or (
+                self.strategy.config.parameters.get("leader_symbol")
+                or self.strategy.config.parameters.get("leader", "SPY")
+            )
+            leader_rows = causal_indicators.filter(
+                (pl.col("symbol") == leader_symbol) & (pl.col("date") == current_date)
+            )
+            leader_return: float | None = None
+            if len(leader_rows) > 0 and "close" in leader_rows.columns:
+                closes = (
+                    causal_indicators.filter(pl.col("symbol") == leader_symbol)
+                    .sort("date")
+                    .tail(2)
+                    .select("close")
+                    .to_series()
+                    .to_list()
+                )
+                if len(closes) == 2 and closes[0] > 0:
+                    leader_return = closes[1] / closes[0] - 1.0
+
+            if leader_return is not None:
+                multiplier = signal_strength_weight(
+                    leader_return=leader_return,
+                    entry_threshold=cfg.signal_strength_scale,
+                    max_multiplier=cfg.signal_strength_cap,
+                )
+                if multiplier != 1.0:
+                    scaled: list[TradeSignal] = []
+                    for sig in signals:
+                        if sig.action == Action.BUY:
+                            new_weight = min(sig.target_weight * multiplier, 1.0)
+                            scaled.append(
+                                TradeSignal(
+                                    symbol=sig.symbol,
+                                    action=sig.action,
+                                    conviction=sig.conviction,
+                                    target_weight=new_weight,
+                                    stop_loss=sig.stop_loss,
+                                    reasoning=sig.reasoning,
+                                )
+                            )
+                        else:
+                            scaled.append(sig)
+                    signals = scaled
+
+        return signals
 
     def _check_data_quality(self, df: pl.DataFrame, trading_dates: list) -> list[str]:
         """Check data quality and return warnings."""

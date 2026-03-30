@@ -292,6 +292,121 @@ def check_stop_loss(
     )
 
 
+def check_atr_stop_loss(
+    stop_loss_price: float,
+    entry_price: float,
+    atr: float,
+    atr_multiplier: float,
+) -> RiskCheckResult:
+    """Validate that a stop-loss is at least ``atr_multiplier`` ATRs from entry.
+
+    Replaces static percentage stops with ATR-calibrated stops.  The Turtle
+    Traders standard is 2x ATR; crypto and volatile commodities use 2.5-3x.
+
+    Parameters
+    ----------
+    stop_loss_price:
+        Proposed stop-loss price.
+    entry_price:
+        Proposed entry price.
+    atr:
+        Current ATR value for the symbol.
+    atr_multiplier:
+        Minimum required distance as a multiple of ATR (e.g. 2.0 for equities,
+        2.5-3.0 for crypto/volatile commodities).
+    """
+    if entry_price <= 0.0 or atr <= 0.0:
+        return RiskCheckResult(
+            passed=False,
+            rule="atr_stop_loss",
+            message="Invalid entry price or ATR — cannot validate ATR stop.",
+            current_value=0.0,
+            limit_value=atr_multiplier,
+        )
+
+    distance = entry_price - stop_loss_price
+    distance_in_atrs = distance / atr if atr > 0 else 0.0
+    passed = distance_in_atrs >= atr_multiplier
+    return RiskCheckResult(
+        passed=passed,
+        rule="atr_stop_loss",
+        message=(
+            f"Stop distance {distance_in_atrs:.2f}x ATR "
+            f"{'>=' if passed else '<'} required {atr_multiplier:.1f}x ATR "
+            f"(stop={stop_loss_price:.4f}, entry={entry_price:.4f}, "
+            f"ATR={atr:.4f})."
+        ),
+        current_value=distance_in_atrs,
+        limit_value=atr_multiplier,
+    )
+
+
+def check_volatility_sizing(
+    symbol: str,
+    atr: float,
+    price: float,
+    proposed_size: float,
+    nav: float,
+    target_risk_pct: float,
+    deviation_buffer: float = 0.20,
+) -> RiskCheckResult:
+    """Check that position size is consistent with ATR-based volatility sizing.
+
+    Computes the maximum position size fraction of NAV implied by the
+    target risk per trade and current ATR, then alerts if the proposed
+    size exceeds that limit by more than ``deviation_buffer``.
+
+    Formula: max_size = target_risk_pct / (atr / price)
+
+    Parameters
+    ----------
+    symbol:
+        Ticker symbol (used in the message only).
+    atr:
+        Current ATR value for the symbol.
+    price:
+        Current price of the symbol.
+    proposed_size:
+        Proposed position size as a fraction of NAV (e.g. 0.05 for 5%).
+    nav:
+        Current net asset value (used to scale the notional check).
+    target_risk_pct:
+        Fraction of NAV to risk per trade (e.g. 0.01 for 1%).
+    deviation_buffer:
+        Fractional buffer before triggering a rebalance alert
+        (default 0.20 = 20% above the ATR-implied limit).
+    """
+    if price <= 0.0 or atr <= 0.0 or nav <= 0.0:
+        return RiskCheckResult(
+            passed=False,
+            rule="volatility_sizing",
+            message=(
+                f"{symbol}: Invalid price ({price}), ATR ({atr}), or NAV ({nav}) "
+                "— cannot compute ATR-based size limit."
+            ),
+            current_value=proposed_size,
+            limit_value=0.0,
+        )
+
+    atr_pct = atr / price  # normalised ATR (volatility as fraction of price)
+    atr_implied_max = target_risk_pct / atr_pct  # max position fraction of NAV
+    alert_threshold = atr_implied_max * (1.0 + deviation_buffer)
+
+    passed = proposed_size <= alert_threshold
+    return RiskCheckResult(
+        passed=passed,
+        rule="volatility_sizing",
+        message=(
+            f"{symbol}: proposed size {proposed_size:.2%} "
+            f"{'<=' if passed else '>'} ATR alert threshold {alert_threshold:.2%} "
+            f"(ATR-implied max {atr_implied_max:.2%}, ATR/price={atr_pct:.4f}, "
+            f"target_risk={target_risk_pct:.2%}, buffer={deviation_buffer:.0%})."
+        ),
+        current_value=proposed_size,
+        limit_value=alert_threshold,
+    )
+
+
 def check_drawdown_limit(
     current_nav: float,
     peak_nav: float,

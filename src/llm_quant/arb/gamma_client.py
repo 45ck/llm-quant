@@ -1,16 +1,17 @@
 """Polymarket market data client — read-only, no authentication required.
 
 Supports two backends:
-  1. Gamma API (gamma-api.polymarket.com) — full market data, geo-blocked in US
+  1. CLOB API (clob.polymarket.com) — full market data, geo-blocked in US
+     (previously gamma-api.polymarket.com, which returned 404 as of 2026-03-27)
   2. Polymarket US API (api.polymarket.us) — US-regulated, limited without auth
 
-The client tries Gamma first and falls back to the US API on failure.
+The client tries CLOB API first and falls back to the US API on failure.
 
-Gamma API docs: https://docs.polymarket.com/
+CLOB API docs: https://docs.polymarket.com/
 US API docs: https://polymarket.us/developer
 
 Key endpoints used:
-  Gamma:  GET /markets          — paginated list of all markets
+  CLOB:   GET /markets          — paginated list of all markets
           GET /markets/{id}     — single market detail
   US API: GET /v1/markets       — market listing (limited without API key)
 
@@ -30,7 +31,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-GAMMA_BASE = "https://gamma-api.polymarket.com"
+GAMMA_BASE = "https://clob.polymarket.com"
 US_API_BASE = "https://api.polymarket.us"
 _DEFAULT_TIMEOUT = 15  # seconds
 _PAGE_SIZE = 100

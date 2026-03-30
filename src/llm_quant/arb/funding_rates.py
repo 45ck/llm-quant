@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import ccxt
@@ -369,8 +369,9 @@ def load_rates(
         query += " AND exchange = ?"
         params.append(exchange)
     if days:
-        query += " AND timestamp >= NOW() - INTERVAL ? DAY"
-        params.append(days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        query += " AND timestamp >= ?"
+        params.append(cutoff)
 
     query += " ORDER BY timestamp DESC"
 

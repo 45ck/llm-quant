@@ -363,6 +363,11 @@ Present the complete promotion checklist with all gate results:
 - [ ] Research spec frozen before backtesting
 - [ ] CPCV mean OOS Sharpe > 0
 - [ ] Parameter stability > 50%
+- [ ] Marginal SR contribution dSR_P >= 0.05 (portfolio admission gate -- taff)
+      Formula: dSR_P approx (SR_k - rho_kP * SR_P) / sqrt(1 + 2*rho_kP*SR_k/SR_P)
+      Skipped for first strategy when portfolio is empty.
+- [ ] Rolling 60-day correlation to portfolio NAV < 0.30 (diversification gate -- r5j4)
+      Skipped for first strategy when portfolio is empty.
 
 ### Paper Trading Minimums
 - [ ] >= 50 trades executed

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import itertools
 import logging
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+from scipy import stats
 
 from llm_quant.backtest.metrics import compute_sharpe
 
@@ -56,6 +58,28 @@ class PerturbationResult:
 
 
 @dataclass
+class MinTRLResult:
+    """Result of Minimum Track Record Length computation.
+
+    Bailey & Lopez de Prado (2014): minimum number of monthly observations
+    needed to determine with statistical confidence that a Sharpe ratio is
+    genuine, accounting for non-normal return distributions.
+
+    Formula:
+        MinTRL = (1 - skew*SR + ((kurt-1)/4)*SR^2) * (z_alpha / (SR - SR*))^2
+    where SR* = 0 (benchmark), z_alpha = 1.645 (95% confidence).
+    """
+
+    min_trl_months: float = 0.0
+    backtest_months: float = 0.0
+    sharpe: float = 0.0
+    skew: float = 0.0
+    kurtosis: float = 0.0  # excess kurtosis
+    confidence: float = 0.95
+    min_trl_pass: bool = False  # True if backtest_months >= min_trl_months
+
+
+@dataclass
 class RobustnessResult:
     """Complete robustness gate result."""
 
@@ -75,6 +99,15 @@ class RobustnessResult:
     shuffled_signal: object = None  # ShuffledSignalResult or None
     shuffled_signal_passed: bool = True  # default True (skipped = pass)
 
+    # MinTRL (informational — not a hard gate but emits WARNING if insufficient)
+    min_trl: MinTRLResult = field(default_factory=MinTRLResult)
+
+    # Portfolio admission gates (taff + r5j4)
+    marginal_sr_contribution: float = 0.0  # ΔSR_P; gate: >= 0.05
+    marginal_sr_passed: bool = True  # default True (skipped = pass)
+    portfolio_correlation: float = 0.0  # rolling 60-day avg; gate: < 0.30
+    portfolio_correlation_passed: bool = True  # default True (skipped = pass)
+
     # Overall
     overall_passed: bool = False
     gate_details: dict[str, bool] = field(default_factory=dict)
@@ -88,8 +121,22 @@ class RobustnessResult:
             "2x_costs_survive": self.cost_2x_survives,
             "parameter_stability_>_50%": self.parameter_stability_passed,
             "shuffled_signal_p_<_0.05": self.shuffled_signal_passed,
+            "marginal_sr_contribution_>=_0.05": self.marginal_sr_passed,
+            "portfolio_correlation_<_0.30": self.portfolio_correlation_passed,
         }
         self.overall_passed = all(self.gate_details.values())
+
+        # Emit WARNING if backtest history is shorter than MinTRL
+        if not self.min_trl.min_trl_pass and self.min_trl.min_trl_months > 0:
+            logger.warning(
+                "MinTRL WARNING: backtest has %.1f months but requires %.1f months "
+                "for %.0f%% confidence that SR=%.3f is genuine. "
+                "Results may not be statistically significant.",
+                self.min_trl.backtest_months,
+                self.min_trl.min_trl_months,
+                self.min_trl.confidence * 100,
+                self.min_trl.sharpe,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -356,6 +403,116 @@ def generate_perturbations(
 
 
 # ---------------------------------------------------------------------------
+# Minimum Track Record Length (MinTRL)
+# ---------------------------------------------------------------------------
+
+
+def compute_min_trl(
+    sharpe: float,
+    skew: float,
+    kurtosis: float,
+    n_observations: int,
+    confidence: float = 0.95,
+    trading_days_per_year: int = 252,
+    sr_star: float = 0.0,
+) -> MinTRLResult:
+    """Compute Minimum Track Record Length.
+
+    Bailey & Lopez de Prado (2014): minimum monthly observations needed to
+    conclude with statistical confidence that a Sharpe ratio exceeds sr_star.
+
+    Formula (in trading-day units):
+        MinTRL = (1 - skew*SR + ((kurt-1)/4)*SR^2) * (z_alpha / (SR - SR*))^2
+
+    where:
+      - SR is the *annualized* Sharpe ratio
+      - skew is sample skewness of daily returns
+      - kurt is sample *excess* kurtosis (normal = 0)
+      - z_alpha = norm.ppf(confidence)
+      - SR* = benchmark annualized Sharpe (default 0)
+
+    Parameters
+    ----------
+    sharpe : float
+        Annualized Sharpe ratio of the strategy.
+    skew : float
+        Sample skewness of daily returns.
+    kurtosis : float
+        Sample excess kurtosis of daily returns (normal = 0).
+    n_observations : int
+        Number of daily observations actually available in the backtest.
+    confidence : float
+        Statistical confidence level (default 0.95 → z = 1.645).
+    trading_days_per_year : int
+        Annualization factor (default 252).
+    sr_star : float
+        Benchmark annualized Sharpe ratio (default 0 = cash).
+
+    Returns
+    -------
+    MinTRLResult
+        min_trl_months, backtest_months, and pass/fail.
+    """
+    backtest_months = n_observations / (trading_days_per_year / 12.0)
+
+    if sharpe <= sr_star:
+        # Strategy doesn't beat benchmark — MinTRL is infinite
+        return MinTRLResult(
+            min_trl_months=float("inf"),
+            backtest_months=backtest_months,
+            sharpe=sharpe,
+            skew=skew,
+            kurtosis=kurtosis,
+            confidence=confidence,
+            min_trl_pass=False,
+        )
+
+    z_alpha = float(stats.norm.ppf(confidence))
+    sr_diff = sharpe - sr_star
+
+    # Adjustment factor for non-normality
+    # Uses *excess* kurtosis (normal = 0), so (kurt_excess + 3 - 1)/4 = (kurt_excess + 2)/4
+    # Simplifies to: (1 - skew*SR + (kurt_excess + 2)/4 * SR^2)
+    # But the original Bailey & de Prado formula uses (γ₄ - 1)/4 where γ₄ = regular kurtosis.
+    # Regular kurtosis = excess kurtosis + 3, so (γ₄ - 1)/4 = (excess + 2)/4.
+    adjustment = 1.0 - skew * sharpe + (kurtosis + 2.0) / 4.0 * sharpe**2
+
+    # Guard against pathological distributions
+    adjustment = max(adjustment, 0.01)
+
+    # MinTRL in trading-day units
+    min_trl_days = adjustment * (z_alpha / sr_diff) ** 2
+
+    # Convert to months
+    days_per_month = trading_days_per_year / 12.0
+    min_trl_months = min_trl_days / days_per_month
+
+    min_trl_pass = backtest_months >= min_trl_months
+
+    logger.debug(
+        "MinTRL: SR=%.3f, skew=%.3f, kurt=%.3f, adj=%.3f → "
+        "%.1f months required, %.1f months available → %s",
+        sharpe,
+        skew,
+        kurtosis,
+        adjustment,
+        min_trl_months,
+        backtest_months,
+        "PASS" if min_trl_pass else "FAIL",
+    )
+
+    return MinTRLResult(
+        min_trl_months=min_trl_months,
+        backtest_months=backtest_months,
+        sharpe=sharpe,
+        skew=skew,
+        kurtosis=kurtosis,
+        confidence=confidence,
+        min_trl_pass=min_trl_pass,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Full robustness gate
 # ---------------------------------------------------------------------------
 
@@ -370,6 +527,13 @@ def run_robustness_gate(
     pbo_threshold: float = 0.10,
     asset_returns: list[float] | None = None,
     n_shuffles: int = 1000,
+    annualized_sharpe: float | None = None,
+    min_trl_confidence: float = 0.95,
+    portfolio_returns: list[float] | None = None,
+    portfolio_sr: float | None = None,
+    correlation_window: int = 60,
+    marginal_sr_threshold: float = 0.05,
+    correlation_threshold: float = 0.30,
 ) -> RobustnessResult:
     """Run the complete robustness gate.
 
@@ -394,6 +558,24 @@ def run_robustness_gate(
         signal test).  If None, Gate 6 is skipped (defaults to pass).
     n_shuffles : int
         Number of permutations for shuffled signal test.
+    annualized_sharpe : float | None
+        Annualized Sharpe ratio of the best strategy (for MinTRL). If None,
+        MinTRL is computed from best_returns.
+    min_trl_confidence : float
+        Statistical confidence for MinTRL computation (default 0.95).
+    portfolio_returns : list[float] | None
+        Daily portfolio NAV returns for portfolio admission gates.
+        If None, both portfolio gates are skipped (default pass).
+    portfolio_sr : float | None
+        Current portfolio combined Sharpe ratio for marginal SR gate.
+        Required when portfolio_returns is provided.  If None but
+        portfolio_returns is given, marginal SR gate is skipped.
+    correlation_window : int
+        Rolling window (days) for portfolio correlation gate (default 60).
+    marginal_sr_threshold : float
+        Minimum ΔSR_P for admission (default 0.05).
+    correlation_threshold : float
+        Maximum rolling correlation to portfolio NAV for admission (default 0.30).
 
     Returns
     -------
@@ -442,8 +624,276 @@ def run_robustness_gate(
         # Skipped -- default to pass (backwards compatible)
         result.shuffled_signal_passed = True
 
+    # 7. MinTRL (informational — emits WARNING if insufficient)
+    if best_returns:
+        arr = np.array(best_returns)
+        n_obs = len(arr)
+        # Compute annualized Sharpe if not provided
+        if annualized_sharpe is not None:
+            sr_ann = annualized_sharpe
+        else:
+            from llm_quant.backtest.metrics import TRADING_DAYS_PER_YEAR, compute_sharpe
+
+            sr_ann = compute_sharpe(best_returns, annualize=True)
+
+        from scipy import stats as _stats
+
+        skew = float(_stats.skew(arr, bias=False))
+        kurt = float(_stats.kurtosis(arr, bias=False))  # excess kurtosis
+
+        result.min_trl = compute_min_trl(
+            sharpe=sr_ann,
+            skew=skew,
+            kurtosis=kurt,
+            n_observations=n_obs,
+            confidence=min_trl_confidence,
+        )
+    else:
+        result.min_trl = MinTRLResult()
+
+    # 8. Portfolio admission gates (taff: marginal SR, r5j4: correlation)
+    if portfolio_returns is not None and best_returns:
+        # Correlation gate (r5j4)
+        result.portfolio_correlation = check_portfolio_correlation(
+            strategy_returns=best_returns,
+            portfolio_returns=portfolio_returns,
+            window=correlation_window,
+        )
+        result.portfolio_correlation_passed = (
+            result.portfolio_correlation < correlation_threshold
+        )
+        logger.info(
+            "Portfolio correlation gate: rho=%.3f (threshold < %.2f) — %s",
+            result.portfolio_correlation,
+            correlation_threshold,
+            "PASS" if result.portfolio_correlation_passed else "FAIL",
+        )
+
+        # Marginal SR gate (taff)
+        if portfolio_sr is not None:
+            if annualized_sharpe is not None:
+                sr_k = annualized_sharpe
+            else:
+                from llm_quant.backtest.metrics import compute_sharpe
+
+                sr_k = compute_sharpe(best_returns, annualize=True)
+
+            result.marginal_sr_contribution = compute_marginal_sr_contribution(
+                strategy_sr=sr_k,
+                portfolio_sr=portfolio_sr,
+                correlation=result.portfolio_correlation,
+            )
+            result.marginal_sr_passed = (
+                result.marginal_sr_contribution >= marginal_sr_threshold
+            )
+            logger.info(
+                "Marginal SR gate: ΔSR_P=%.4f (threshold >= %.2f) — %s",
+                result.marginal_sr_contribution,
+                marginal_sr_threshold,
+                "PASS" if result.marginal_sr_passed else "FAIL",
+            )
+        else:
+            # portfolio_sr not provided — skip marginal SR gate
+            result.marginal_sr_passed = True
+            logger.info(
+                "Marginal SR gate skipped (no portfolio_sr provided)"
+            )
+    else:
+        # No portfolio context — both admission gates default to pass
+        result.marginal_sr_passed = True
+        result.portfolio_correlation_passed = True
+
     # Overall
     result.compute_overall()
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Track C — Structural Arb Robustness Gate
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TrackCRobustnessResult:
+    """Robustness gate result specific to Track C structural arb strategies.
+
+    Track C applies tighter performance floors and adds market-neutrality
+    and statistical-significance checks that are not required for Tracks A/B.
+
+    Gates
+    -----
+    1. sharpe_gate       — annualized Sharpe >= 1.5  (vs 0.8 for Track A)
+    2. maxdd_gate        — max drawdown < 10%        (vs 15% for Track A)
+    3. beta_gate         — absolute SPY beta < 0.15  (market-neutrality)
+    4. min_trades_gate   — at least 50 completed trades (stat significance)
+    5. cost_stress_gate  — re-run at 2x fees; Sharpe still >= 1.0
+
+    The ``overall_passed`` flag is True only when all five gates pass.
+    """
+
+    # Raw inputs (stored for audit trail)
+    sharpe: float = 0.0
+    max_drawdown: float = 0.0       # positive fraction, e.g. 0.08 for 8%
+    beta_to_spy: float = 0.0        # absolute value
+    n_trades: int = 0
+    cost_stress_sharpe: float = 0.0
+
+    # Individual gate results
+    sharpe_gate: bool = False           # sharpe >= 1.5
+    maxdd_gate: bool = False            # max_drawdown < 0.10
+    beta_gate: bool = False             # beta_to_spy < 0.15
+    min_trades_gate: bool = False       # n_trades >= 50
+    cost_stress_gate: bool = False      # cost_stress_sharpe >= 1.0
+
+    # Gate thresholds (informational)
+    sharpe_threshold: float = 1.5
+    maxdd_threshold: float = 0.10
+    beta_threshold: float = 0.15
+    min_trades_threshold: int = 50
+    cost_stress_sharpe_threshold: float = 1.0
+
+    # Overall
+    overall_passed: bool = False
+    gate_details: dict[str, bool] = field(default_factory=dict)
+
+    def compute_overall(self) -> None:
+        """Compute overall gate pass from individual gate results."""
+        self.gate_details = {
+            "sharpe_>=_1.5": self.sharpe_gate,
+            "max_drawdown_<_10%": self.maxdd_gate,
+            "beta_to_spy_<_0.15": self.beta_gate,
+            "min_50_trades": self.min_trades_gate,
+            "cost_2x_sharpe_>=_1.0": self.cost_stress_gate,
+        }
+        self.overall_passed = all(self.gate_details.values())
+
+
+def run_track_c_robustness_gate(
+    sharpe: float,
+    max_drawdown: float,
+    beta_to_spy: float,
+    n_trades: int,
+    cost_stress_sharpe: float,
+    sharpe_threshold: float = 1.5,
+    maxdd_threshold: float = 0.10,
+    beta_threshold: float = 0.15,
+    min_trades: int = 50,
+    cost_stress_sharpe_threshold: float = 1.0,
+) -> TrackCRobustnessResult:
+    """Run the Track C structural arb robustness gate.
+
+    All five gates must pass for the strategy to be eligible for promotion.
+
+    Parameters
+    ----------
+    sharpe : float
+        Annualized Sharpe ratio from the primary backtest.
+    max_drawdown : float
+        Maximum portfolio drawdown as a positive fraction (e.g. 0.08 = 8%).
+    beta_to_spy : float
+        Absolute rolling-30d beta of the strategy to SPY.  Arb strategies
+        must remain near-zero beta; values >= 0.15 indicate leg imbalance.
+    n_trades : int
+        Total number of completed round-trip trades in the backtest.  Arb
+        strategies need >= 50 trades for statistical significance.
+    cost_stress_sharpe : float
+        Sharpe ratio re-computed with transaction costs doubled (2x fees).
+        Must remain >= 1.0 to confirm cost robustness.
+    sharpe_threshold : float
+        Minimum acceptable Sharpe.  Default 1.5 (vs 0.8 for Track A).
+    maxdd_threshold : float
+        Maximum acceptable drawdown.  Default 0.10 (vs 0.15 for Track A).
+    beta_threshold : float
+        Maximum acceptable absolute SPY beta.  Default 0.15.
+    min_trades : int
+        Minimum number of completed trades for stat significance.  Default 50.
+    cost_stress_sharpe_threshold : float
+        Minimum Sharpe under 2x-cost stress.  Default 1.0.
+
+    Returns
+    -------
+    TrackCRobustnessResult
+        Individual gate results and overall pass/fail flag.
+    """
+    result = TrackCRobustnessResult(
+        sharpe=sharpe,
+        max_drawdown=max_drawdown,
+        beta_to_spy=abs(beta_to_spy),
+        n_trades=n_trades,
+        cost_stress_sharpe=cost_stress_sharpe,
+        sharpe_threshold=sharpe_threshold,
+        maxdd_threshold=maxdd_threshold,
+        beta_threshold=beta_threshold,
+        min_trades_threshold=min_trades,
+        cost_stress_sharpe_threshold=cost_stress_sharpe_threshold,
+    )
+
+    # Gate 1: Sharpe >= threshold
+    result.sharpe_gate = sharpe >= sharpe_threshold
+    if not result.sharpe_gate:
+        logger.warning(
+            "Track C sharpe gate FAILED: %.3f < threshold %.3f",
+            sharpe,
+            sharpe_threshold,
+        )
+
+    # Gate 2: MaxDD < threshold
+    result.maxdd_gate = max_drawdown < maxdd_threshold
+    if not result.maxdd_gate:
+        logger.warning(
+            "Track C maxdd gate FAILED: %.2f%% >= threshold %.2f%%",
+            max_drawdown * 100,
+            maxdd_threshold * 100,
+        )
+
+    # Gate 3: Beta to SPY < threshold (market-neutrality check)
+    result.beta_gate = abs(beta_to_spy) < beta_threshold
+    if not result.beta_gate:
+        logger.warning(
+            "Track C beta gate FAILED: |beta|=%.3f >= threshold %.3f — "
+            "strategy is not market-neutral; check leg sizing.",
+            abs(beta_to_spy),
+            beta_threshold,
+        )
+
+    # Gate 4: Min trades (statistical significance)
+    result.min_trades_gate = n_trades >= min_trades
+    if not result.min_trades_gate:
+        logger.warning(
+            "Track C min_trades gate FAILED: %d trades < required %d — "
+            "insufficient sample size for arb stat significance.",
+            n_trades,
+            min_trades,
+        )
+
+    # Gate 5: Cost stress — 2x fees, Sharpe still >= cost_stress_sharpe_threshold
+    result.cost_stress_gate = cost_stress_sharpe >= cost_stress_sharpe_threshold
+    if not result.cost_stress_gate:
+        logger.warning(
+            "Track C cost_stress gate FAILED: 2x-fee Sharpe %.3f < threshold %.3f — "
+            "strategy edge erodes under realistic cost assumptions.",
+            cost_stress_sharpe,
+            cost_stress_sharpe_threshold,
+        )
+
+    result.compute_overall()
+
+    logger.info(
+        "Track C robustness gate %s: sharpe=%.3f(%s) maxdd=%.2f%%(%s) "
+        "beta=%.3f(%s) trades=%d(%s) cost_stress_sr=%.3f(%s)",
+        "PASSED" if result.overall_passed else "FAILED",
+        sharpe,
+        "pass" if result.sharpe_gate else "FAIL",
+        max_drawdown * 100,
+        "pass" if result.maxdd_gate else "FAIL",
+        abs(beta_to_spy),
+        "pass" if result.beta_gate else "FAIL",
+        n_trades,
+        "pass" if result.min_trades_gate else "FAIL",
+        cost_stress_sharpe,
+        "pass" if result.cost_stress_gate else "FAIL",
+    )
+
     return result
 
 
@@ -592,6 +1042,114 @@ def mechanism_inversion_test(
         inverted_is_negative=inv_sr < 0,
         passed=diff >= min_differential,
     )
+
+
+# ---------------------------------------------------------------------------
+# Portfolio Admission Gates (Task taff + r5j4)
+# ---------------------------------------------------------------------------
+
+
+def compute_marginal_sr_contribution(
+    strategy_sr: float,
+    portfolio_sr: float,
+    correlation: float,
+) -> float:
+    """Compute the marginal Sharpe Ratio contribution of a new strategy.
+
+    Uses the Lopez de Prado portfolio SR approximation:
+        ΔSR_P ≈ (SR_k - ρ_{kP} × SR_P) / sqrt(1 + 2×ρ_{kP}×SR_k/SR_P)
+
+    A positive ΔSR_P means adding the strategy improves the portfolio's
+    risk-adjusted return.  The admission gate requires ΔSR_P >= 0.05.
+
+    Parameters
+    ----------
+    strategy_sr : float
+        Annualized Sharpe ratio of the candidate strategy.
+    portfolio_sr : float
+        Current portfolio (combined) Sharpe ratio.
+    correlation : float
+        Rolling correlation between the candidate strategy returns and
+        the portfolio NAV returns.  Should be in [-1, 1].
+
+    Returns
+    -------
+    float
+        Marginal SR contribution ΔSR_P.  Gate passes when >= 0.05.
+    """
+    if portfolio_sr <= 0:
+        # Degenerate case: any positive-SR strategy improves a zero-SR portfolio
+        return strategy_sr
+
+    rho = float(correlation)
+    sr_k = float(strategy_sr)
+    sr_p = float(portfolio_sr)
+
+    numerator = sr_k - rho * sr_p
+    denominator_sq = 1.0 + 2.0 * rho * sr_k / sr_p
+    # Guard against negative denominator (highly correlated, low-SR candidate)
+    if denominator_sq <= 0:
+        return -abs(numerator)
+    denominator = math.sqrt(denominator_sq)
+    return numerator / denominator
+
+
+def check_portfolio_correlation(
+    strategy_returns: list[float],
+    portfolio_returns: list[float],
+    window: int = 60,
+) -> float:
+    """Compute rolling 60-day average correlation between strategy and portfolio.
+
+    Used as the portfolio admission correlation gate.  New strategies must
+    have a rolling average correlation < 0.30 to the portfolio NAV returns.
+
+    Parameters
+    ----------
+    strategy_returns : list[float]
+        Daily strategy returns.
+    portfolio_returns : list[float]
+        Daily portfolio NAV returns (same length, aligned on dates).
+    window : int
+        Rolling window in days.  Default 60.
+
+    Returns
+    -------
+    float
+        Mean rolling correlation over the overlapping history.
+        The admission gate requires this to be < 0.30.
+    """
+    n = min(len(strategy_returns), len(portfolio_returns))
+    if n < window:
+        logger.warning(
+            "check_portfolio_correlation: only %d observations, need %d for window",
+            n,
+            window,
+        )
+        if n < 2:
+            return 0.0
+        # Fall back to full-period correlation
+        s = np.array(strategy_returns[:n])
+        p = np.array(portfolio_returns[:n])
+        if np.std(s) == 0 or np.std(p) == 0:
+            return 0.0
+        return float(np.corrcoef(s, p)[0, 1])
+
+    s = np.array(strategy_returns[-n:])
+    p = np.array(portfolio_returns[-n:])
+
+    rolling_corrs: list[float] = []
+    for start in range(n - window + 1):
+        end = start + window
+        s_w = s[start:end]
+        p_w = p[start:end]
+        if np.std(s_w) == 0 or np.std(p_w) == 0:
+            continue
+        rolling_corrs.append(float(np.corrcoef(s_w, p_w)[0, 1]))
+
+    if not rolling_corrs:
+        return 0.0
+    return float(np.mean(rolling_corrs))
 
 
 # ---------------------------------------------------------------------------

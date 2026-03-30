@@ -20,14 +20,29 @@ max_trades_per_session = 5
 # Minimum cash reserve as fraction of NAV
 min_cash_reserve = 0.05  # 5%
 
-# Stop-loss required on every position (percentage below entry)
+# Stop-loss required on every position
 require_stop_loss = true
-default_stop_loss_pct = 0.05  # 5%
+# ATR-calibrated stop-loss multipliers (Turtle Traders: 2x ATR baseline)
+# Static default_stop_loss_pct is kept as fallback when ATR is unavailable.
+default_stop_loss_pct = 0.05      # 5% static fallback
+atr_stop_multiplier = 2.0         # 2x ATR for equities / fixed income
+atr_stop_multiplier_crypto = 2.5  # 2.5x ATR for crypto (wider for overnight gaps)
+atr_stop_multiplier_commodity = 2.5  # 2.5x ATR for volatile commodities
 
 # Portfolio-level drawdown circuit breaker (blocks new buys when breached)
 max_drawdown_pct = 0.15  # 15%
 
 # --- Per-asset-class overrides (Track A defaults) ---
+
+# ATR-based position sizing parameters
+# target_risk_pct: fraction of NAV to risk per trade when sizing via ATR
+# deviation_buffer: how far above ATR-implied limit before a rebalance alert fires
+# atr_period: lookback for equity/fixed income ATR
+# atr_period_crypto: shorter lookback for faster-moving crypto
+target_risk_pct = 0.01            # 1% of NAV at risk per trade
+deviation_buffer = 0.20           # 20% above ATR-implied max triggers alert
+atr_period = 14                   # standard ATR period (equities, fixed income)
+atr_period_crypto = 7             # shorter ATR period for crypto (faster regime response)
 
 # Crypto: Higher volatility → tighter position weight, wider stop-loss
 crypto_max_position_weight = 0.05   # 5%  (vs 12% default)
@@ -55,9 +70,59 @@ max_trades_per_session = 5           # unchanged
 min_cash_reserve = 0.03              # 3%  (vs 5% Track A)
 require_stop_loss = true
 default_stop_loss_pct = 0.08         # 8%  (vs 5% Track A — wider for volatile strategies)
+atr_stop_multiplier = 2.0            # same 2x ATR baseline as Track A
+atr_stop_multiplier_crypto = 3.0     # 3x ATR for crypto (Track B tolerates more vol)
+atr_stop_multiplier_commodity = 2.5  # 2.5x ATR for volatile commodities
+target_risk_pct = 0.015              # 1.5% of NAV at risk per trade (vs 1% Track A)
+deviation_buffer = 0.25              # 25% buffer before alert (wider for Track B)
 max_drawdown_pct = 0.30              # 30% (vs 15% Track A — the key relaxation)
 
 # Track B per-asset-class overrides
 crypto_max_position_weight = 0.08    # 8%  (vs 5% Track A)
 crypto_default_stop_loss_pct = 0.20  # 20% (wider — crypto overnight gaps are large)
 leveraged_etf_max_position_weight = 0.10  # 10% — leveraged ETFs capped below general limit
+
+# =============================================================================
+# TRACK C — STRUCTURAL ARB / EVENT-DRIVEN
+# Applied to strategies with track: track_c in their mandate.yaml
+# Near-zero-beta arb strategies: wider single-leg sizing, tight net exposure,
+# larger cash cushion for event-driven deployment.
+# INTEGRITY GATES (DSR, CPCV) ARE UNCHANGED — only risk gates differ.
+# See docs/governance/research-tracks.md for full specification.
+# =============================================================================
+
+[track_c]
+# Per-position and per-trade sizing — wider than Track A because legs are
+# partially offsetting; net exposure remains near zero.
+max_position_weight = 0.20           # 20% per strategy (vs 10% Track A)
+max_trade_size = 0.05                # 5% per trade    (vs 2% Track A)
+
+# Exposure caps — tight net cap enforces arb discipline.
+max_gross_exposure = 2.0             # 200% unchanged (long + short legs summed)
+max_net_exposure = 0.30              # 30% (arbs must remain near-zero beta)
+
+# Sector / exchange concentration — caps a single exchange at 25%.
+max_sector_concentration = 0.30      # 30% unchanged (cross-sector arbs are common)
+max_exchange_concentration = 0.25    # 25% on any single exchange
+
+# Session limit unchanged; cash reserve raised for event-driven staging.
+max_trades_per_session = 5
+min_cash_reserve = 0.10              # 10% (vs 5% Track A — hold dry powder for events)
+
+# Stop-loss policy — arb legs typically have tight natural stops.
+require_stop_loss = true
+default_stop_loss_pct = 0.05         # 5% static fallback
+atr_stop_multiplier = 2.0
+atr_stop_multiplier_crypto = 2.5
+atr_stop_multiplier_commodity = 2.5
+
+# ATR-based sizing — slightly tighter risk per trade than Track A.
+target_risk_pct = 0.01
+deviation_buffer = 0.20
+max_drawdown_pct = 0.10              # 10% — arb should be market-neutral; drawdown > 10%
+                                     # signals leg imbalance or spread regime break
+
+# Kill-switch thresholds
+max_beta_to_spy = 0.25               # rolling-30d beta breach triggers review
+min_spread_bps = 5.0                 # spread below 5 bps → spread collapse warning
+max_funding_rate_pct = 0.50          # funding > 50 bps/day → funding reversal warning

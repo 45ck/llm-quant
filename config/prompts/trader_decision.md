@@ -24,9 +24,15 @@
 {% endfor %}
 
 ## Macro Indicators
-- **VIX**: {{ "%.2f"|format(vix) }}
+- **VIX**: {{ "%.2f"|format(vix) }} ({{ "%.1f"|format(vix_percentile_126d) }}th percentile of last 126 days)
+- **VIX Regime**: {{ market_regime }} (thresholds: {{ "%.1f"|format(vix_regime_thresholds[0]) }} / {{ "%.1f"|format(vix_regime_thresholds[1]) }})
 - **10Y-2Y Spread**: {{ "%.2f"|format(yield_spread) }} bps
 - **SPY 50/200 SMA**: {{ spy_trend }}
+{% if credit_spread_oas is not none %}
+- **Credit OAS (BAMLC0A0CM)**: {{ "%.2f"|format(credit_spread_oas) }} bps (z-score: {{ "%.2f"|format(credit_spread_zscore) if credit_spread_zscore is not none else "N/A" }}){% if silent_stress %} ⚠️ **SILENT STRESS**: credit spread elevated while VIX is low — hidden risk building{% endif %}
+{% else %}
+- **Credit OAS**: N/A (FRED data not loaded)
+{% endif %}
 
 {% if governance is defined and governance %}
 ## Governance Status
@@ -49,9 +55,11 @@
 
 ## Instructions
 Analyze the data above and provide your trading decisions as JSON following the system prompt format. Consider:
-1. Current market regime and any regime shifts
+1. Current market regime and any regime shifts (use adaptive VIX thresholds above, not fixed 20/25)
 2. Sector rotation signals from momentum and RSI
 3. Existing position management (stop-loss triggers, profit-taking)
 4. New opportunities aligned with the regime
 5. All hard constraints from your mandate
 6. Governance status — respect halt restrictions, note warnings in analysis
+7. **VIX percentile sizing rule**: when VIX percentile > 80, scale down target position sizes by 50% to reduce vol exposure
+8. **Silent stress alert**: when silent_stress=True, treat as risk_off even if VIX appears benign — credit markets are leading equity stress indicators

@@ -32,8 +32,9 @@ from llm_quant.backtest.artifacts import (
     save_artifact,
     strategy_dir,
 )
-from llm_quant.backtest.engine import BacktestEngine, CostModel
+from llm_quant.backtest.engine import BacktestEngine, CostModel, MetaFilterConfig
 from llm_quant.backtest.report import generate_backtest_report
+from llm_quant.backtest.robustness import compute_min_trl
 from llm_quant.backtest.strategies import STRATEGY_REGISTRY, create_strategy
 from llm_quant.backtest.strategy import StrategyConfig
 from llm_quant.data.fetcher import fetch_ohlcv
@@ -121,6 +122,71 @@ def main() -> None:
         action="store_true",
         help="Skip frozen spec check (for quick testing only)",
     )
+    parser.add_argument(
+        "--volatility-target",
+        type=float,
+        default=None,
+        metavar="VOL",
+        help=(
+            "Annualized volatility target for position scaling "
+            "(e.g. 0.15 for 15%%). Default: disabled."
+        ),
+    )
+    parser.add_argument(
+        "--vol-target-window",
+        type=int,
+        default=20,
+        help="Rolling window (days) for realized vol estimate. Default: 20.",
+    )
+    parser.add_argument(
+        "--vol-target-max-scale",
+        type=float,
+        default=2.0,
+        help="Maximum leverage multiplier for vol targeting. Default: 2.0.",
+    )
+    # Rule-based meta-filter flags
+    parser.add_argument(
+        "--regime-filter",
+        action="store_true",
+        default=False,
+        help="Suppress BUY signals when VIX > vix-threshold (default 25).",
+    )
+    parser.add_argument(
+        "--vix-threshold",
+        type=float,
+        default=25.0,
+        help="VIX level above which regime_filter blocks BUY signals. Default: 25.",
+    )
+    parser.add_argument(
+        "--signal-strength",
+        action="store_true",
+        default=False,
+        help="Scale position size by leader-return magnitude.",
+    )
+    parser.add_argument(
+        "--signal-strength-scale",
+        type=float,
+        default=0.01,
+        help="Leader-return entry threshold divisor for signal_strength_weight. Default: 0.01.",
+    )
+    parser.add_argument(
+        "--signal-strength-cap",
+        type=float,
+        default=2.0,
+        help="Maximum multiplier cap for signal_strength_weight. Default: 2.0.",
+    )
+    parser.add_argument(
+        "--ensemble-vote",
+        action="store_true",
+        default=False,
+        help="Require 2+ BUY signals to agree before acting (ensemble gate).",
+    )
+    parser.add_argument(
+        "--ensemble-min-votes",
+        type=int,
+        default=2,
+        help="Minimum BUY vote count required when --ensemble-vote is set. Default: 2.",
+    )
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -169,12 +235,46 @@ def main() -> None:
     logger.info("Computing indicators...")
     indicators_df = compute_indicators(prices_df)
 
+    # Build meta-filter config if any filter flags are set
+    meta_filter: MetaFilterConfig | None = None
+    if args.regime_filter or args.signal_strength or args.ensemble_vote:
+        meta_filter = MetaFilterConfig(
+            regime_filter_enabled=args.regime_filter,
+            vix_threshold=args.vix_threshold,
+            signal_strength_enabled=args.signal_strength,
+            signal_strength_scale=args.signal_strength_scale,
+            signal_strength_cap=args.signal_strength_cap,
+            ensemble_vote_enabled=args.ensemble_vote,
+            ensemble_min_votes=args.ensemble_min_votes,
+        )
+        active = [
+            name
+            for name, flag in [
+                ("regime_filter", args.regime_filter),
+                ("signal_strength", args.signal_strength),
+                ("ensemble_vote", args.ensemble_vote),
+            ]
+            if flag
+        ]
+        logger.info("Meta-filters enabled: %s", ", ".join(active))
+
     # Run backtest with cost sensitivity
     logger.info("Running backtest with cost sensitivity...")
+    if args.volatility_target is not None:
+        logger.info(
+            "Volatility targeting enabled: target=%.1f%%, window=%d days, max_scale=%.1fx",
+            args.volatility_target * 100,
+            args.vol_target_window,
+            args.vol_target_max_scale,
+        )
     engine = BacktestEngine(
         strategy=strategy,
         data_dir=str(data_dir),
         initial_capital=args.initial_capital,
+        meta_filter=meta_filter,
+        volatility_target=args.volatility_target,
+        vol_target_window=args.vol_target_window,
+        vol_target_max_scale=args.vol_target_max_scale,
     )
 
     result = engine.run_with_cost_sensitivity(
@@ -214,6 +314,34 @@ def main() -> None:
     experiments_dir.mkdir(parents=True, exist_ok=True)
 
     if base_metrics:
+        # Compute MinTRL from backtest returns
+        min_trl_result = compute_min_trl(
+            sharpe=base_metrics.sharpe_ratio,
+            skew=0.0,
+            kurtosis=0.0,
+            n_observations=len(result.daily_returns),
+        )
+        # Re-compute with actual skew/kurtosis if returns available
+        if result.daily_returns and len(result.daily_returns) >= 10:
+            import numpy as np
+            from scipy import stats as scipy_stats
+
+            arr = np.array(result.daily_returns)
+            min_trl_result = compute_min_trl(
+                sharpe=base_metrics.sharpe_ratio,
+                skew=float(scipy_stats.skew(arr, bias=False)),
+                kurtosis=float(scipy_stats.kurtosis(arr, bias=False)),
+                n_observations=len(result.daily_returns),
+            )
+        if not min_trl_result.min_trl_pass:
+            logger.warning(
+                "MinTRL WARNING: %.1f months available but %.1f months required "
+                "for 95%% confidence (SR=%.3f)",
+                min_trl_result.backtest_months,
+                min_trl_result.min_trl_months,
+                min_trl_result.sharpe,
+            )
+
         artifact = {
             "experiment_id": result.experiment_id,
             "trial_number": trial_number,
@@ -240,6 +368,10 @@ def main() -> None:
                 "total_trades": base_metrics.total_trades,
                 "win_rate": base_metrics.win_rate,
             },
+            "min_trl_months": round(min_trl_result.min_trl_months, 2),
+            "min_trl_pass": min_trl_result.min_trl_pass,
+            "min_trl_backtest_months": round(min_trl_result.backtest_months, 2),
+            "volatility_target": args.volatility_target,
             "daily_returns": result.daily_returns,
             "data_warnings": result.data_warnings,
         }

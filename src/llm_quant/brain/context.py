@@ -8,7 +8,7 @@ from typing import Any
 
 import duckdb
 
-from llm_quant.brain.models import MarketContext, MarketRow, PositionRow
+from llm_quant.brain.models import MarketContext, MarketRegime, MarketRow, PositionRow
 from llm_quant.config import AppConfig
 
 logger = logging.getLogger(__name__)
@@ -233,6 +233,197 @@ def _get_spy_trend(conn: duckdb.DuckDBPyConnection) -> str:
     return trend
 
 
+def _get_credit_spread(
+    conn: duckdb.DuckDBPyConnection,
+    zscore_window: int = 20,
+    silent_stress_zscore_threshold: float = 1.5,
+    silent_stress_vix_ceiling: float = 20.0,
+    vix: float = 0.0,
+) -> tuple[float | None, float | None, bool]:
+    """Fetch ICE BofA US Corporate OAS (BAMLC0A0CM) from fred_data_daily.
+
+    Returns (oas_bps, zscore, silent_stress) where:
+      - oas_bps: latest OAS value in basis points (or None if unavailable)
+      - zscore: 20-day rolling z-score of OAS (or None if < 2 data points)
+      - silent_stress: True when zscore > threshold AND VIX is below ceiling
+        (credit is pricing in stress that equities haven't yet reflected)
+    """
+    series_id = "BAMLC0A0CM"
+    try:
+        rows = conn.execute(
+            """
+            SELECT value
+            FROM fred_data_daily
+            WHERE series_id = ?
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            [series_id, zscore_window],
+        ).fetchall()
+    except Exception:
+        logger.warning("fred_data_daily not available; credit spread defaults to None")
+        return None, None, False
+
+    if not rows:
+        logger.warning(
+            "No FRED data for %s; credit spread defaults to None", series_id
+        )
+        return None, None, False
+
+    values = [float(r[0]) for r in rows if r[0] is not None]
+    if not values:
+        return None, None, False
+
+    oas = values[0]  # most recent value
+
+    if len(values) < 2:
+        return oas, None, False
+
+    import statistics  # noqa: PLC0415
+
+    mean = statistics.mean(values)
+    stdev = statistics.stdev(values)
+
+    if stdev == 0.0:
+        zscore = 0.0
+    else:
+        zscore = (oas - mean) / stdev
+
+    zscore = round(zscore, 4)
+    silent_stress = (zscore > silent_stress_zscore_threshold) and (
+        vix < silent_stress_vix_ceiling
+    )
+
+    logger.debug(
+        "Credit spread OAS=%.2f bps, z-score=%.2f, silent_stress=%s",
+        oas,
+        zscore,
+        silent_stress,
+    )
+    return oas, zscore, silent_stress
+
+
+def _get_vix_regime(
+    conn: duckdb.DuckDBPyConnection,
+    vix: float,
+    percentile_window: int = 252,
+) -> tuple[MarketRegime, tuple[float, float]]:
+    """Classify market regime using adaptive percentile-based VIX thresholds.
+
+    Loads up to ``percentile_window`` days of VIX history, computes the 33rd
+    and 67th percentile (tercile boundaries), then classifies the current VIX:
+
+      risk_on   — VIX < 33rd percentile
+      transition — 33rd <= VIX <= 67th percentile
+      risk_off  — VIX > 67th percentile
+
+    Falls back to static thresholds (20/25) when insufficient history exists.
+
+    Returns
+    -------
+    (regime, (lower_threshold, upper_threshold))
+    """
+    _FALLBACK_LOW = 20.0
+    _FALLBACK_HIGH = 25.0
+
+    vix_values: list[float] = []
+    for vix_symbol in ("^VIX", "VIX"):
+        rows = conn.execute(
+            """
+            SELECT close
+            FROM market_data_daily
+            WHERE symbol = ?
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            [vix_symbol, percentile_window],
+        ).fetchall()
+        if rows:
+            vix_values = [float(r[0]) for r in rows if r[0] is not None]
+            break
+
+    if len(vix_values) < 10:
+        logger.warning(
+            "Insufficient VIX history (%d rows); using static thresholds %.1f/%.1f",
+            len(vix_values),
+            _FALLBACK_LOW,
+            _FALLBACK_HIGH,
+        )
+        lower, upper = _FALLBACK_LOW, _FALLBACK_HIGH
+    else:
+        sorted_vix = sorted(vix_values)
+        n = len(sorted_vix)
+        # Percentile index (nearest-rank method)
+        idx_33 = max(0, int(round(0.33 * n)) - 1)
+        idx_67 = max(0, int(round(0.67 * n)) - 1)
+        lower = round(sorted_vix[idx_33], 2)
+        upper = round(sorted_vix[idx_67], 2)
+        logger.debug(
+            "Adaptive VIX thresholds: 33rd pct=%.2f, 67th pct=%.2f (n=%d)",
+            lower,
+            upper,
+            n,
+        )
+
+    if vix < lower:
+        regime = MarketRegime.RISK_ON
+    elif vix > upper:
+        regime = MarketRegime.RISK_OFF
+    else:
+        regime = MarketRegime.TRANSITION
+
+    logger.debug(
+        "VIX regime=%s (VIX=%.2f, lower=%.2f, upper=%.2f)",
+        regime,
+        vix,
+        lower,
+        upper,
+    )
+    return regime, (lower, upper)
+
+
+def _get_vix_percentile_126d(
+    conn: duckdb.DuckDBPyConnection,
+    vix: float,
+) -> float:
+    """Compute the percentile rank of current VIX among the last 126 trading days.
+
+    Returns a value on the 0–100 scale.  Returns 50.0 if insufficient data.
+    The 126-day window covers approximately 6 calendar months.
+    """
+    vix_values: list[float] = []
+    for vix_symbol in ("^VIX", "VIX"):
+        rows = conn.execute(
+            """
+            SELECT close
+            FROM market_data_daily
+            WHERE symbol = ?
+            ORDER BY date DESC
+            LIMIT 126
+            """,
+            [vix_symbol],
+        ).fetchall()
+        if rows:
+            vix_values = [float(r[0]) for r in rows if r[0] is not None]
+            break
+
+    if len(vix_values) < 2:
+        logger.warning(
+            "Insufficient VIX history for 126d percentile; defaulting to 50.0"
+        )
+        return 50.0
+
+    count_below = sum(1 for v in vix_values if v < vix)
+    percentile = round(count_below / len(vix_values) * 100.0, 1)
+    logger.debug(
+        "VIX 126d percentile=%.1f (VIX=%.2f, n=%d)",
+        percentile,
+        vix,
+        len(vix_values),
+    )
+    return percentile
+
+
 def _build_position_rows(
     positions: list[dict[str, Any]],
     market_prices: dict[str, dict[str, Any]],
@@ -372,6 +563,22 @@ def build_market_context(
     yield_spread = _get_yield_spread(conn)
     spy_trend = _get_spy_trend(conn)
 
+    # ev8: credit spread stress indicator
+    vix_regime_percentile_window: int = getattr(
+        config, "vix_regime_percentile_window", 252
+    )
+    credit_spread_oas, credit_spread_zscore, silent_stress = _get_credit_spread(
+        conn, vix=vix
+    )
+
+    # 4a1: adaptive VIX regime classification
+    market_regime, vix_regime_thresholds = _get_vix_regime(
+        conn, vix, percentile_window=vix_regime_percentile_window
+    )
+
+    # vts: 126-day VIX percentile rank
+    vix_percentile_126d = _get_vix_percentile_126d(conn, vix)
+
     from datetime import datetime
 
     today = datetime.now(tz=UTC).date()
@@ -388,16 +595,28 @@ def build_market_context(
         vix=round(vix, 2),
         yield_spread=round(yield_spread, 2),
         spy_trend=spy_trend,
+        credit_spread_oas=round(credit_spread_oas, 2) if credit_spread_oas is not None else None,
+        credit_spread_zscore=round(credit_spread_zscore, 4) if credit_spread_zscore is not None else None,
+        silent_stress=silent_stress,
+        vix_regime_thresholds=vix_regime_thresholds,
+        market_regime=market_regime,
+        vix_percentile_126d=vix_percentile_126d,
     )
 
     logger.info(
         "Market context built: date=%s, nav=%.2f, %d positions, %d market rows, "
-        "VIX=%.2f, spy_trend=%s",
+        "VIX=%.2f (pct126d=%.1f, regime=%s), spy_trend=%s, "
+        "credit_oas=%s, credit_z=%s, silent_stress=%s",
         context.date,
         context.nav,
         len(context.positions),
         len(context.market_data),
         context.vix,
+        context.vix_percentile_126d,
+        context.market_regime,
         context.spy_trend,
+        f"{context.credit_spread_oas:.2f}" if context.credit_spread_oas is not None else "N/A",
+        f"{context.credit_spread_zscore:.4f}" if context.credit_spread_zscore is not None else "N/A",
+        context.silent_stress,
     )
     return context

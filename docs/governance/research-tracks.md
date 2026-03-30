@@ -119,7 +119,7 @@ provides leveraged upside.
 Every mandate.yaml must include a `track` field:
 
 ```yaml
-track: track_a   # or track_b
+track: track_a   # or track_b or track_c or track_d
 ```
 
 This determines which gate thresholds apply throughout the lifecycle.
@@ -128,15 +128,17 @@ This determines which gate thresholds apply throughout the lifecycle.
 
 ## Lifecycle Gates by Track
 
-| Stage | Track A | Track B |
-|-------|---------|---------|
-| Mandate | max_drawdown: 0.15 | max_drawdown: 0.30 |
-| Robustness: Sharpe gate | >= 0.80 | >= 1.00 |
-| Robustness: MaxDD gate | < 15% | < 30% |
-| Robustness: DSR gate | >= 0.95 | >= 0.95 |
-| Robustness: CPCV gate | OOS/IS > 0 | OOS/IS > 0 |
-| Promotion: Paper Sharpe | >= 0.60 | >= 0.80 |
-| Promotion: Canary MaxDD | < 10% | < 20% |
+| Stage | Track A | Track B | Track C | Track D |
+|-------|---------|---------|---------|---------|
+| Mandate | max_drawdown: 0.15 | max_drawdown: 0.30 | max_drawdown: 0.10 | max_drawdown: 0.40 |
+| Robustness: Sharpe gate | >= 0.80 | >= 1.00 | >= 1.50 | >= 0.80 |
+| Robustness: MaxDD gate | < 15% | < 30% | < 10% | < 40% |
+| Robustness: DSR gate | >= 0.95 | >= 0.95 | >= 0.95 | >= 0.90 |
+| Robustness: CPCV gate | OOS/IS > 0 | OOS/IS > 0 | OOS/IS > 0 | OOS/IS > 0 |
+| Promotion: Paper Sharpe | >= 0.60 | >= 0.80 | >= 1.20 | >= 0.60 |
+| Promotion: Canary MaxDD | < 10% | < 20% | < 8% | < 30% |
+| Promotion: MAR gate | n/a | n/a | n/a | >= 1.0 after 90d |
+| Max holding period | n/a | n/a | n/a | 5 calendar days |
 
 ---
 
@@ -166,14 +168,67 @@ This determines which gate thresholds apply throughout the lifecycle.
 
 ---
 
-## Portfolio Combination (Three Tracks)
+## Track D — Sprint Alpha
 
-| Track | Allocation | Expected Sharpe | Beta |
-|-------|-----------|-----------------|------|
-| A (11 strategies) | 60% | ~1.35 | ~0.4 |
-| B (3-5 target) | 20% | ~1.5 | ~0.8 |
-| C (2-3 target) | 20% | ~2.0 | ~0.0 |
-| **Combined** | **100%** | **~2.0-2.5** | ~0.3 |
+**Purpose:** Maximize CAGR by re-expressing validated Family 1 and Family 8 signals through 3x leveraged ETFs. Not a new signal search — a re-expression engine. Only signals that have already passed Track A or Track B gates are candidates.
+
+**Mandate:** `data/strategies/sprint-alpha/mandate.yaml`
+
+**Rebalancing reference:** `docs/governance/track-d-rebalancing.md`
+
+| Gate | Threshold | Rationale |
+|------|-----------|-----------|
+| Sharpe | >= 0.80 | Lower bar vs. Track B — leverage amplifies both signal and noise |
+| Max Drawdown | < 40% | Accepts aggressive drawdowns; leverage makes 30%+ drawdowns structurally inevitable |
+| DSR | >= 0.90 | Slightly relaxed vs. 0.95 — shorter effective history from 3x ETF launch dates |
+| CPCV OOS/IS | > 0 (mean and median) | Unchanged — integrity gate, non-negotiable |
+| Perturbation stability | >= 3/5 | Unchanged |
+| MAR (CAGR/MaxDD) | >= 1.0 after 90 days paper | Kill condition — if leverage isn't producing asymmetric returns, retire immediately |
+| Max holding period | <= 5 calendar days | Hard rule — beta decay and volatility drag make multi-week holds structurally losing |
+
+**Position sizing:**
+- Max position: 30-50% of NAV (concentrated by design — diversification destroys leveraged returns)
+- Max trade: 5% of NAV
+- Cash reserve: >= 10% (higher buffer — leveraged drawdowns are fast and deep)
+- No more than 2 leveraged positions simultaneously
+
+**Benchmark:** 100% TQQQ buy-and-hold (the monster baseline — if you can't beat passive TQQQ, the strategy adds no value)
+
+**Return target:** 60-120% annualized CAGR (gross)
+
+**Portfolio allocation:** 0% until paper trading gate passes; target 10-15% of total capital at full deployment
+
+**Universe:**
+- Leveraged equity: TQQQ (3x QQQ), UPRO (3x SPY), SOXL (3x semis)
+- Leveraged bond: TMF (3x TLT), TLTW (3x TLT + covered calls)
+- No inverse ETFs — short signals expressed via exit/cash, not SQQQ/SPXS
+
+**Signal sources (re-expression only):**
+- Family 1 (Cross-Asset Information Flow): LQD/AGG/HYG lead signals re-expressed as TQQQ/UPRO entries
+- Family 8 (Non-Credit Lead-Lag): SOXX-QQQ lead re-expressed as SOXL entries
+- No new signal research in Track D — only re-expression of promoted Track A/B strategies
+
+**Kill conditions (any one triggers immediate retirement):**
+1. MAR < 1.0 after 90 days of paper trading
+2. Three consecutive weekly losses exceeding 15% each
+3. Single-session loss > 20%
+4. Beta decay drag > 5% annualized vs. 3x theoretical return (measured monthly)
+
+**Status:** Experimental — 2 strategies in backtest phase (LQD-SPY signal → TQQQ, SOXX-QQQ signal → SOXL). Not yet in paper trading.
+
+---
+
+## Portfolio Combination (Four Tracks)
+
+| Track | Allocation | Expected Sharpe | Beta | Status |
+|-------|-----------|-----------------|------|--------|
+| A (11 strategies) | 60% | ~1.35 | ~0.4 | Deployed |
+| B (3-5 target) | 20% | ~1.5 | ~0.8 | Research |
+| C (2-3 target) | 10-20% | ~2.0 | ~0.0 | Planning |
+| D (Sprint Alpha) | 0-15% | ~0.8-1.2 | ~2.0 | Experimental |
+| **Combined** | **100%** | **~2.0-2.5** | ~0.4 | |
+
+Track D allocation is gated: 0% until paper trading gate passes, then grows from 5% → 15% over 6 months contingent on MAR >= 1.0.
 
 ---
 
@@ -183,3 +238,4 @@ This determines which gate thresholds apply throughout the lifecycle.
 |---------|------|--------|
 | 1.0 | 2026-03-26 | Initial dual-track framework. |
 | 2.0 | 2026-03-27 | Added Track C (Niche Arbitrage). |
+| 3.0 | 2026-03-30 | Added Track D (Sprint Alpha — leveraged re-expression). |

@@ -205,4 +205,39 @@ def generate_robustness_report(result: RobustnessResult) -> str:
             )
         lines.append("")
 
+    # MinTRL section
+    mtrl = result.min_trl
+    if mtrl.min_trl_months > 0:
+        lines.append("## Minimum Track Record Length (MinTRL)")
+        lines.append("")
+        lines.append("| Field | Value |")
+        lines.append("| --- | --- |")
+        lines.append(
+            f"| Annualized Sharpe | {_fmt_metric(mtrl.sharpe, '.3f')} |"
+        )
+        lines.append(f"| Skewness | {_fmt_metric(mtrl.skew, '.3f')} |")
+        lines.append(
+            f"| Excess Kurtosis | {_fmt_metric(mtrl.kurtosis, '.3f')} |"
+        )
+        lines.append(
+            f"| Confidence Level | {_fmt_metric(mtrl.confidence, '.0%')} |"
+        )
+        lines.append(
+            f"| Required months (MinTRL) | {_fmt_metric(mtrl.min_trl_months, '.1f')} |"
+        )
+        lines.append(
+            f"| Available months | {_fmt_metric(mtrl.backtest_months, '.1f')} |"
+        )
+        trl_status = "PASS" if mtrl.min_trl_pass else "WARNING — insufficient history"
+        lines.append(f"| MinTRL Status | **{trl_status}** |")
+        if not mtrl.min_trl_pass:
+            lines.append("")
+            lines.append(
+                f"> **WARNING**: Strategy has {mtrl.backtest_months:.1f} months of "
+                f"backtest history but requires {mtrl.min_trl_months:.1f} months for "
+                f"{mtrl.confidence:.0%} confidence. Results may not be statistically "
+                "significant."
+            )
+        lines.append("")
+
     return "\n".join(lines)

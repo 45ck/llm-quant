@@ -31,7 +31,7 @@ def compute_indicators(df: pl.DataFrame) -> pl.DataFrame:
     * **macd** -- MACD line (EMA-12 minus EMA-26 of *close*).
     * **macd_signal** -- 9-period EMA of the MACD line.
     * **macd_hist** -- MACD minus MACD signal.
-    * **atr_14** -- 14-period Average True Range (Wilder's smoothing).
+    * **atr_14** -- 14-period Average True Range (standard EMA smoothing).
     * **vol_sma_20** -- 20-day simple moving average of *volume*.
     * **intraday_return** -- Same-day return: ``(close - open) / open``.
     * **high_20** -- 20-day rolling maximum of *close* (for ATR breakout signals).
@@ -276,13 +276,15 @@ def _compute_macd(
 
 
 def _compute_atr(df: pl.DataFrame, period: int = 14) -> pl.DataFrame:
-    """Compute Average True Range using Wilder's smoothing.
+    """Compute Average True Range using standard EMA smoothing (span=period).
+
+    Standard EMA (span=period) responds faster to volatility regime changes
+    than Wilder's smoothing (alpha=1/period), which is equivalent to a
+    longer effective span of (2*period - 1).
 
     True Range = max(high - low, |high - prev_close|, |low - prev_close|).
-    ATR = EWM(TR, alpha=1/period).
+    ATR = EMA(TR, span=period).
     """
-    alpha = 1.0 / period
-
     df = df.with_columns(
         pl.col("close").shift(1).over("symbol").alias("_prev_close"),
     )
@@ -297,7 +299,7 @@ def _compute_atr(df: pl.DataFrame, period: int = 14) -> pl.DataFrame:
 
     df = df.with_columns(
         pl.col("_tr")
-        .ewm_mean(alpha=alpha, adjust=False, min_samples=period)
+        .ewm_mean(span=period, adjust=False, min_samples=period)
         .over("symbol")
         .alias("atr_14"),
     )

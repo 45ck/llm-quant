@@ -233,44 +233,22 @@ class CombinatorialDetector:
         all_conditions: list[tuple[Market, Any]],
         pair_indices: list[tuple[int, int]],
     ) -> list[DependencyResult]:
-        """Call Claude on a batch of pairs."""
-        # Build questions and prices blocks
-        questions_lines = []
-        prices_lines = []
-        prompt_idx = 0
-        condition_objects = []
+        """Call Claude on each pair individually to avoid dropping pairs."""
+        results = []
         for gi_a, gi_b in pair_indices:
             _, c_a = all_conditions[gi_a]
             _, c_b = all_conditions[gi_b]
-            if prompt_idx == 0:
-                questions_lines.append(f"{prompt_idx}: {c_a.question}")
-                prices_lines.append(f"{prompt_idx}: {c_a.outcome_yes:.4f} (YES)")
-                condition_objects.append(c_a)
-                prompt_idx += 1
-                questions_lines.append(f"{prompt_idx}: {c_b.question}")
-                prices_lines.append(f"{prompt_idx}: {c_b.outcome_yes:.4f} (YES)")
-                condition_objects.append(c_b)
-                prompt_idx += 1
-            # For multi-pair batches, only add unique conditions
-            # (avoid repeating the same condition multiple times)
-
-        if not questions_lines:
-            return []
-
-        prompt = _APPENDIX_B_PROMPT.format(
-            n_statements=len(questions_lines),
-            questions_block="\n".join(questions_lines),
-            prices_block="\n".join(prices_lines),
-        )
-
-        raw = self._call_claude(prompt)
-        if not raw:
-            return []
-
-        results = []
-        for gi_a, gi_b in pair_indices[:1]:  # Process first pair for simple batch
-            _, c_a = all_conditions[gi_a]
-            _, c_b = all_conditions[gi_b]
+            prompt = _APPENDIX_B_PROMPT.format(
+                n_statements=2,
+                questions_block=f"0: {c_a.question}\n1: {c_b.question}",
+                prices_block=(
+                    f"0: {c_a.outcome_yes:.4f} (YES)\n"
+                    f"1: {c_b.outcome_yes:.4f} (YES)"
+                ),
+            )
+            raw = self._call_claude(prompt)
+            if not raw:
+                continue
             ctx = PairContext(
                 condition_id_a=c_a.condition_id,
                 condition_id_b=c_b.condition_id,
@@ -282,7 +260,6 @@ class CombinatorialDetector:
             result = self._parse_single_result(raw=raw, ctx=ctx)
             if result and result.claude_confidence >= self.min_confidence:
                 results.append(result)
-
         return results
 
     def _call_claude(self, prompt: str) -> dict | None:
@@ -417,3 +394,5 @@ class CombinatorialDetector:
                 )
             except duckdb.Error as exc:
                 logger.debug("Failed to persist pair %s: %s", r.pair_id, exc)
+
+        conn.close()

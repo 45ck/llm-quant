@@ -10,6 +10,7 @@ Usage:
     cd E:/llm-quant && PYTHONPATH=src python scripts/portfolio_optimizer.py
     cd E:/llm-quant && PYTHONPATH=src python scripts/portfolio_optimizer.py --threshold 0.6
     cd E:/llm-quant && PYTHONPATH=src python scripts/portfolio_optimizer.py --top-n 8
+    cd E:/llm-quant && PYTHONPATH=src python scripts/portfolio_optimizer.py --ignore-missing
 """
 
 from __future__ import annotations
@@ -90,15 +91,23 @@ def load_daily_returns(
     """Load daily returns and metrics from experiment artifacts.
 
     Returns a dict of slug -> {daily_returns: list[float], sharpe: float, ...}
+    Logs a warning for every skipped strategy with the specific reason.
     """
     strategies: dict[str, dict] = {}
+    registered = len(STRATEGY_EXPERIMENTS)
 
     for slug, exp_id in STRATEGY_EXPERIMENTS.items():
         artifact_path = (
             data_dir / "strategies" / slug / "experiments" / f"{exp_id}.yaml"
         )
         if not artifact_path.exists():
-            logger.warning("Artifact not found: %s — skipping", artifact_path)
+            logger.warning(
+                "SKIP [%s]: artifact not found at %s "
+                "(experiment %s — run /lifecycle to reconstruct)",
+                slug,
+                artifact_path,
+                exp_id,
+            )
             continue
 
         artifact = load_artifact(artifact_path)
@@ -106,7 +115,12 @@ def load_daily_returns(
         metrics = artifact.get("metrics_1x", {})
 
         if not daily_returns:
-            logger.warning("No daily returns in %s — skipping", slug)
+            logger.warning(
+                "SKIP [%s]: artifact %s exists but contains no daily_returns "
+                "(re-run /backtest to regenerate)",
+                slug,
+                exp_id,
+            )
             continue
 
         strategies[slug] = {
@@ -121,7 +135,18 @@ def load_daily_returns(
             "family": MECHANISM_FAMILIES.get(slug, "Unknown"),
         }
 
-    logger.info("Loaded %d strategies with daily returns", len(strategies))
+    loaded = len(strategies)
+    skipped = registered - loaded
+    if skipped > 0:
+        logger.warning(
+            "Loaded %d of %d registered strategies (%d skipped — artifacts missing). "
+            "See warnings above for details. Run /lifecycle to identify gaps.",
+            loaded,
+            registered,
+            skipped,
+        )
+    else:
+        logger.info("Loaded %d strategies with daily returns", loaded)
     return strategies
 
 
@@ -639,14 +664,63 @@ def main() -> None:
         default=None,
         help="Output file path (default: stdout)",
     )
+    parser.add_argument(
+        "--min-strategies",
+        type=int,
+        default=2,
+        help=(
+            "Minimum number of strategies with complete artifacts required "
+            "before the optimizer will run (default: 2). "
+            "Raise this to enforce stricter governance gates."
+        ),
+    )
+    parser.add_argument(
+        "--ignore-missing",
+        action="store_true",
+        default=False,
+        help=(
+            "Bypass the minimum-strategies guard and run on whatever artifacts "
+            "are available. For development use only — output is not reliable "
+            "when fewer than --min-strategies strategies are loaded."
+        ),
+    )
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
 
     # 1. Load daily returns
     strategies = load_daily_returns(data_dir)
-    if len(strategies) < 2:
-        logger.error("Need at least 2 strategies, got %d", len(strategies))
+    loaded = len(strategies)
+    registered = len(STRATEGY_EXPERIMENTS)
+
+    # Governance guard: fail hard if too few strategies loaded
+    if loaded < args.min_strategies:
+        if args.ignore_missing:
+            logger.warning(
+                "GOVERNANCE BYPASS (--ignore-missing): only %d of %d registered "
+                "strategies have artifacts. Output is NOT reliable. "
+                "Run /lifecycle to identify and reconstruct missing artifacts.",
+                loaded,
+                registered,
+            )
+        else:
+            logger.error(
+                "ERROR: Portfolio optimizer requires at least %d strategies with "
+                "complete artifacts. Only %d of %d registered strategies found. "
+                "Run /lifecycle to identify and reconstruct missing artifacts. "
+                "Use --ignore-missing to bypass this guard for development.",
+                args.min_strategies,
+                loaded,
+                registered,
+            )
+            sys.exit(1)
+
+    if loaded < 2:
+        logger.error(
+            "Cannot compute correlation matrix with fewer than 2 strategies "
+            "(got %d). Aborting.",
+            loaded,
+        )
         sys.exit(1)
 
     # 2. Compute correlation matrix

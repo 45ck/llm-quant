@@ -14,6 +14,7 @@ from datetime import date
 import polars as pl
 
 from llm_quant.arb.cef_strategy import CEFDiscountRegistryStrategy
+from llm_quant.backtest.nlp_signal_strategy import NlpSignalStrategy
 from llm_quant.backtest.strategy import SMACrossoverStrategy, Strategy, StrategyConfig
 from llm_quant.brain.models import Action, Conviction, TradeSignal
 from llm_quant.trading.portfolio import Portfolio
@@ -2183,6 +2184,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "ohlcv_momentum": OHLCVMomentumStrategy,
     "overnight_momentum": OvernightMomentumStrategy,
     "cef_discount": CEFDiscountRegistryStrategy,
+    "nlp_signal": NlpSignalStrategy,
 }
 
 
