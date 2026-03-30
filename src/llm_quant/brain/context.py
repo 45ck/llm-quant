@@ -534,6 +534,104 @@ def _get_hmm_regime(
         return None, 0.5, True
 
 
+def _get_inflation_regime(
+    conn: duckdb.DuckDBPyConnection,
+    lookback_days: int = 63,
+) -> tuple[str | None, dict | None]:
+    """Detect the 2x2 macro quadrant using SPY momentum + FRED inflation proxies.
+
+    Fetches SPY prices (lookback_days + 5 buffer), T5YIE breakeven, and
+    CPIAUCSL from DuckDB, then calls InflationRegimeDetector.
+
+    Returns
+    -------
+    (quadrant_value, tilts_dict) or (None, None) on insufficient data.
+    The tilts_dict contains keys: overweight, underweight, confidence.
+    """
+    try:
+        import polars as pl  # noqa: PLC0415
+
+        from llm_quant.regime.inflation import InflationRegimeDetector  # noqa: PLC0415
+
+        needed = lookback_days + 5  # small buffer for alignment
+
+        # --- SPY prices ---
+        spy_rows = conn.execute(
+            """
+            SELECT close
+            FROM market_data_daily
+            WHERE symbol = 'SPY' AND close IS NOT NULL
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            [needed],
+        ).fetchall()
+
+        if not spy_rows or len(spy_rows) < lookback_days + 1:
+            logger.warning(
+                "Inflation regime: insufficient SPY data (%d rows, need %d); skipping",
+                len(spy_rows) if spy_rows else 0,
+                lookback_days + 1,
+            )
+            return None, None
+
+        # Rows are DESC; reverse to chronological order
+        spy_prices = pl.Series([float(r[0]) for r in reversed(spy_rows)])
+
+        # --- TIPS 5y breakeven (T5YIE) ---
+        tips_breakeven: pl.Series | None = None
+        try:
+            be_rows = conn.execute(
+                """
+                SELECT value
+                FROM fred_data_daily
+                WHERE series_id = 'T5YIE' AND value IS NOT NULL
+                ORDER BY date DESC
+                LIMIT ?
+                """,
+                [needed],
+            ).fetchall()
+            if be_rows and len(be_rows) >= lookback_days + 1:
+                tips_breakeven = pl.Series([float(r[0]) for r in reversed(be_rows)])
+        except Exception:
+            logger.debug("T5YIE not in fred_data_daily; will try CPI fallback")
+
+        # --- CPI (CPIAUCSL) fallback ---
+        cpi_series: pl.Series | None = None
+        if tips_breakeven is None:
+            try:
+                cpi_rows = conn.execute(
+                    """
+                    SELECT value
+                    FROM fred_data_daily
+                    WHERE series_id = 'CPIAUCSL' AND value IS NOT NULL
+                    ORDER BY date DESC
+                    LIMIT 4
+                    """,
+                ).fetchall()
+                if cpi_rows and len(cpi_rows) >= 3:
+                    cpi_series = pl.Series([float(r[0]) for r in reversed(cpi_rows)])
+            except Exception:
+                logger.debug("CPIAUCSL not in fred_data_daily")
+
+        detector = InflationRegimeDetector(
+            growth_lookback=lookback_days,
+            inflation_lookback=lookback_days,
+        )
+        quadrant, tilts = detector.detect(spy_prices, tips_breakeven, cpi_series)
+
+        tilts_dict = {
+            "overweight": tilts.overweight,
+            "underweight": tilts.underweight,
+            "confidence": tilts.confidence,
+        }
+        return quadrant.value, tilts_dict
+
+    except Exception:
+        logger.warning("Inflation regime detection failed; skipping", exc_info=True)
+        return None, None
+
+
 def _get_tsmom_signals(
     conn: duckdb.DuckDBPyConnection,
     symbols: list[str],
@@ -848,6 +946,9 @@ def build_market_context(
                     market_regime,
                 )
 
+    # llm-quant-t2s: 2x2 inflation regime overlay (Bridgewater framework)
+    macro_quadrant, quadrant_tilts = _get_inflation_regime(conn)
+
     # llm-quant-56k: COT crowding overlay for applicable symbols
     # cot_stale=True skips fetching and returns None when DB data is >10 days old
     cot_crowding = _get_cot_crowding(universe_symbols, cot_stale=cot_stale)
@@ -889,6 +990,8 @@ def build_market_context(
         regime_confidence=round(regime_confidence, 4),
         hmm_regime_fallback=hmm_regime_fallback,
         tsmom_signals=tsmom_signals,
+        macro_quadrant=macro_quadrant,
+        quadrant_tilts=quadrant_tilts,
     )
 
     logger.info(
