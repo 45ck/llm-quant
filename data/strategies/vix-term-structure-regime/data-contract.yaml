@@ -1,0 +1,36 @@
+# Data Contract: vix-term-structure-regime (F4-H1)
+
+strategy_slug: "vix-term-structure-regime"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993, deep liquidity"
+
+  - symbol: "VIX"
+    description: "CBOE Volatility Index (^VIX)"
+    source: "Yahoo Finance (^VIX)"
+    quality_grade: "A"
+    availability: "since 1990"
+    notes: "Non-tradeable index, fetcher maps VIX → ^VIX"
+
+  - symbol: "VIX3M"
+    description: "CBOE 3-Month Volatility Index (^VIX3M)"
+    source: "Yahoo Finance (^VIX3M)"
+    quality_grade: "B"
+    availability: "since 2007"
+    notes: "Non-tradeable index, fetcher maps VIX3M → ^VIX3M. Shorter history limits backtest to ~18yr max."
+
+lookback:
+  years: 5
+  warmup_days: 50
+  rationale: "50-day warmup for VIX/VIX3M ratio stabilization"
+
+data_status: "available"
+data_quality_grade: "B"
+infrastructure: "existing"
+validated_at: "2026-03-31"
+notes: "VIX3M data availability since 2007 may limit effective backtest window"

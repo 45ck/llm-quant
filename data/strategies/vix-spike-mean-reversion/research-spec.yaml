@@ -1,0 +1,49 @@
+# Research Spec: vix-spike-mean-reversion (F4-H3)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "vix-spike-mean-reversion"
+strategy_type: "vix_regime"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Contrarian VIX spike strategy. When VIX rises >=20% in a single day,
+  buy SPY at 90% weight (fear overshoot = buying opportunity). Exit when
+  VIX drops below 20 (fear normalization). Uses vix_regime strategy with
+  mode=vix_spike. Event-driven: mostly in cash, enters only on spike events.
+
+strategy_class: "vix_regime"
+parameters:
+  mode: "vix_spike"
+  vix_symbol: "VIX"
+  equity_symbol: "SPY"
+  spike_threshold: 0.20
+  spike_exit_vix: 20.0
+  target_weight: 0.90
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. spike_threshold=0.20 (20%)
+  is a widely-used threshold in VIX literature for "significant" spikes
+  (Whaley 2000). spike_exit_vix=20.0 is the long-run VIX median —
+  below this level, fear has normalized. target_weight=0.90 is conservative
+  for MaxDD control. All parameters are theoretically motivated.
+
+spec_version: "1.0"

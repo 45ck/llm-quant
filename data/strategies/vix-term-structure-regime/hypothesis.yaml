@@ -1,0 +1,29 @@
+# Hypothesis: vix-term-structure-regime (F4-H1)
+
+hypothesis_id: "F4-H1-H1"
+strategy_slug: "vix-term-structure-regime"
+created_at: "2026-03-31"
+
+statement: >
+  When the VIX term structure is in contango (VIX3M/VIX > 1.05), the
+  volatility risk premium is being harvested normally, and equity markets
+  are in a favourable regime. Holding SPY at 90% weight during contango
+  and exiting to cash during backwardation generates Sharpe > 0.8 with
+  MaxDD < 15%.
+
+mechanism: >
+  VIX term structure is a well-documented regime indicator. Contango is
+  the default state (~80% of the time) — vol sellers earn the VRP.
+  Backwardation signals acute stress (VIX spikes above VIX3M) — these
+  periods contain the majority of equity drawdowns. The 1.05 threshold
+  requires a 5% contango margin to filter noise and avoid whipsaws at
+  the flat boundary.
+
+measurement:
+  vix_symbol: "VIX"
+  vix3m_symbol: "VIX3M"
+  equity_symbol: "SPY"
+  contango_threshold: 1.05
+  target_weight: 0.90
+
+status: "backtest_pending"

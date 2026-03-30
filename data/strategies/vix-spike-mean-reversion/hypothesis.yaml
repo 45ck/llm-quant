@@ -1,0 +1,29 @@
+# Hypothesis: vix-spike-mean-reversion (F4-H3)
+
+hypothesis_id: "F4-H3-H1"
+strategy_slug: "vix-spike-mean-reversion"
+created_at: "2026-03-31"
+
+statement: >
+  When VIX rises >=20% in a single day (fear spike), buying SPY at the
+  close and holding until VIX drops below 20 generates Sharpe > 0.8 with
+  MaxDD < 15%. The VIX spike is a contrarian indicator: fear overshoots
+  create mean-reversion opportunities in equities.
+
+mechanism: >
+  VIX spikes represent acute fear events where put demand temporarily
+  exceeds fundamentally justified levels. Post-spike equity returns are
+  positive on average because: (1) implied vol overshoots realized vol,
+  (2) portfolio insurance demand creates temporary selling pressure that
+  reverses, (3) market makers hedge delta-neutral, amplifying the bounce.
+  Exit at VIX < 20 captures the normalization period without holding
+  through extended drawdowns.
+
+measurement:
+  vix_symbol: "VIX"
+  equity_symbol: "SPY"
+  spike_threshold: 0.20
+  spike_exit_vix: 20.0
+  target_weight: 0.90
+
+status: "backtest_pending"

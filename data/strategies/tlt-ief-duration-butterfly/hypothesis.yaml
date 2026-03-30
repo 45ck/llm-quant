@@ -1,0 +1,29 @@
+# Hypothesis: tlt-ief-duration-butterfly (F2-H1)
+
+hypothesis_id: "F2-H1-H1"
+strategy_slug: "tlt-ief-duration-butterfly"
+created_at: "2026-03-31"
+
+statement: >
+  The TLT/IEF price ratio (20yr vs 7-10yr Treasuries) exhibits mean-reverting
+  behavior driven by term premium dynamics. A Bollinger Band z-score strategy
+  entering at |z|>1.5 and exiting at z=0 on a 60-day rolling window generates
+  Sharpe > 0.8 with MaxDD < 15%.
+
+mechanism: >
+  TLT and IEF are both US Treasury ETFs differing only in duration exposure.
+  Their ratio is driven by the 20yr-10yr term premium, which mean-reverts
+  because: (1) no credit component — both are risk-free, (2) pension/insurance
+  duration matching creates rebalancing flows, (3) Fed communication normalizes
+  rate expectations. The 60-day window captures medium-term term premium cycles
+  while filtering daily noise.
+
+measurement:
+  symbol_a: "TLT"
+  symbol_b: "IEF"
+  bb_window: 60
+  bb_std: 1.5
+  exit_z: 0.0
+  target_weight: 0.90
+
+status: "backtest_pending"

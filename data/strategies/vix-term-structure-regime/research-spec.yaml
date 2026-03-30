@@ -1,0 +1,49 @@
+# Research Spec: vix-term-structure-regime (F4-H1)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "vix-term-structure-regime"
+strategy_type: "vix_regime"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Equity timing strategy based on VIX term structure. Long SPY at 90%
+  weight when VIX3M/VIX > 1.05 (contango = normal regime). Exit to cash
+  when backwardated (VIX3M/VIX < 1.05 = stressed regime). Exploits the
+  volatility risk premium structure as a regime classifier.
+
+strategy_class: "vix_regime"
+parameters:
+  mode: "term_structure"
+  vix_symbol: "VIX"
+  vix3m_symbol: "VIX3M"
+  equity_symbol: "SPY"
+  contango_threshold: 1.05
+  target_weight: 0.90
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. contango_threshold=1.05
+  is standard in VRP literature — requires 5% margin above flat to confirm
+  contango and filter noise. target_weight=0.90 is conservative for MaxDD
+  control. Mode=term_structure is the canonical VIX regime signal used
+  in institutional VRP harvesting.
+
+spec_version: "1.0"

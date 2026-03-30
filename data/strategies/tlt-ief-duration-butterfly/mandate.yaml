@@ -1,0 +1,42 @@
+# Mandate: tlt-ief-duration-butterfly (F2-H1)
+# Family 2: Term Structure / Duration
+
+mandate_id: "F2-H1"
+strategy_slug: "tlt-ief-duration-butterfly"
+created_at: "2026-03-31"
+
+objective: >
+  Exploit term premium mean-reversion between long-duration (TLT, 20yr)
+  and intermediate-duration (IEF, 7-10yr) Treasury ETFs. Same issuer,
+  zero credit differential — pure duration/term premium signal.
+
+mechanism: >
+  The TLT/IEF ratio reflects the term premium between 20yr and 10yr
+  Treasuries. When the ratio stretches beyond normal bounds (z-score > 1.5),
+  it indicates temporary mispricing in the term structure that reverts.
+  Treasury term premium mean-reverts because: (1) both are risk-free
+  government bonds with identical credit quality, (2) the spread is driven
+  by supply/demand imbalances and rate expectations that normalize,
+  (3) duration-matching flows from pension/insurance rebalancing create
+  mean-reverting dynamics. Literature: Adrian, Crump & Moench (2013)
+  ACM term premium model.
+
+universe:
+  long_duration: "TLT"
+  intermediate_duration: "IEF"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Duration pairs strategy should generate returns uncorrelated with
+  equity/credit strategies, improving portfolio diversification.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.90
+
+trial_family: "term_structure_duration"
+family_trial_number: 1
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

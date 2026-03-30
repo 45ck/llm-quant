@@ -1,0 +1,29 @@
+# Data Contract: tlt-ief-duration-butterfly (F2-H1)
+
+strategy_slug: "tlt-ief-duration-butterfly"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "TLT"
+    description: "iShares 20+ Year Treasury Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002, deep liquidity"
+    notes: "Long-duration Treasury exposure, ~17yr effective duration"
+
+  - symbol: "IEF"
+    description: "iShares 7-10 Year Treasury Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002, deep liquidity"
+    notes: "Intermediate-duration Treasury exposure, ~7.5yr effective duration"
+
+lookback:
+  years: 5
+  warmup_days: 100
+  rationale: "100-day warmup covers bb_window=60 with safety buffer for ratio computation"
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+validated_at: "2026-03-31"

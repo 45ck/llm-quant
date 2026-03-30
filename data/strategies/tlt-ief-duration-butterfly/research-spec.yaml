@@ -1,0 +1,53 @@
+# Research Spec: tlt-ief-duration-butterfly (F2-H1)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "tlt-ief-duration-butterfly"
+strategy_type: "pairs_ratio"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Mean-reversion on the TLT/IEF price ratio using Bollinger Band z-scores.
+  Enter when z-score exceeds 1.5 standard deviations (ratio stretched),
+  exit when z-score returns to 0 (ratio reverted). 60-day rolling window
+  captures medium-term term premium cycles. Engine is long-only: buys
+  the underperformer when ratio is stretched. Stop-loss is 10% price-based
+  (engine default).
+
+strategy_class: "pairs_ratio"
+parameters:
+  symbol_a: "TLT"
+  symbol_b: "IEF"
+  bb_window: 60
+  bb_std: 1.5
+  exit_z: 0.0
+  target_weight: 0.90
+  # Note: stop_std=3.5 was desired but PairsRatioStrategy uses fixed 10%
+  # price stop. The z-score entry at 1.5 and exit at 0.0 are the active params.
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 100
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 2.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. bb_window=60 is standard
+  for medium-term mean-reversion (approx 3 months). bb_std=1.5 is conservative
+  entry threshold for Treasury pairs (lower vol than equities). exit_z=0.0
+  is the theoretical fair value (complete reversion). All parameters derive
+  from term premium literature, not curve-fitting.
+
+spec_version: "1.0"
