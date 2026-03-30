@@ -1,0 +1,59 @@
+# Hypothesis: vrp-spy-timing (H4.2)
+
+hypothesis_id: "H4.2"
+strategy_slug: "vrp-spy-timing"
+created_at: "2026-03-31"
+
+statement: >
+  When the Variance Risk Premium (VRP = VIX - 20-day realized volatility
+  of SPY) crosses above +3 from below and VIX > 16, subsequent SPY returns
+  are significantly positive. Holding SPY during elevated VRP periods and
+  exiting when VRP collapses below 0 generates Sharpe > 1.0 with MaxDD < 30%.
+
+mechanism: >
+  Institutional mandates force continuous purchase of downside protection
+  regardless of market outlook. When VRP is elevated (VIX >> realized vol),
+  protection is expensive = institutions are aggressively hedging = the
+  "insurance premium" is large. This is a structural alpha source because:
+  (1) Pension funds MUST hedge per fiduciary requirements
+  (2) Risk-parity funds mechanically buy vol when targets are breached
+  (3) 0DTE options growth has increased vol supply
+  Bollerslev et al. 2009: t-stat 5.11 for quarterly return prediction.
+  Beckers & Bouten 2005: VRP timing doubles Sharpe vs buy-and-hold.
+  The signal works because it's harvesting a genuine risk premium,
+  not predicting returns — institutions pay this premium willingly.
+
+expected_outcome:
+  sharpe_range: "0.80 - 1.10"
+  max_drawdown: "< 30%"
+  trade_count_5yr: "40-80"
+  correlation_to_family_1: "0.10 - 0.20"
+
+measurement:
+  signal: "VRP = VIX - 20d realized vol of SPY, smoothed with 5-day SMA"
+  entry: "Long SPY when VRP_smoothed crosses above +3 AND VIX > 16"
+  exit_rules:
+    - "VRP_smoothed crosses below 0 (premium collapsed)"
+    - "20-day max hold period"
+    - "VIX > 35: reduce to 50% position (extreme fear regime)"
+  universe: "SPY, ^VIX"
+  parameters:
+    vrp_entry_threshold: 3.0
+    vrp_exit_threshold: 0.0
+    vrp_smoothing: 5
+    rv_window: 20
+    vix_min: 16
+    vix_max: 35
+    target_weight: 0.90
+    reduced_weight: 0.45
+    time_stop_days: 20
+
+falsification_criteria:
+  - "Shuffled returns test: p-value > 0.05"
+  - "Inverted signal test: inverted Sharpe > original"
+  - "VRP has no forward predictive power for SPY returns (regression R2 < 1%)"
+  - "2022 max drawdown > 30% (fails to protect in crash)"
+  - "Trade count < 30 in 5 years (insufficient significance)"
+  - "DSR < 0.95 after multiple-testing correction"
+
+status: "hypothesis_written"

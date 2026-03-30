@@ -1,0 +1,66 @@
+# Mandate: vol-scaled-tsmom (H3.1)
+# Family 3 — Momentum / Trend Following
+
+mandate_id: "H3.1"
+strategy_slug: "vol-scaled-tsmom"
+created_at: "2026-03-31"
+
+objective: >
+  Capture persistent price trends across multiple asset classes using
+  time-series momentum (TSMOM) with volatility scaling. Blended 21/63/252-day
+  lookback signals with 10% portfolio vol target. This is the single
+  highest-priority research candidate — CTAs using this exact mechanism
+  returned +20-27% in 2022 while equities crashed.
+
+mechanism: >
+  Behavioral under-reaction to news causes prices to trend 1-12 months
+  across all asset classes (Moskowitz, Ooi & Pedersen 2012, one of the
+  most cited finance papers of the decade). Vol-scaling exploits the
+  documented inverse relationship between factor volatility and forward
+  returns — when momentum volatility spikes near crashes, positions
+  automatically shrink, avoiding the worst drawdowns (Barroso &
+  Santa-Clara 2015, nearly doubles Sharpe). Equal-weight blending across
+  three lookback horizons (21d, 63d, 252d) is near-optimal per Hurst,
+  Ooi & Pedersen 2013.
+
+universe:
+  equities:
+    - SPY     # S&P 500
+    - QQQ     # Nasdaq-100
+    - IWM     # Russell 2000
+    - EFA     # EAFE International
+    - EEM     # Emerging Markets
+  bonds:
+    - TLT     # 20+ Year Treasury
+    - IEF     # 7-10 Year Treasury
+    - AGG     # US Aggregate Bond
+    - HYG     # High Yield Corporate
+  commodities:
+    - GLD     # Gold
+    - SLV     # Silver
+    - USO     # Crude Oil
+    - DBC     # Broad Commodities
+  fx:
+    - UUP     # US Dollar Index
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Multi-asset trend-following should beat passive 60/40 by capturing
+  trends across all asset classes while vol-scaling protects in crashes.
+  The 2022 test is critical: CTAs returned +20-27% while 60/40 lost ~17%.
+
+constraints:
+  target_sharpe: "> 0.80"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.15
+  vol_target: 0.10
+  rebalance: "weekly"
+  track: "A"
+
+trial_family: "vol_scaled_tsmom"
+family_trial_number: 1
+mechanism_family: 3
+mechanism_family_name: "Momentum / Trend Following"
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

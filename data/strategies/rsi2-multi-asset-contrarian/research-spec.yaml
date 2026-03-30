@@ -1,0 +1,67 @@
+# Research Spec: rsi2-multi-asset-contrarian (H7.2)
+strategy_slug: "rsi2-multi-asset-contrarian"
+strategy_type: "rsi2_contrarian"
+
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: RSI(2) < 10 with golden cross filter (50-EMA > 200-EMA) captures
+# behavioral overreaction in liquid ETFs. Multi-asset scanning across 13 ETFs
+# ensures 80-120 trades over 5 years. Family 7 Sentiment/Contrarian.
+# Expected Sharpe 0.90-1.20, ρ to Family 1 ≈ 0.10-0.20.
+
+parameters:
+  rsi_period: 2
+  oversold_threshold: 10
+  overbought_threshold: 70
+  ema_short: 50
+  ema_long: 200
+  max_positions: 3
+  target_weight: 0.15
+  stop_loss_pct: 0.04
+  time_stop_days: 10
+  consecutive_up_exit: 2       # Exit after N consecutive closes above 5d SMA
+  sma_exit_period: 5           # SMA period for consecutive-close exit rule
+
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 3.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  rsi_period: "RSI(2) — extremely short-term indicator per Connors research. Captures 2-day oversold extremes."
+  oversold_threshold: "10 — aggressive threshold. Only fires on severe oversold. Pre-specified from H7.2 design."
+  overbought_threshold: "70 — exit when RSI(2) recovers to neutral-overbought. Pre-specified."
+  ema_short: "50-day EMA — intermediate trend. Pre-specified per golden cross convention."
+  ema_long: "200-day EMA — long-term trend. Pre-specified per golden cross convention."
+  max_positions: "3 simultaneous positions at 15% each = max 45% exposure. Pre-specified."
+  target_weight: "15% per position. Pre-specified from H7.2 design."
+  stop_loss_pct: "4% stop — wider than typical to allow mean-reversion to work. Pre-specified."
+  time_stop_days: "10 days max hold — if no reversion by day 10, thesis is wrong. Pre-specified."
+  consecutive_up_exit: "2 consecutive closes above 5d SMA signals trend recovery. Pre-specified."
+
+backtest_spec:
+  symbols: ["SPY", "QQQ", "IWM", "XLK", "XLF", "XLE", "XLV", "XLI", "EFA", "EEM", "GLD", "TLT", "HYG"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 250
+
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+
+family: "rsi2_contrarian"
+family_trial_number: 1
+family_prior_trials: 0
+track: "A"
+mechanism_family: 7
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"

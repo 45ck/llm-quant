@@ -1,0 +1,62 @@
+# Hypothesis: rsi2-multi-asset-contrarian (H7.2)
+
+hypothesis_id: "H7.2"
+strategy_slug: "rsi2-multi-asset-contrarian"
+created_at: "2026-03-31"
+
+statement: >
+  When RSI(2) drops below 10 for a liquid ETF that is in a structural uptrend
+  (50-day EMA above 200-day EMA), the subsequent 1-10 day return is
+  significantly positive. A portfolio buying these extreme oversold readings
+  and exiting when RSI(2) recovers above 70 (or via time/stop rules)
+  generates Sharpe > 0.80 with MaxDD < 15% across 13 liquid ETFs.
+
+mechanism: >
+  Behavioral overreaction: when RSI-2 hits extreme levels (<10), short-term
+  selling pressure has exhausted — forced liquidations, margin calls, and
+  panic selling create temporary mispricing that reverts within days.
+  The golden cross filter (50-EMA > 200-EMA) ensures we only buy dips
+  within structural bull regimes, avoiding the catastrophic 2022 failure
+  mode where pure contrarian strategies bought every dip in a falling market.
+  Academic backing: Connors RSI-2 research shows 62% win rate on SPY alone.
+  BacktestMe confirms +4.8% avg winner vs -3.1% avg loser with trend filter.
+  MSCI (2025): sentiment and momentum factors have only 26% constituent
+  overlap — genuinely independent alpha sources.
+
+expected_outcome:
+  sharpe_range: "0.90 - 1.20"
+  max_drawdown: "< 15%"
+  win_rate: "> 60%"
+  avg_winner_vs_loser: "> 1.5:1"
+  trade_count_5yr: "80-120"
+  correlation_to_family_1: "0.10 - 0.20"
+
+measurement:
+  signal: "RSI(2) < 10 AND 50-EMA > 200-EMA"
+  entry: "Buy at close when signal fires, max 3 simultaneous positions at 15% each"
+  exit_rules:
+    - "RSI(2) > 70 (overbought recovery)"
+    - "2 consecutive closes above 5-day SMA (trend recovered)"
+    - "10-day time stop (max hold period)"
+    - "-4% stop-loss from entry price"
+  universe: "SPY, QQQ, IWM, XLK, XLF, XLE, XLV, XLI, EFA, EEM, GLD, TLT, HYG"
+  parameters:
+    rsi_period: 2
+    oversold_threshold: 10
+    overbought_threshold: 70
+    ema_short: 50
+    ema_long: 200
+    max_positions: 3
+    position_weight: 0.15
+    stop_loss_pct: 0.04
+    time_stop_days: 10
+
+falsification_criteria:
+  - "Shuffled returns test: p-value > 0.05 (signal captures noise, not structure)"
+  - "Inverted signal test: inverted Sharpe > original Sharpe (wrong direction)"
+  - "Trade count < 50 in 5-year backtest (insufficient statistical significance)"
+  - "2022 drawdown > 15% with golden cross filter active (filter fails)"
+  - "RSI(2) < 10 shows no forward return premium vs random entries with same filter"
+  - "DSR < 0.95 after multiple-testing correction"
+
+status: "hypothesis_written"

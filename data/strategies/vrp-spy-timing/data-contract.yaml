@@ -1,0 +1,36 @@
+# Data Contract: vrp-spy-timing (H4.2)
+
+strategy_slug: "vrp-spy-timing"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993"
+
+  - symbol: "^VIX"
+    description: "CBOE Volatility Index"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1990"
+    notes: "Not tradeable — used as signal input only. Close price = VIX level."
+
+lookback:
+  years: 5
+  warmup_days: 30
+  rationale: >
+    30-day warmup covers the 20-day realized vol window + 5-day VRP
+    smoothing with buffer. VIX is available from day 1.
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+notes: >
+  Both SPY and ^VIX are in the existing universe. VIX data is fetched
+  via yfinance as ^VIX. The backtest engine can handle it as a signal
+  source (non-tradeable indicator symbol). Realized vol computed from
+  SPY daily returns.
+
+validated_at: "2026-03-31"

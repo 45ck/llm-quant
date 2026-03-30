@@ -1,0 +1,76 @@
+# Research Spec: macro-momentum-barometer (H6.4)
+strategy_slug: "macro-momentum-barometer"
+strategy_type: "macro_barometer"
+
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: 4-barometer macro momentum (AQR-inspired). SPY/TLT/DBC/EFA as
+# regime indicators. Z-score of blended 21d/63d returns. Risk-on when 3+
+# bullish, risk-off when <=1 bullish. Expected Sharpe 0.80-1.10.
+
+parameters:
+  barometers: ["SPY", "TLT", "DBC", "EFA"]
+  z_lookback_short: 21
+  z_lookback_long: 63
+  z_window: 63
+  risk_on_threshold: 3
+  risk_off_threshold: 1
+  rebalance_frequency_days: 5
+  # Risk-on basket weights
+  risk_on_weights:
+    SPY: 0.35
+    EFA: 0.25
+    DBC: 0.10
+    GLD: 0.15
+    HYG: 0.15
+  # Risk-off basket weights
+  risk_off_weights:
+    TLT: 0.30
+    IEF: 0.25
+    GLD: 0.25
+    AGG: 0.20
+  # Blended regime (bull_count = 2): 50% risk-on, 50% risk-off
+  blend_ratio: 0.50
+
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 3.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  barometers: "SPY (growth), TLT (duration), DBC (real assets), EFA (global). Captures 4 orthogonal macro themes per AQR Brooks 2017."
+  z_lookback_short: "21-day return = 1-month momentum. Pre-specified."
+  z_lookback_long: "63-day return = 3-month momentum. Pre-specified."
+  z_window: "63-day rolling z-score normalization window. Pre-specified."
+  risk_on_threshold: "3 of 4 barometers bullish = strong macro environment. Pre-specified."
+  risk_off_threshold: "1 or fewer barometers bullish = deteriorating macro. Pre-specified."
+  rebalance_frequency_days: "Weekly. Balances responsiveness vs turnover."
+  risk_on_weights: "Growth-heavy: 35% US equities, 25% intl, balanced commodities/HY. Pre-specified."
+  risk_off_weights: "Duration-heavy: 55% treasuries, 25% gold, 20% aggregate bond. Pre-specified."
+
+backtest_spec:
+  symbols: ["SPY", "TLT", "DBC", "EFA", "IEF", "AGG", "HYG", "GLD", "SHY"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 80
+
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+
+family: "macro_momentum_barometer"
+family_trial_number: 1
+family_prior_trials: 0
+track: "A"
+mechanism_family: 6
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"

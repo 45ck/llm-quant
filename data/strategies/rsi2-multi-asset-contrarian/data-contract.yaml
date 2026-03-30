@@ -1,0 +1,102 @@
+# Data Contract: rsi2-multi-asset-contrarian (H7.2)
+
+strategy_slug: "rsi2-multi-asset-contrarian"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993"
+
+  - symbol: "QQQ"
+    description: "Invesco QQQ Trust (Nasdaq-100)"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1999"
+
+  - symbol: "IWM"
+    description: "iShares Russell 2000 ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2000"
+
+  - symbol: "XLK"
+    description: "Technology Select Sector SPDR"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1998"
+
+  - symbol: "XLF"
+    description: "Financial Select Sector SPDR"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1998"
+
+  - symbol: "XLE"
+    description: "Energy Select Sector SPDR"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1998"
+
+  - symbol: "XLV"
+    description: "Health Care Select Sector SPDR"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1998"
+
+  - symbol: "XLI"
+    description: "Industrial Select Sector SPDR"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1998"
+
+  - symbol: "EFA"
+    description: "iShares MSCI EAFE ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2001"
+
+  - symbol: "EEM"
+    description: "iShares MSCI Emerging Markets ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2003"
+
+  - symbol: "GLD"
+    description: "SPDR Gold Shares"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2004"
+
+  - symbol: "TLT"
+    description: "iShares 20+ Year Treasury Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002"
+
+  - symbol: "HYG"
+    description: "iShares iBoxx $ High Yield Corporate Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2007"
+
+lookback:
+  years: 5
+  warmup_days: 250
+  rationale: >
+    250-day warmup covers 200-day EMA computation with buffer.
+    5-year window (2021-2026) includes 2022 bear market for stress testing
+    the golden cross filter's ability to block falling-knife entries.
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+notes: >
+  All 13 symbols available via existing Yahoo Finance pipeline.
+  RSI(2) requires only 3 data points for computation.
+  50-EMA and 200-EMA computed from existing indicator infrastructure.
+  No external data dependencies — Yahoo Finance only.
+
+validated_at: "2026-03-31"

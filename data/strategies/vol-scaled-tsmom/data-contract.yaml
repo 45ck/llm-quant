@@ -1,0 +1,111 @@
+# Data Contract: vol-scaled-tsmom (H3.1)
+
+strategy_slug: "vol-scaled-tsmom"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993"
+
+  - symbol: "QQQ"
+    description: "Invesco QQQ Trust (Nasdaq-100)"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1999"
+
+  - symbol: "IWM"
+    description: "iShares Russell 2000 ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2000"
+
+  - symbol: "EFA"
+    description: "iShares MSCI EAFE ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2001"
+
+  - symbol: "EEM"
+    description: "iShares MSCI Emerging Markets ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2003"
+
+  - symbol: "TLT"
+    description: "iShares 20+ Year Treasury Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002"
+
+  - symbol: "IEF"
+    description: "iShares 7-10 Year Treasury Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2002"
+
+  - symbol: "AGG"
+    description: "iShares Core US Aggregate Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2003"
+
+  - symbol: "HYG"
+    description: "iShares iBoxx $ High Yield Corporate Bond ETF"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2007"
+
+  - symbol: "GLD"
+    description: "SPDR Gold Shares"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2004"
+
+  - symbol: "SLV"
+    description: "iShares Silver Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 2006"
+
+  - symbol: "USO"
+    description: "United States Oil Fund"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2006"
+    notes: "Structural contango drag. Reverse splits. Grade B due to NAV tracking error."
+
+  - symbol: "DBC"
+    description: "Invesco DB Commodity Index Tracking Fund"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2006"
+    notes: "Broad commodity exposure. Contango drag on some components."
+
+  - symbol: "UUP"
+    description: "Invesco DB US Dollar Index Bullish Fund"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2007"
+    notes: "Dollar index proxy. Some tracking error vs DXY."
+
+lookback:
+  years: 5
+  warmup_days: 300
+  rationale: >
+    300-day warmup covers the 252-day lookback + 126-day vol window with buffer.
+    5-year window (2021-2026) includes 2022 bear market — critical for
+    validating the crash-diversification thesis that makes TSMOM valuable.
+
+data_status: "available"
+data_quality_grade: "B"
+infrastructure: "existing"
+notes: >
+  14 symbols via existing Yahoo Finance pipeline. Grades B for commodity/FX
+  ETFs due to structural tracking issues (contango, NAV error). All symbols
+  in the existing universe.toml. The TsmomCalculator in signals/tsmom.py
+  handles all signal computation — no new infrastructure needed.
+
+validated_at: "2026-03-31"

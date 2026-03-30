@@ -1,0 +1,49 @@
+# Mandate: vrp-spy-timing (H4.2)
+# Family 4 — Volatility Regime Harvesting
+
+mandate_id: "H4.2"
+strategy_slug: "vrp-spy-timing"
+created_at: "2026-03-31"
+
+objective: >
+  Time SPY exposure based on the Variance Risk Premium (VRP = VIX minus
+  20-day realized volatility of SPY). Go long when VRP is elevated
+  (institutions structurally overpaying for protection), exit when VRP
+  collapses. This harvests the well-documented insurance premium that
+  averages 4-5 vol points.
+
+mechanism: >
+  The variance risk premium exists because institutional investors
+  structurally overpay for downside protection (pension funds, insurance
+  companies, systematic hedging programs). VIX consistently exceeds
+  subsequent realized volatility by 4-5 points on average. Bollerslev,
+  Tauchen & Zhou (2009) showed VRP predicts quarterly equity returns with
+  t-stat 5.11 and R-squared ~5-6%. Beckers & Bouten (2005) found VRP-based
+  market timing doubles Sharpe vs constant equity exposure. The signal is
+  structurally persistent because insurance demand is driven by mandates,
+  not market views.
+
+universe:
+  tradeable: "SPY"
+  signal: "^VIX"
+  defensive: "CASH"
+
+benchmark: "100% SPY"
+benchmark_rationale: >
+  Track B benchmark. VRP timing should outperform constant SPY by avoiding
+  periods of risk-on crowding (VRP collapsed) while capturing most upside
+  when VRP is elevated.
+
+constraints:
+  target_sharpe: "> 1.00"
+  max_drawdown: "< 0.30"
+  max_position_weight: 0.90
+  track: "B"
+
+trial_family: "vrp_timing"
+family_trial_number: 1
+mechanism_family: 4
+mechanism_family_name: "Volatility Regime Harvesting"
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

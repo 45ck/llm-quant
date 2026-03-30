@@ -1,0 +1,65 @@
+# Research Spec: vrp-spy-timing (H4.2)
+strategy_slug: "vrp-spy-timing"
+strategy_type: "vrp_timing"
+
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: VRP (VIX - 20d realized vol SPY) timing for SPY.
+# Bollerslev et al 2009, t-stat 5.11. Family 4 vol regime.
+# Expected Sharpe 0.80-1.10, rho to Family 1 ~ 0.10-0.20.
+
+parameters:
+  vix_symbol: "VIX"
+  equity_symbol: "SPY"
+  rv_window: 20
+  vrp_smoothing: 5
+  vrp_entry_threshold: 3.0
+  vrp_exit_threshold: 0.0
+  vix_min: 16
+  vix_max: 35
+  target_weight: 0.90
+  reduced_weight: 0.45
+  time_stop_days: 20
+  rebalance_frequency_days: 1
+
+cost_model:
+  spread_bps: 3.0
+  flat_slippage_bps: 2.0
+  slippage_volatility_factor: 0.1
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  rv_window: "20-day realized vol — standard 1-month vol estimation. Pre-specified."
+  vrp_smoothing: "5-day SMA smoothing on VRP to reduce noise. Pre-specified."
+  vrp_entry_threshold: "+3 vol points — VRP must be meaningfully elevated. Bollerslev et al. use similar threshold. Pre-specified."
+  vrp_exit_threshold: "0 — exit when VRP collapses to zero (implied = realized). Pre-specified."
+  vix_min: "16 — don't enter when VIX is very low (no insurance premium to harvest). Pre-specified."
+  vix_max: "35 — reduce position in extreme fear. Pre-specified."
+  target_weight: "90% SPY when signal active. Pre-specified."
+  reduced_weight: "45% (half position) when VIX > 35. Pre-specified."
+  time_stop_days: "20 days max hold — if VRP hasn't resolved in a month, exit. Pre-specified."
+
+backtest_spec:
+  symbols: ["SPY", "VIX"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+
+benchmark:
+  symbols:
+    SPY: 1.00
+
+family: "vrp_timing"
+family_trial_number: 1
+family_prior_trials: 0
+track: "B"
+mechanism_family: 4
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"

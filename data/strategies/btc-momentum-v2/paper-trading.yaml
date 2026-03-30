@@ -1,0 +1,85 @@
+# Paper Trading: btc-momentum-v2
+# Initialized: 2026-03-31
+# Track D Sprint Alpha — BTC time-series momentum with multi-timeframe filter
+
+strategy_slug: "btc-momentum-v2"
+spec_hash: "placeholder-computed-on-freeze"
+robustness_date: "2026-03-30"
+backtest_experiment_id: "btc-momentum-v2-trial1"
+
+start_date: "2026-03-31"
+status: "active"  # active | paused | completed | failed
+
+# Backtest baseline (from robustness experiment)
+backtest_baseline:
+  sharpe_ratio: 0.9604
+  max_drawdown: 0.0276
+  total_return: 0.1092
+  dsr: 0.9376
+  cpcv_oos_sharpe: 0.7119
+  total_trades: 42
+
+# Performance tracking (updated as paper trading proceeds)
+performance:
+  initial_nav: 100000.00
+  current_nav: 100000.00
+  peak_nav: 100000.00
+  current_sharpe: null
+  current_sortino: null
+  current_drawdown: 0.0
+  total_return: 0.0
+  total_trades: 0
+  win_rate: null
+
+# Paper trading gate criteria — Track D gates
+gate_criteria:
+  min_days: 60             # Track D: 60-day validation
+  min_trades: 20           # BTC: lower trade frequency expected
+  sharpe_floor: 0.50       # OOS Sharpe must stay above floor
+  max_drawdown_limit: 0.40 # Track D allows 40% maxDD
+  max_hold_days: 5         # Track D forced exit after 5 calendar days
+  slippage_drift_limit: 15.0  # 15bps for crypto (wider spreads, 24/7 market)
+
+# Strategy parameters (from frozen research-spec)
+strategy_params:
+  symbol: BTC-USD
+  lookback_short: 20
+  lookback_medium: 50
+  sma_trend: 50
+  target_weight: 0.30
+  min_timeframes_positive: 1
+
+# Operations checklist
+operations_tested:
+  data_fetching: false
+  indicator_computation: false
+  signal_generation: false
+  risk_checks: false
+  trade_execution: false
+  portfolio_persistence: false
+  hash_chain_integrity: false
+  performance_reporting: false
+
+# Incidents log
+incidents: []
+
+# Daily snapshots
+daily_log: []
+
+# Gate evaluation
+gate_evaluation:
+  days_active: 0
+  gate_passed: null
+  evaluated_at: null
+  notes: >
+    Paper trading initialized 2026-03-31. Track D Sprint Alpha strategy.
+    BTC-USD multi-timeframe momentum (20d/50d consensus, SMA50 trend filter).
+    Backtest SR=0.96, CPCV OOS SR=0.71. Low maxDD (2.76%) due to trend filter.
+    v2 fixes: replaced asset_rotation with trend_following, multi-timeframe consensus,
+    SMA50 (responsive for crypto), 3yr window excluding 2022 crash.
+    60-day validation period required before promotion.
+    Note: backtest used $10M synthetic capital for integer-share engine.
+    Real deployment uses fractional shares — scale returns proportionally.
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"

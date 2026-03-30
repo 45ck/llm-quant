@@ -1,0 +1,50 @@
+# Hypothesis: macro-momentum-barometer (H6.4)
+
+hypothesis_id: "H6.4"
+strategy_slug: "macro-momentum-barometer"
+created_at: "2026-03-31"
+
+statement: >
+  A 4-barometer macro momentum system using blended 21d/63d returns of
+  SPY, TLT, DBC, and EFA to classify macro regimes generates Sharpe > 0.80
+  with MaxDD < 15%. When 3+ barometers show positive z-scores → risk-on
+  basket; when 1 or fewer → risk-off basket; between → blended.
+
+mechanism: >
+  AQR's "Half Century of Macro Momentum" (Brooks 2017) demonstrates that
+  macro momentum — the tendency for economic trends to persist — generates
+  Sharpe 0.5-0.7 per individual theme. The critical innovation: using
+  price-based momentum of representative ETFs rather than lagging economic
+  data enables daily-frequency regime detection. Four barometers:
+  SPY (US growth), TLT (duration/rates), DBC (real assets/inflation),
+  EFA (global risk appetite). Low pairwise correlations (-0.15 to +0.44)
+  between themes make the composite robust.
+
+expected_outcome:
+  sharpe_range: "0.80 - 1.10"
+  max_drawdown: "< 15%"
+  trade_count_5yr: "100-200"
+  correlation_to_family_1: "0.10 - 0.20"
+
+measurement:
+  signal: "4-barometer z-score composite: z = blended(21d, 63d) return for each barometer"
+  regime: "bull_count = count of barometers with z > 0. >= 3 risk-on, <= 1 risk-off, 2 blended"
+  entry: "Rotate to regime-appropriate basket on weekly rebalance"
+  universe: "SPY, QQQ, EFA, EEM, TLT, IEF, AGG, HYG, GLD, DBC, SHY"
+  parameters:
+    barometers: ["SPY", "TLT", "DBC", "EFA"]
+    z_lookback_short: 21
+    z_lookback_long: 63
+    z_window: 63
+    risk_on_threshold: 3
+    risk_off_threshold: 1
+    rebalance_frequency_days: 5
+
+falsification_criteria:
+  - "Shuffled barometer returns: p-value > 0.05"
+  - "Random barometer selection performs equally well"
+  - "2022 drawdown > 15%"
+  - "Individual barometer z-scores have no forward predictive power"
+  - "DSR < 0.95"
+
+status: "hypothesis_written"

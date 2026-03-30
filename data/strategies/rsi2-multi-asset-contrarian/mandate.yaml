@@ -1,0 +1,58 @@
+# Mandate: rsi2-multi-asset-contrarian (H7.2)
+# Family 7 — Sentiment / Contrarian Signals
+
+mandate_id: "H7.2"
+strategy_slug: "rsi2-multi-asset-contrarian"
+created_at: "2026-03-31"
+
+objective: >
+  Capture short-term behavioral overreaction across 13 liquid ETFs using
+  RSI(2) extreme oversold readings, filtered by a golden cross trend filter
+  (50-EMA > 200-EMA) to avoid falling-knife entries in sustained bear markets.
+  Multi-asset scanning provides ample trade count and diversification.
+
+mechanism: >
+  RSI-2 < 10 captures extreme short-term oversold conditions from behavioral
+  overreaction and forced selling (Connors research). The golden cross filter
+  (50-EMA > 200-EMA) ensures entries only within structural uptrends, blocking
+  the 2022 falling-knife trap where pure contrarian strategies were devastated.
+  Multi-asset scanning across 13 ETFs ensures 80-120 trades over 5 years.
+  MSCI research (2025) shows sentiment alpha has only 26% overlap with
+  momentum — genuinely independent from Family 1 credit lead-lag.
+
+universe:
+  tradeable:
+    - SPY    # S&P 500
+    - QQQ    # Nasdaq-100
+    - IWM    # Russell 2000
+    - XLK    # Technology Select
+    - XLF    # Financial Select
+    - XLE    # Energy Select
+    - XLV    # Health Care Select
+    - XLI    # Industrial Select
+    - EFA    # EAFE International
+    - EEM    # Emerging Markets
+    - GLD    # Gold
+    - TLT    # Long-term Treasury
+    - HYG    # High Yield Corporate
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Track A defensive alpha benchmark. Strategy should beat passive 60/40
+  by capturing oversold bounces while golden cross filter avoids bear regime.
+
+constraints:
+  target_sharpe: "> 0.80"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.15
+  max_simultaneous_positions: 3
+  track: "A"
+
+trial_family: "rsi2_contrarian"
+family_trial_number: 1
+mechanism_family: 7
+mechanism_family_name: "Sentiment / Contrarian"
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

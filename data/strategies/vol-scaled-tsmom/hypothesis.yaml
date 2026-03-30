@@ -1,0 +1,59 @@
+# Hypothesis: vol-scaled-tsmom (H3.1)
+
+hypothesis_id: "H3.1"
+strategy_slug: "vol-scaled-tsmom"
+created_at: "2026-03-31"
+
+statement: >
+  A blended 21/63/252-day time-series momentum strategy with vol-scaling
+  across 14 instruments (equities, bonds, commodities, FX) generates
+  Sharpe > 0.80 with MaxDD < 15%. Each asset is evaluated independently:
+  go long when blended signal > +0.2 (vol-scaled), short when < -0.2,
+  flat otherwise. Portfolio-level vol target of 10% annualized.
+
+mechanism: >
+  Time-series momentum (TSMOM) captures persistent price trends driven
+  by behavioral under-reaction (anchoring bias, gradual information
+  diffusion) and institutional herding. Unlike cross-sectional momentum,
+  each asset is evaluated against its own history — no relative ranking.
+  Three lookback horizons (21d short, 63d medium, 252d long) are
+  equal-weight blended per Hurst et al. 2013 (near-optimal allocation).
+  Vol-scaling (Barroso & Santa-Clara 2015) exploits the documented
+  inverse vol-return relationship: when momentum volatility spikes
+  near crashes, positions automatically shrink. This is why CTAs
+  (SG Trend Index +27.3%) thrived in 2022 while equities and bonds
+  crashed simultaneously.
+
+  The multi-asset design is critical for portfolio diversification:
+  commodity and FX trends are structurally uncorrelated with credit
+  lead-lag strategies (Family 1), providing genuine independent alpha.
+
+expected_outcome:
+  sharpe_range: "0.85 - 1.10"
+  max_drawdown: "< 15%"
+  trade_count_5yr: "400-600"
+  correlation_to_family_1: "0.05 - 0.15"
+
+measurement:
+  signal: "Blended TSMOM: avg(sign(21d ret), sign(63d ret), sign(252d ret)) * vol_scalar"
+  entry: "Long when scaled signal > +0.2, short when < -0.2"
+  exit: "Signal crosses zero (direction reversal) OR 126d realized vol > 2x its 2yr median"
+  universe: "SPY, QQQ, IWM, EFA, EEM, TLT, IEF, AGG, HYG, GLD, SLV, USO, DBC, UUP"
+  parameters:
+    lookbacks: [21, 63, 252]
+    blend_weights: [0.333, 0.333, 0.334]
+    vol_target: 0.10
+    vol_window: 126
+    max_vol_scalar: 2.0
+    flat_threshold: 0.2
+    rebalance_frequency: 5  # weekly (every 5 trading days)
+
+falsification_criteria:
+  - "Shuffled returns test: p-value > 0.05 (signal captures noise)"
+  - "Inverted signal test: inverted Sharpe > original Sharpe (wrong direction)"
+  - "2022 drawdown > 15% (fails the crash diversification thesis)"
+  - "Commodity + FX sub-portfolio Sharpe < 0 (the non-equity component is the diversifier)"
+  - "Vol-scaling does not improve Sharpe by >20% vs unscaled version"
+  - "DSR < 0.95 after multiple-testing correction"
+
+status: "hypothesis_written"
