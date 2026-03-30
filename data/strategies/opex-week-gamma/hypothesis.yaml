@@ -1,0 +1,31 @@
+# Hypothesis: opex-week-gamma (F5-H1)
+
+hypothesis_id: "F5-H1"
+strategy_slug: "opex-week-gamma"
+created_at: "2026-03-31"
+
+statement: >
+  Buying SPY on the Friday before monthly OPEX (3rd Friday of month) and
+  selling on the Thursday of OPEX week generates positive risk-adjusted
+  returns, because market-maker long-gamma positioning suppresses volatility
+  and creates upward drift. Excluding quarterly OPEX months (Mar/Jun/Sep/Dec)
+  and requiring VIX < 25 at entry filters out regime-disruptive periods.
+  Expected standalone Sharpe 0.35-0.55 (weak but diversifying).
+
+mechanism: >
+  Options market makers who are net long gamma must delta-hedge by buying
+  when prices fall and selling when prices rise. This mechanical hedging
+  dampens realized volatility and creates a slight upward drift during
+  the week leading into standard monthly OPEX. The effect is well-documented
+  in options microstructure literature (Ni et al. 2009).
+
+measurement:
+  target_symbol: "SPY"
+  filter_symbol: "VIX"
+  vix_threshold: 25
+  entry: "Friday before 3rd Friday (T-5 business days before OPEX)"
+  exit: "Thursday of OPEX week (T-1 before 3rd Friday)"
+  exclusions: "Quarterly OPEX months (Mar, Jun, Sep, Dec)"
+
+status: "backtest"
+result_summary: null

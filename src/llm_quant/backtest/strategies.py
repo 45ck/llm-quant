@@ -3443,7 +3443,7 @@ class VIXPercentileSpikeStrategy(Strategy):
         stop_loss_price = equity_price * (1.0 - stop_loss_pct)
 
         logger.info(
-            "VIXPercentileSpike: ENTER %s on %s (VIX=%.1f, pct=%.0f, spike=%.1%%, RSI=%.1f)",
+            "VIXPercentileSpike: ENTER %s on %s (VIX=%.1f, pct=%.0f, spike=%.3f, RSI=%.1f)",
             equity_sym,
             as_of_date,
             vix_now,
@@ -3607,7 +3607,7 @@ class LeveragedMeanRevStrategy(Strategy):
             stop_loss_price = price * (1.0 - stop_loss_pct)
 
             logger.info(
-                "LeveragedMeanRev: ENTER %s on %s (decline=%.1%%, down=%dd, VIX=%.1f, VIX_RSI=%.1f)",
+                "LeveragedMeanRev: ENTER %s on %s (decline=%.3f, down=%dd, VIX=%.1f, VIX_RSI=%.1f)",
                 sym, as_of_date, cum_decline, consec_down, vix_now, vix_rsi,
             )
 

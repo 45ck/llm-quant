@@ -1,0 +1,31 @@
+# Hypothesis: crypto-weekend-equity-signal (F5-H5)
+
+hypothesis_id: "F5-H5"
+strategy_slug: "crypto-weekend-equity-signal"
+created_at: "2026-03-31"
+
+statement: >
+  When BTC weekend return (Friday close to most-recent-available close before
+  Monday) is positive, buying QQQ at Monday open and selling Tuesday close
+  generates positive risk-adjusted returns. When BTC weekend return is < -2%,
+  stay flat (no QQQ position). Engine is long-only, so this captures the
+  positive-weekend signal directly.
+
+mechanism: >
+  Bitcoin trades continuously through weekends while equity markets are closed.
+  Weekend BTC price action reflects global risk sentiment that hasn't yet been
+  priced into equities. Positive BTC weekends signal risk-on sentiment that
+  carries into Monday equity opens. Negative BTC weekends (< -2%) signal
+  risk-off sentiment that predicts Monday equity weakness.
+  Source: 2025 ScienceDirect paper on crypto-equity weekend spillovers.
+
+measurement:
+  signal_symbol: "BTC-USD"
+  trade_symbol: "QQQ"
+  signal: "BTC Fri-close to last-available-close before Monday"
+  entry: "Monday (if BTC weekend return >= -2%)"
+  exit: "Tuesday close"
+  negative_filter: "BTC weekend return < -2% => stay flat"
+
+status: "backtest"
+result_summary: null

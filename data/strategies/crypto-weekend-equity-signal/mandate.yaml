@@ -1,0 +1,38 @@
+# Mandate: crypto-weekend-equity-signal (F5-H5)
+# Calendar / Structural Signals
+
+mandate_id: "F5-H5"
+strategy_slug: "crypto-weekend-equity-signal"
+created_at: "2026-03-31"
+
+objective: >
+  Use negative weekend BTC returns as a predictive signal for Monday equity
+  weakness. Buy QQQ on Monday when BTC weekend return is positive; stay out
+  when BTC weekend return is negative. Exit Tuesday close.
+
+mechanism: >
+  Bitcoin trades 24/7 and acts as a weekend "canary" for global risk sentiment.
+  Negative weekend BTC returns (Fri close to Sun/Mon open) predict Monday stock
+  declines (2025 ScienceDirect paper). This is a cross-asset information flow
+  from crypto's continuous market to equity's discrete market.
+
+universe:
+  crypto_signal: "BTC-USD"
+  equity: "QQQ"
+  defensive: "CASH"
+
+benchmark: "100% SPY"
+benchmark_rationale: >
+  Track B growth benchmark. Strategy uses QQQ for higher beta to capture
+  the Monday equity signal with more leverage.
+
+constraints:
+  target_sharpe: "> 1.0"
+  max_drawdown: "< 0.30"
+  max_position_weight: 0.95
+
+trial_family: "crypto_weekend_equity_signal"
+family_trial_number: 1
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

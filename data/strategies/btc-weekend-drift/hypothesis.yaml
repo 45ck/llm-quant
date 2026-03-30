@@ -1,0 +1,30 @@
+# Hypothesis: btc-weekend-drift (F5-H3)
+
+hypothesis_id: "F5-H3"
+strategy_slug: "btc-weekend-drift"
+created_at: "2026-03-31"
+
+statement: >
+  Buying BTC-USD at Friday close and selling at Monday close captures
+  positive weekend drift caused by institutional liquidity withdrawal.
+  Filters: 5-day BTC momentum > -5% (no catching falling knives) and
+  20-day realized vol < 80% annualized (avoid extreme volatility).
+  Expected Sharpe 0.60-0.90 standalone.
+
+mechanism: >
+  Institutional desks (hedge funds, prop shops, market makers) reduce
+  crypto exposure over weekends. This creates a liquidity vacuum where
+  retail buying pressure is relatively unopposed. CME BTC futures
+  markets close Friday evening and reopen Sunday, creating gaps that
+  fill with high probability (77-98%). The structural liquidity
+  asymmetry creates a persistent weekend drift.
+
+measurement:
+  symbol: "BTC-USD"
+  entry: "Friday (day_of_week == 4)"
+  exit: "Monday (day_of_week == 0)"
+  momentum_filter: "5d return > -5%"
+  vol_filter: "20d realized vol < 80% annualized"
+
+status: "backtest"
+result_summary: null

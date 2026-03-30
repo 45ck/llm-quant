@@ -1,0 +1,28 @@
+# Data Contract: crypto-weekend-equity-signal (F5-H5)
+
+strategy_slug: "crypto-weekend-equity-signal"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "BTC-USD"
+    description: "Bitcoin USD"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2014, continuous 7-day/week data"
+    notes: "Signal source. Weekend data availability needs verification."
+
+  - symbol: "QQQ"
+    description: "Invesco QQQ Trust (Nasdaq-100)"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1999, 1255 days in 5yr window"
+
+lookback:
+  years: 5
+  warmup_days: 10
+  rationale: "Minimal warmup. Just need prior Friday's BTC close."
+
+data_status: "available"
+data_quality_grade: "B"
+infrastructure: "existing"
+validated_at: "2026-03-31"

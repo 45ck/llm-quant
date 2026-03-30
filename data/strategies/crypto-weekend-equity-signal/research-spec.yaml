@@ -1,0 +1,50 @@
+# Research Spec: crypto-weekend-equity-signal (F5-H5)
+# FROZEN -- do not modify after backtest is run
+
+strategy_slug: "crypto-weekend-equity-signal"
+strategy_name: "crypto_weekend_equity"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Cross-asset calendar strategy using BTC weekend returns to predict Monday
+  equity direction. Buy QQQ on Monday when BTC weekend return >= -2%, sell
+  Tuesday close. Stay flat when BTC weekend return < -2%. Long-only.
+
+strategy_class: "crypto_weekend_equity"
+parameters:
+  signal_symbol: "BTC-USD"
+  trade_symbol: "QQQ"
+  weekend_threshold: -0.02  # BTC return below this => stay flat
+  target_weight: 0.95
+  hold_days: 2  # Monday + Tuesday
+  rebalance_frequency_days: 1
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 10
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 1.0
+    flat_slippage_bps: 0.5
+    slippage_volatility_factor: 0.05
+
+benchmark:
+  symbols:
+    SPY: 1.00
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 1.0"
+    - "MaxDD < 0.30"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. Weekend threshold -2% is from
+  published literature. Hold period of Mon-Tue captures the documented spillover
+  window. QQQ chosen for higher beta to amplify signal.
+
+spec_version: "1.0"

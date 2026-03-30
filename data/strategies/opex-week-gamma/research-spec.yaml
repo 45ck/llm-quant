@@ -1,0 +1,51 @@
+# Research Spec: opex-week-gamma (F5-H1)
+# FROZEN -- do not modify after backtest is run
+
+strategy_slug: "opex-week-gamma"
+strategy_name: "opex_week"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Calendar strategy exploiting market-maker gamma positioning during OPEX week.
+  Buy SPY on Friday before standard monthly OPEX (3rd Friday), sell Thursday of
+  OPEX week. Filter: VIX < 25 at entry. Exclude quarterly OPEX (Mar/Jun/Sep/Dec).
+
+strategy_class: "opex_week"
+parameters:
+  target_symbol: "SPY"
+  vix_symbol: "^VIX"
+  vix_threshold: 25
+  target_weight: 0.95
+  exclude_quarterly: true
+  rebalance_frequency_days: 1
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 30
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 1.0
+    flat_slippage_bps: 0.5
+    slippage_volatility_factor: 0.05
+
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. VIX threshold of 25 is a standard
+  regime boundary. OPEX week timing is deterministic from calendar. Quarterly
+  exclusion is based on known structural difference (triple witching).
+
+spec_version: "1.0"

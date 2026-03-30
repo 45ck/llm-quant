@@ -1,0 +1,28 @@
+# Data Contract: opex-week-gamma (F5-H1)
+
+strategy_slug: "opex-week-gamma"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993, 1255 days in 5yr window"
+
+  - symbol: "^VIX"
+    description: "CBOE Volatility Index"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1990, 1255 days in 5yr window"
+    notes: "Used as filter only (VIX < 25 at entry). Not traded."
+
+lookback:
+  years: 5
+  warmup_days: 30
+  rationale: "Minimal warmup needed for calendar strategy. 30 days covers first OPEX cycle."
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+validated_at: "2026-03-31"

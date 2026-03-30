@@ -1,0 +1,38 @@
+# Mandate: btc-weekend-drift (F5-H3)
+# Calendar / Structural Signals
+
+mandate_id: "F5-H3"
+strategy_slug: "btc-weekend-drift"
+created_at: "2026-03-31"
+
+objective: >
+  Capture BTC weekend drift from institutional liquidity drop-off.
+  Buy BTC-USD Friday close, sell Monday close. Filter by 5d momentum
+  and 20d realized volatility to avoid entering during drawdowns or
+  extreme vol regimes.
+
+mechanism: >
+  Institutional crypto trading volume drops 20-40% on weekends as
+  traditional finance desks close. CME BTC futures gaps fill 77-98%
+  of the time. Reduced institutional selling pressure + retail buying
+  creates upward weekend drift. This is a liquidity-structural anomaly.
+
+universe:
+  crypto: "BTC-USD"
+  defensive: "CASH"
+
+benchmark: "100% SPY"
+benchmark_rationale: >
+  Track B strategy targeting aggressive returns. Weekend-only exposure
+  means capital is idle Mon-Fri.
+
+constraints:
+  target_sharpe: "> 1.0"
+  max_drawdown: "< 0.30"
+  max_position_weight: 0.95
+
+trial_family: "btc_weekend_drift"
+family_trial_number: 1
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"
