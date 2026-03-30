@@ -1,0 +1,56 @@
+strategy_slug: lqd-tqqq-sprint
+run_date: '2026-03-30'
+track: D
+gates:
+  sharpe_min: 0.8
+  maxdd_max: 0.4
+  dsr_min: 0.9
+weight_variants:
+- weight: base (30%)
+  target_weight: 0.3
+  sharpe: 0.8647
+  max_dd: 0.1824
+  annualized_return: 0.0985
+  total_return: 0.5904
+  dsr: 0.9739
+  sortino: 1.3202
+  calmar: 0.5398
+  total_trades: 103
+  win_rate: 0.2524
+  passes_track_d: true
+- weight: 50%
+  target_weight: 0.5
+  sharpe: 0.8683
+  max_dd: 0.2879
+  annualized_return: 0.1589
+  total_return: 1.0718
+  dsr: 0.9743
+  sortino: 1.324
+  calmar: 0.5518
+  total_trades: 103
+  win_rate: 0.2524
+  passes_track_d: true
+- weight: 70%
+  target_weight: 0.7
+  sharpe: 0.8712
+  max_dd: 0.3817
+  annualized_return: 0.2147
+  total_return: 1.6138
+  dsr: 0.9747
+  sortino: 1.3267
+  calmar: 0.5625
+  total_trades: 103
+  win_rate: 0.2524
+  passes_track_d: true
+- weight: 90%
+  target_weight: 0.9
+  sharpe: 0.8732
+  max_dd: 0.4649
+  annualized_return: 0.2655
+  total_return: 2.2005
+  dsr: 0.9749
+  sortino: 1.3283
+  calmar: 0.5711
+  total_trades: 103
+  win_rate: 0.2524
+  passes_track_d: false

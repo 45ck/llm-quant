@@ -1,0 +1,10 @@
+slug: m5-sharpe-dispersion-rotation
+family: 7
+title: Cross-asset Sharpe dispersion signals elevated rotation alpha window
+mechanism: When assets perform heterogeneously (high Sharpe dispersion), momentum and mean-reversion rotation strategies generate greater alpha because winners and losers are more distinguishable. Low dispersion (all assets performing similarly) is a low-alpha environment for rotation.
+prediction: Cross-asset Sharpe dispersion (std dev of rolling 60d Sharpe across SPY/TLT/GLD/HYG/EEM/USO/BTC-USD/IWM) > 1.0 predicts that a simple top-2/bottom-2 rotation strategy achieves 2x its unconditional Sharpe over the subsequent 20 days.
+falsification: If rotation strategy alpha conditioned on high-dispersion regime is not statistically different from low-dispersion regime (Mann-Whitney p > 0.10 on forward 20d rotation returns).
+data_required: ["SPY", "TLT", "GLD", "HYG", "EEM", "USO", "BTC-USD", "IWM"]
+expected_rho_to_credit_family: 0.25
+quick_kill: false
+notes: This is a meta-signal — a filter for when to deploy rotation strategies, not a standalone entry signal. Useful as regime filter layer.

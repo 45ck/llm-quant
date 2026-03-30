@@ -1,0 +1,45 @@
+slug: crypto-funding-rate-arb
+frozen: true
+strategy_class: delta_neutral_funding
+
+entry_rules:
+  signal: 24h average funding rate annualized > 15%
+  description: >
+    Compute annualized funding rate as (avg of last three 8h funding payments) * 3 * 365.
+    Enter delta-neutral position (long spot BTC or ETH, short equal notional perpetual futures)
+    when annualized rate exceeds 15% threshold.
+
+exit_rules:
+  primary: Funding rate drops below 5% annualized (3-period rolling average)
+  secondary: Spot/perp spread exceeds 2% (basis risk stop)
+  time_stop: None (position held as long as funding remains above exit threshold)
+
+position_sizing:
+  target_weight: 0.10
+  rationale: Conservative sizing due to counterparty/exchange risk on perp leg
+
+universe:
+  assets: [BTC/USDT:USDT, ETH/USDT:USDT]
+  exchanges: [Binance, OKX, Bybit]
+  selection: highest open interest + lowest basis spread at entry
+
+backtest_period:
+  start: "2020-01-01"
+  end: "2025-12-31"
+
+oos_period:
+  start: "2024-01-01"
+  end: "2025-12-31"
+
+anti_overfitting:
+  dsr_threshold: 0.95
+  cpcv_oos_is_min: 0.0
+  parameter_count: 2  # entry threshold (15%), exit threshold (5%)
+  justification: >
+    Thresholds chosen from economic reasoning (funding > cost of capital = positive carry),
+    not curve-fitted to historical data. Only 2 free parameters.
+
+risk_notes: >
+  Primary risks: exchange counterparty default, perpetual liquidity crisis (funding spike
+  without ability to close), regulatory restriction on perp trading. Weight capped at 10%
+  to reflect non-negligible tail risk from exchange failure.

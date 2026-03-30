@@ -1,0 +1,50 @@
+# Research Spec: emb-spy-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "emb-spy-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Emerging market bond ETF (EMB) as leading indicator for SPY.
+  When EMB's 5-day return exceeds 0.5% (global risk appetite / EM credit healthy),
+  hold SPY at 0.80. When EMB's 5-day return falls below -0.5% (global risk-off /
+  EM credit stress), exit SPY. Tests cross-border information flow channel.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "EMB"
+  follower_symbol: "SPY"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  entry_threshold=0.005 matches HYG threshold — EMB has comparable weekly
+  volatility to HYG given its EM credit/FX risk premium. Set before backtest
+  based on EMB's historical daily range. No in-sample optimization.
+  Template from lqd-spy-credit-lead (Sharpe=1.250, DSR=0.9950).
+
+spec_version: "1.0"

@@ -1,0 +1,58 @@
+slug: defensive-factor-vix-overlay
+family: P  # Portfolio Construction / Regime Overlay
+issue: llm-quant-vay4
+mechanism: >
+  In elevated-volatility regimes (VIX > 25), defensive equity factors
+  (low-volatility, quality, consumer staples, utilities) outperform the broad
+  market due to investor flight-to-quality, forced de-risking by leveraged
+  participants, and lower earnings sensitivity to the business cycle.
+  This is a regime-conditional overlay, not a standalone alpha source:
+  it improves portfolio drawdown control by tilting factor exposure when the
+  risk regime shifts. The overlay interacts multiplicatively with existing
+  strategies — it does NOT generate independent alpha on its own.
+prediction: |
+  During periods when VIX > 25 (high-volatility regime), a 20% tilt from
+  existing equity positions toward low-vol/defensive ETFs (USMV, XLU, XLP)
+  reduces portfolio max drawdown by at least 3 percentage points versus
+  the unmodified portfolio, with a Sharpe improvement > 0.1 over the 2000-2024
+  backtest window including the 2008-09, 2020, and 2022 episodes.
+universe:
+  defensive_etfs: [USMV, XLU, XLP, XLRE]  # All yfinance available
+  proxy_for_low_vol: USMV   # iShares MSCI Min Vol USA ETF
+  utilities: XLU
+  consumer_staples: XLP
+regime_signal:
+  indicator: "VIX level"
+  threshold: 25  # Above = high-vol regime
+  source: "^VIX via yfinance"
+  note: "Adaptive threshold also acceptable (e.g., VIX > 75th percentile of trailing 252-day distribution)"
+strategy_type: overlay  # Not standalone — modifies existing portfolio weights
+integration_note: >
+  This overlay should be evaluated as a portfolio-level modification, not as an
+  independent strategy. Backtest must compare overlay ON vs overlay OFF within
+  the existing deployed portfolio, not in isolation. The alpha claim is
+  conditional on having equity exposure that benefits from the tilt.
+falsification: >
+  If the defensive tilt during VIX > 25 regimes does NOT reduce max drawdown
+  by at least 3 percentage points in the 2000-2024 period, or if the Sharpe
+  improvement is < 0.05 (no meaningful risk-adjusted benefit), the overlay is
+  not worth the added complexity. Also killed if defensive ETFs have high
+  correlation to existing holdings, providing no real diversification.
+data_availability:
+  usmv: "USMV via yfinance — available (2011-present)"
+  xlu: "XLU via yfinance — available (1999-present)"
+  xlp: "XLP via yfinance — available (1999-present)"
+  vix: "^VIX via yfinance — available (1990-present)"
+  note: "2000-2010 pre-dates USMV; use XLU/XLP as low-vol proxies for that period"
+prior_evidence: >
+  Baker et al. (2011) "Benchmarks as Limits to Arbitrage" — low-vol anomaly;
+  Blitz & van Vliet (2007) "The Volatility Effect" — low-vol outperforms in
+  bear markets; MSCI research on defensive factor performance during crises.
+expected_rho_to_credit_family: 0.30  # Risk-off regime partially overlaps
+expected_rho_to_existing_qual_strategy: 0.55  # qual-spy-risk-off-rotation is related
+overlap_check:
+  qual_spy_risk_off_rotation: >
+    qual-spy-risk-off-rotation also uses quality factor in risk-off. That strategy
+    is a standalone signal. This overlay is additive to the *whole portfolio*.
+    Different scope, compatible if combined carefully.
+track: A  # Defensive alpha — reduces drawdown, improves Sharpe

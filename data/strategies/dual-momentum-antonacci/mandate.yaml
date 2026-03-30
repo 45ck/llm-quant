@@ -1,0 +1,10 @@
+slug: dual-momentum-antonacci
+track: A
+family: 3
+objective: maximize Sharpe subject to drawdown constraints
+benchmark: 60/40 SPY/TLT
+target_sharpe: 0.8
+target_max_drawdown: 0.15
+target_cagr_min: 0.10
+position_limit_per_asset: 0.90  # concentrated rotation
+universe: [SPY, TLT, GLD, BIL]

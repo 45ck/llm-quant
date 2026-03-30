@@ -1,0 +1,77 @@
+# Paper Trading: gld-slv-mean-reversion-v4
+strategy_slug: "gld-slv-mean-reversion-v4"
+spec_hash: "14cdfaaf"
+robustness_date: "2026-03-27"
+
+start_date: "2026-03-30"
+status: "active"  # active | paused | completed | failed
+
+# Strategy parameters for reference
+strategy_params:
+  type: pairs_ratio
+  symbols: [GLD, SLV]
+  consensus_windows: [60, 90, 120]
+  bb_std: 2.0
+  exit_z: 0.5
+  target_weight: 0.40
+
+# Performance tracking
+performance:
+  initial_nav: 100000.00
+  current_nav: 100000.00
+  peak_nav: 100000.00
+  current_sharpe: null
+  current_sortino: null
+  current_drawdown: 0.0
+  total_return_pct: 0.0
+  annualized_return_pct: null
+
+# Trade log — updated each session
+trades: []
+# Each trade entry:
+#   date: "YYYY-MM-DD"
+#   symbol: "GLD" or "SLV"
+#   action: "buy"/"sell"/"close"
+#   shares: 10
+#   price: 200.00
+#   signal: "ratio_zscore_long_gld"
+#   fill_type: "paper"
+
+# Incident log — operational issues, near-misses, anomalies
+incidents: []
+# Each incident:
+#   date: "YYYY-MM-DD"
+#   severity: "critical"  # critical | warning | info
+#   description: "What happened"
+#   resolution: "How it was resolved"
+#   impact: "Impact on P&L or operations"
+
+# Slippage drift tracking
+slippage_drift_bps: 0.0
+slippage_samples: 0
+
+# Operational checklist
+operations_tested:
+  data_fetching: false
+  indicator_computation: false
+  signal_generation: false
+  risk_checks: false
+  trade_execution: false
+  portfolio_persistence: false
+  hash_chain_integrity: false
+  performance_reporting: false
+
+days_active: 0
+total_trades: 0
+
+# Gate thresholds (Track A)
+gate_thresholds:
+  min_days: 30
+  min_trades: 20
+  min_sharpe: 0.60
+  max_drawdown_pct: 15.0
+  max_slippage_drift_bps: 5.0
+  earliest_promotion_eligible: "2026-04-26"
+
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

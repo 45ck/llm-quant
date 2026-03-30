@@ -1,0 +1,10 @@
+slug: n8-global-yield-convergence
+family: 3
+title: US-German yield spread narrowing predicts international equity outperformance
+mechanism: Yield differential between US and German 10Y Bunds drives currency-adjusted return expectations. When the US rate advantage narrows, dollar appreciation slows and international equities (EFA) become more attractive to global capital flows on a relative-return basis.
+prediction: When US 10Y minus German 10Y spread narrows by >50bps over 60 days, EFA outperforms SPY by >2% over subsequent 60 days with >60% frequency.
+falsification: If EFA-SPY forward return shows no significant relationship to US-German yield spread changes, or if currency effects dominate and create noise that drowns the capital flow signal.
+data_required: ["EFA", "SPY", "EWG"]
+expected_rho_to_credit_family: 0.15
+quick_kill: false
+notes: DGS10 and INTDSRDEM193N (Germany 10Y) available via FRED API. EWG (Germany ETF) as additional signal asset.

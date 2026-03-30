@@ -1,0 +1,20 @@
+slug: opex-calendar-pinning
+frozen: true
+strategy_class: calendar_event
+event: opex
+event_definition: 3rd Friday of each calendar month
+symbols: [SPY]
+hold_before: 2   # trading days before OPEX Friday
+hold_after: 1    # trading days after OPEX Friday
+target_weight: 0.80
+backtest_start: 2000-01-01
+backtest_end: 2025-12-31
+oos_start: 2023-01-01
+sensitivity_tests:
+  - hold_before: [1, 2, 3]
+  - hold_after: [0, 1, 2]
+min_trades_required: 50
+notes: >
+  Weekly options proliferation post-2010 may dilute the monthly OPEX effect.
+  Run sub-period analysis: 2000-2009 (pre-weekly), 2010-2019, 2020-2025.
+  Also test Wednesday expiry (introduced 2016) as a confound.

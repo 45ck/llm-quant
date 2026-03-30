@@ -1,0 +1,39 @@
+strategy: gld-slv-mean-reversion-v4
+run_date: '2026-03-30'
+backtest_days: 1053
+shuffled_signal:
+  real_sharpe: 0.948
+  shuffled_95th_pct: 1.429
+  p_value: 0.274
+  passed: false
+  verdict: FAIL -- real SR 0.948 does NOT exceed 95th pct of shuffled distribution
+    (1.429)
+mechanism_inversion:
+  original_sharpe: 0.948
+  inverted_sharpe: 1.075
+  sharpe_differential: -0.127
+  passed: false
+  verdict: FAIL -- inverted signal SR (1.075) exceeds original SR (0.948); differential
+    = -0.127 (< 0.25 threshold)
+time_in_market:
+  pct_invested: 0.319
+  invested_days: 336
+  total_days: 1053
+  passed: true
+  verdict: PASS -- 31.9% time invested is well below 80% threshold
+overall_verdict: FAIL
+gates_passed: 1
+gates_total: 3
+notes:
+- 'Shuffled signal FAIL: The real SR (0.948) does not beat the 95th pct of random-timing
+  runs (1.429). The strategy may be capturing equity beta from GLD (via the ratio)
+  rather than genuine timing alpha.'
+- 'Inversion FAIL: Swapping symbol_a/symbol_b produces SR=1.075 > original SR=0.948.
+  A genuine mean-reversion signal should be destroyed by inversion. This is a red
+  flag -- the strategy may be directionally betting on GLD/SLV momentum rather than
+  mean-reversion.'
+- 'Time-in-market PASS: 32% invested is well within limits.'
+- 'RECOMMENDATION: Do not promote. The fraud detectors indicate the strategy may be
+  capturing general commodity beta or gold momentum rather than genuine pairs mean-reversion.
+  Consider: longer out-of-sample validation, regime-split analysis, or rethinking
+  the signal logic.'

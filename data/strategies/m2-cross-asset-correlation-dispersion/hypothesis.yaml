@@ -1,0 +1,9 @@
+slug: m2-cross-asset-correlation-dispersion
+family: 7
+title: Cross-asset correlation spike predicts SPY drawdown within 15 days
+mechanism: Under normal conditions, SPY/TLT/GLD/HYG exhibit diversifying correlations. In risk-off episodes, correlations converge as institutional risk managers sell across all asset classes simultaneously. This correlation spike is a leading (not lagging) indicator of market stress, detectable before the full equity drawdown materializes.
+prediction: When average pairwise rolling 10d correlation among SPY/TLT/GLD/HYG exceeds 0.70, SPY suffers >3% drawdown within 15 trading days with >65% frequency.
+falsification: If SPY drawdown frequency following high-correlation regime is not statistically different from unconditional 15d drawdown frequency (chi-squared p > 0.10), or if correlation spike is contemporaneous with not leading the drawdown.
+data_required: ["SPY", "TLT", "GLD", "HYG"]
+expected_rho_to_credit_family: 0.40
+quick_kill: false

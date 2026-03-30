@@ -1,0 +1,47 @@
+slug: em-carry-trade
+family: K  # Carry / Cross-Asset Spread
+issue: llm-quant-yj9
+mechanism: >
+  Emerging market (EM) equities embed a structural yield premium over developed
+  market (DM) equities due to higher country risk, currency risk, and liquidity
+  risk premia. When the EM-DM forward earnings yield spread is positive (EM
+  cheaper than DM), a long EEM / short EFA position captures carry-like alpha
+  as the spread mean-reverts. The mechanism is distinct from EM momentum:
+  it exploits the *level* of relative cheapness, not trend. Low correlation to
+  the existing credit lead-lag family which uses investment-grade bond yields.
+prediction: |
+  When the EM forward earnings yield (EEM P/E proxy) exceeds the DM forward
+  earnings yield (EFA P/E proxy) by > 200bps, the long EEM / short EFA position
+  produces annualized alpha > 5% with Sharpe > 0.6 on a monthly-rebalanced basis
+  over the 2005-2024 backtest window.
+universe:
+  long: EEM   # iShares MSCI Emerging Markets ETF
+  short: EFA  # iShares MSCI EAFE ETF
+  alternatives: [VWO, VEA]  # Vanguard equivalents — all yfinance available
+signal_construction:
+  spread: "EEM_earnings_yield - EFA_earnings_yield (proxy: 1/PE or use reported P/E)"
+  entry: "spread > 200bps"
+  exit: "spread < 50bps (compressed) or position age > 12 months"
+falsification: >
+  If the long EEM / short EFA return conditioned on spread > 200bps is not
+  significantly positive (p > 0.10) over the 2005-2024 window, or if the
+  strategy underperforms a simple long-EEM buy-and-hold after transaction costs,
+  the carry mechanism is not the source of return. Also killed if overlap with
+  existing EM momentum strategy (ashr-eem-lead-lag) exceeds rho > 0.5.
+prior_evidence: >
+  Harvey et al. (2013) "The Impact of the Illiquidity Premium" — EM carry well
+  documented; Asness et al. (2013) "Value and Momentum Everywhere" — value
+  spread in EM equities is a persistent source of return.
+data_availability:
+  eem: "EEM via yfinance — available"
+  efa: "EFA via yfinance — available"
+  vwo: "VWO via yfinance — available"
+  vea: "VEA via yfinance — available"
+  pe_ratios: "Historical P/E not directly in yfinance — need external source or proxy"
+  note: "May need to use trailing P/E from quarterly earnings data or ETF provider disclosures"
+overlap_check:
+  ashr_eem_lead_lag: "ashr-eem-lead-lag uses ASHR/EEM price lead-lag (momentum), not carry spread"
+  verdict: "Distinct mechanism — carry vs momentum"
+expected_rho_to_credit_family: 0.25  # Some macro overlap (risk-off hits both)
+expected_rho_to_dual_momentum: 0.30  # Both are cross-asset, but different signal
+track: A  # Conservative alpha — monthly rebalance, well-documented mechanism

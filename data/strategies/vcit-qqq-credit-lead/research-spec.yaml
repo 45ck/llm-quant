@@ -1,0 +1,50 @@
+# Research Spec: vcit-qqq-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "vcit-qqq-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Intermediate-term corporate bond ETF (VCIT) as leading indicator for QQQ.
+  When VCIT's 5-day return exceeds 0.4% (intermediate credit healthy), hold QQQ at 0.80.
+  When VCIT's 5-day return falls below -0.4% (intermediate credit stress), exit QQQ.
+  Tests whether the belly of the corporate curve (5-10yr) leads growth equities.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "VCIT"
+  follower_symbol: "QQQ"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.004
+  exit_threshold: -0.004
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  entry_threshold=0.004 interpolated between AGG (0.003) and LQD/HYG (0.005)
+  to reflect VCIT's intermediate volatility profile. Set before backtest based
+  on VCIT's historical daily range relative to AGG and LQD. No in-sample
+  optimization. Template from lqd-spy-credit-lead (Sharpe=1.250, DSR=0.9950).
+
+spec_version: "1.0"

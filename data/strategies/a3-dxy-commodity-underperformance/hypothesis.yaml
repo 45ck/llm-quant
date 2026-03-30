@@ -1,0 +1,10 @@
+slug: a3-dxy-commodity-underperformance
+family: 3
+title: Dollar strength (UUP +2% in 10 days) predicts commodity ETF underperformance
+mechanism: Commodities are priced in USD globally. Dollar appreciation directly increases the cost of commodities for foreign buyers, suppressing demand. The price impact on dollar-denominated commodity ETFs is mechanical and near-immediate for energy/metals, with a slightly longer lag for agricultural.
+prediction: When UUP rises >2% over trailing 10 trading days, DJP underperforms SPY by >3% over subsequent 20 trading days with >60% frequency. Effect should be stronger for energy (USO) than equities.
+falsification: If DJP-SPY forward 20d return differential shows no significant inverse relationship to UUP trailing 10d return (regression p > 0.10), the FX-commodity link is not exploitable at this frequency.
+data_required: ["UUP", "DJP", "GLD", "USO", "SPY"]
+expected_rho_to_credit_family: 0.20
+quick_kill: false
+notes: DJP (iPath Bloomberg Commodity) may have limited yfinance history; verify availability. UUP (Invesco DB USD Index) is widely available.

@@ -1,0 +1,53 @@
+# Research Spec: spy-overnight-momentum
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "spy-overnight-momentum"
+strategy_name: "overnight_momentum"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  SPY overnight return (prior close to current open) as intraday direction signal.
+  When SPY gaps up overnight (overnight return > 0%), buy SPY at the open and
+  sell at close the same day. When overnight return is <= 0%, remain flat for
+  that session. Pure intraday hold — no overnight position risk.
+
+strategy_class: "overnight_momentum"
+parameters:
+  ticker: "SPY"
+  signal: "overnight_return"   # (open_t - close_{t-1}) / close_{t-1}
+  signal_threshold: 0.0        # buy if overnight_return > 0
+  hold_period: "intraday"      # enter open, exit close same day
+  target_weight: 0.90          # near-full allocation on signal days
+  rebalance_frequency_days: 1  # daily decision
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 20
+  fill_delay: 0    # fills at open (signal known pre-open)
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 1.5   # SPY is extremely liquid at open
+    flat_slippage_bps: 0.5
+    slippage_volatility_factor: 0.03
+  note: >
+    Two fills per day (open buy + close sell). Cost model applied twice per
+    round-trip. With 2 × 2bps total = 4bps per day traded.
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Signal threshold = 0.0 is the natural binary zero-crossing — no optimization
+  possible for this parameter. Hold period = intraday is mechanistically
+  dictated by the overnight momentum mechanism (not a tunable variable).
+  Target weight 0.90 is the maximum feasible given 5% cash reserve requirement.
+  All parameters set before any backtest. Academic precedent: Lou et al. (2019),
+  Barclay & Hendershott (2003), Branch & Ma (2012).
+
+spec_version: "1.0"

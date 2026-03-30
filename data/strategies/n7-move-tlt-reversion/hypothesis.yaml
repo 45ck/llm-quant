@@ -1,0 +1,10 @@
+slug: n7-move-tlt-reversion
+family: 5
+title: MOVE index extreme (bond vol spike) predicts TLT mean-reversion
+mechanism: Elevated bond volatility reflects peak institutional hedging demand in rates markets. MOVE extremes coincide with forced risk reduction (duration selling); once positioning is cleared, the excess rate vol mean-reverts as uncertainty resolves, and TLT prices recover.
+prediction: When VXTYN (MOVE proxy) or 30d realized vol of TLT exceeds the 90th percentile of its trailing 1-year distribution, TLT produces positive return over subsequent 10 days with >65% frequency.
+falsification: If TLT forward 10d returns following extreme bond vol readings are not statistically different from unconditional 10d returns (t-test p > 0.10), or if mean-reversion frequency falls below 55%.
+data_required: ["TLT", "VXTYN"]
+expected_rho_to_credit_family: 0.35
+quick_kill: false
+notes: VXTYN is CBOE/CBOT 10Y T-note volatility index. Available on yfinance. Alternative: compute realized vol from TLT daily returns.

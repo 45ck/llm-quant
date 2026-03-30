@@ -1,0 +1,10 @@
+slug: a1-cu-au-ratio-equity-lead
+family: 8
+title: Copper-gold ratio decline leads SPY drawdowns by 15-25 trading days
+mechanism: Copper reflects industrial/economic activity while gold reflects risk-off demand. The Cu/Au ratio is a real-time growth sentiment gauge. When growth expectations fall (Cu down, Au up), equity repricing follows with a 3-5 week delay as earnings expectations adjust.
+prediction: Cu/Au 5d MA crossing below 30d MA predicts SPY drawdown >3% within 15-25 trading days with >55% directional accuracy. Granger causality test at 15/20/25d lags shows statistically significant predictive relationship (p < 0.05).
+falsification: If Granger causality test at all three lag windows fails (p > 0.10), or if directional accuracy falls below 52% out-of-sample, the lead-lag relationship is not stable enough to trade.
+data_required: ["CPER", "GLD", "SPY"]
+expected_rho_to_credit_family: 0.30
+quick_kill: false
+notes: CPER is copper ETF (yfinance). Alternative: use ^HG=F futures but availability varies. Family 8 (Non-Credit Lead-Lag) — same family as SOXX-QQQ, expand this family.

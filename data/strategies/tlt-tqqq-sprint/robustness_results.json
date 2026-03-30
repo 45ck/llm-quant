@@ -1,0 +1,107 @@
+{
+  "strategy_slug": "tlt-tqqq-sprint",
+  "strategy_type": "lead_lag",
+  "track": "D",
+  "base_sharpe": 1.4345,
+  "base_max_dd": 0.1266,
+  "base_total_return": 1.3179,
+  "dsr": 0.9941,
+  "cpcv": {
+    "oos_mean_sharpe": 1.6277,
+    "oos_std": 0.2562,
+    "oos_is_ratio": 1.1347,
+    "pct_positive_folds": 1.0
+  },
+  "weight_variants": [
+    {
+      "variant": "target_weight=0.30 (base)",
+      "sharpe": 1.4345,
+      "max_dd": 0.1266,
+      "total_return": 1.3179,
+      "passes_track_d": true
+    },
+    {
+      "variant": "target_weight=0.50",
+      "sharpe": 1.4381,
+      "max_dd": 0.2035,
+      "total_return": 2.8508,
+      "passes_track_d": true
+    },
+    {
+      "variant": "target_weight=0.70",
+      "sharpe": 1.4407,
+      "max_dd": 0.2747,
+      "total_return": 5.1526,
+      "passes_track_d": true
+    }
+  ],
+  "perturbation": {
+    "variants": [
+      {
+        "variant": "lag_days=2",
+        "sharpe": 1.0509,
+        "max_dd": 0.1712,
+        "change_pct": -26.7,
+        "status": "STABLE"
+      },
+      {
+        "variant": "lag_days=4",
+        "sharpe": 1.4775,
+        "max_dd": 0.1129,
+        "change_pct": 3.0,
+        "status": "STABLE"
+      },
+      {
+        "variant": "lag_days=5",
+        "sharpe": 0.8524,
+        "max_dd": 0.1145,
+        "change_pct": -40.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "signal_window=8",
+        "sharpe": 0.7044,
+        "max_dd": 0.1628,
+        "change_pct": -50.9,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "signal_window=12",
+        "sharpe": 0.851,
+        "max_dd": 0.1593,
+        "change_pct": -40.7,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "entry_threshold=0.008",
+        "sharpe": 1.2962,
+        "max_dd": 0.1219,
+        "change_pct": -9.6,
+        "status": "STABLE"
+      },
+      {
+        "variant": "entry_threshold=0.012",
+        "sharpe": 1.4528,
+        "max_dd": 0.1266,
+        "change_pct": 1.3,
+        "status": "STABLE"
+      },
+      {
+        "variant": "entry_threshold=0.015",
+        "sharpe": 1.4016,
+        "max_dd": 0.1081,
+        "change_pct": -2.3,
+        "status": "STABLE"
+      }
+    ],
+    "pct_stable": 62.5
+  },
+  "gates": {
+    "sharpe_gte_0.8": true,
+    "maxdd_lt_40pct": true,
+    "dsr_gte_0.9": true,
+    "cpcv_oos_positive": true,
+    "perturbation_gte_60pct": true
+  },
+  "verdict": "PASS"
+}

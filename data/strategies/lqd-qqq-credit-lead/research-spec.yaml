@@ -1,0 +1,51 @@
+# Research Spec: lqd-qqq-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "lqd-qqq-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Investment-grade corporate bond ETF (LQD) as leading indicator for QQQ.
+  Identical parameters to the validated lqd-spy-credit-lead strategy.
+  When LQD's 5-day return exceeds 0.5% (credit healthy), hold QQQ at 0.80.
+  When LQD's 5-day return falls below -0.5% (credit stress), exit QQQ.
+  Direct universe expansion of lqd-spy — only the equity target changes.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "LQD"
+  follower_symbol: "QQQ"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Identical parameters to lqd-spy-credit-lead (entry=0.5%, exit=-0.5%, 5d window,
+  rebalance=5d, weight=0.80). No parameter optimization — this is a strict
+  universe expansion. If parameters needed to change to work with QQQ, that
+  would be evidence of overfitting to the equity target.
+
+spec_version: "1.0"

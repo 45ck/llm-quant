@@ -1,0 +1,52 @@
+slug: cef-discount-mean-reversion
+frozen: true
+strategy_class: cef_discount_zscore
+
+entry_rules:
+  signal: discount z-score (52-week rolling) < -2.0
+  description: >
+    Compute discount_pct = (price - nav) / nav for each CEF daily.
+    Compute 52-week (252-day) rolling mean and std of discount_pct.
+    Z-score = (current_discount - rolling_mean) / rolling_std.
+    Enter long when z-score < -2.0 (discount unusually wide vs. its own history).
+
+exit_rules:
+  primary: z-score > -0.5 (discount has normalized toward mean)
+  time_stop: 90 calendar days from entry (prevents capital lock-up in slow normalizers)
+
+position_sizing:
+  target_weight_per_position: 0.05
+  max_total_allocation: 0.20
+  rationale: >
+    Diversify across multiple CEFs simultaneously (up to 4 positions).
+    CEF liquidity is limited so per-position cap of 5% prevents excessive market impact.
+
+universe:
+  asset_class: equity CEFs
+  filters:
+    min_aum_usd: 200_000_000
+    min_avg_daily_volume_usd: 500_000
+  source: CEFConnect universe screened quarterly
+  estimated_size: 30-60 qualifying CEFs
+
+backtest_period:
+  start: "2015-01-01"
+  end: "2025-12-31"
+
+oos_period:
+  start: "2023-01-01"
+  end: "2025-12-31"
+
+anti_overfitting:
+  dsr_threshold: 0.95
+  cpcv_oos_is_min: 0.0
+  parameter_count: 3  # z-score entry (-2.0), z-score exit (-0.5), time stop (90d)
+  justification: >
+    Z-score thresholds (-2.0 entry, -0.5 exit) are standard statistical conventions,
+    not optimized to historical returns. 90-day time stop based on activist investor
+    typical campaign timeline (economic justification, not curve-fit).
+
+risk_notes: >
+  Primary risks: discount widens further (value trap), illiquidity at exit, NAV
+  reporting lag creating stale signal. Universe filter (AUM > $200M, vol > $500K/day)
+  mitigates liquidity risk. NAV lag risk partially mitigated by using prior-day NAV.

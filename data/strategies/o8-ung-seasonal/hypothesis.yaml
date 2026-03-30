@@ -1,0 +1,9 @@
+slug: o8-ung-seasonal
+family: 6
+title: Natural gas winter seasonal premium drives UNG momentum Oct-Feb
+mechanism: Heating demand creates predictable winter supply drawdown in natural gas, generating persistent price premium from October through February that institutional participants cannot fully arbitrage away due to physical storage constraints.
+prediction: UNG produces positive return in Oct-Feb in >70% of years; Oct-Feb average monthly return significantly exceeds Mar-Sep average monthly return (t-test p < 0.05).
+falsification: If UNG Oct-Feb win rate falls below 60% over 10+ years, or if t-test p-value > 0.10, seasonal effect is insufficient to trade.
+data_required: ["UNG"]
+expected_rho_to_credit_family: 0.10
+quick_kill: false

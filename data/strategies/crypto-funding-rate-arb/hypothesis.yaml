@@ -1,0 +1,7 @@
+slug: crypto-funding-rate-arb
+title: Delta-neutral funding rate capture via long spot / short perp
+mechanism: Perpetual futures funding rates create a persistent yield for delta-neutral arbitrageurs
+prediction: When annualized funding rate > 15%, delta-neutral position earns 15-40% annualized with near-zero beta
+falsification: If strategy Sharpe < 1.0 after costs, or beta > 0.2, mechanism is not exploitable at scale
+expected_rho_to_credit_family: 0.05
+track: C

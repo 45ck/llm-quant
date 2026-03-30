@@ -1,0 +1,47 @@
+strategy_slug: "tqqq-tmf-ratio-reversion"
+strategy_type: "pairs_ratio"
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+track: "D"
+sub_type: "D3"
+parameters:
+  symbol_a: "TQQQ"
+  symbol_b: "TMF"
+  bb_window: 60
+  bb_std: 2.0
+  exit_z: 0.5
+  target_weight: 0.40
+  rebalance_frequency_days: 1
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 5.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  bb_window: "60-day lookback from hypothesis. Pre-specified. Captures medium-term ratio dynamics without over-fitting to short noise."
+  bb_std: "2.0 sigma entry is standard statistical convention. Pre-specified."
+  exit_z: "0.5 sigma exit captures mean reversion capture. Pre-specified."
+  target_weight: "0.40 conservative sizing for leveraged ETF pair. Pre-specified."
+backtest_spec:
+  symbols: ["TQQQ", "TMF"]
+  years: 14
+  initial_capital: 100000
+  warmup_days: 90
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+family: "leveraged_ratio_reversion"
+family_trial_number: 1
+family_prior_trials: 0
+hypothesis: >
+  TQQQ (3x leveraged QQQ) and TMF (3x leveraged TLT) are risk-off/risk-on proxies
+  that are structurally inversely correlated. When their price ratio deviates more
+  than 2 standard deviations from its 60-day mean, mean reversion to the spread is
+  expected. Fade the outlier by buying the underperformer.
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

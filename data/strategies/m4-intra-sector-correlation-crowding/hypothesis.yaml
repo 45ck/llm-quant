@@ -1,0 +1,10 @@
+slug: m4-intra-sector-correlation-crowding
+family: 7
+title: Intra-sector correlation rise signals XLK crowding and mean-reversion
+mechanism: When individual stocks within a sector begin moving together (high pairwise correlation), it signals momentum crowding — many investors holding the same position. Crowded momentum trades historically unwind sharply, producing sector underperformance relative to SPY.
+prediction: When average pairwise rolling 20d correlation of top-10 XLK holdings exceeds 0.70, XLK underperforms SPY by >3% over subsequent 30 days with >60% frequency.
+falsification: If XLK-SPY forward 30d return differential shows no significant relationship to intra-sector correlation level, or if crowding metric does not Granger-cause subsequent underperformance (p > 0.10).
+data_required: ["XLK", "AAPL", "MSFT", "NVDA", "AVGO", "META", "GOOGL", "GOOG", "TSLA", "ORCL", "AMD", "SPY"]
+expected_rho_to_credit_family: 0.20
+quick_kill: false
+notes: Top-10 XLK holdings will need to be updated periodically as composition changes. Use current constituents as approximation.

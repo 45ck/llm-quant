@@ -1,0 +1,47 @@
+strategy_slug: "vix-spike-tqqq"
+strategy_type: "vix_regime"
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+track: "D"
+sub_type: "D5"
+parameters:
+  mode: "vix_spike"
+  vix_symbol: "VIX"
+  equity_symbol: "TQQQ"
+  spike_threshold: 0.20
+  spike_exit_vix: 20.0
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 5.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  spike_threshold: "20% single-day VIX spike is a large-outlier event; statistically rare, high signal-to-noise. Pre-specified from hypothesis."
+  spike_exit_vix: "VIX < 20 indicates fear has subsided; bounce is captured. Pre-specified."
+  target_weight: "0.90 full allocation — this is an event-driven tactical trade, not a persistent position. Pre-specified."
+backtest_spec:
+  symbols: ["TQQQ", "VIX"]
+  years: 14
+  initial_capital: 100000
+  warmup_days: 10
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+family: "vix_spike_contrarian"
+family_trial_number: 1
+family_prior_trials: 0
+hypothesis: >
+  When VIX spikes >20% in a single day, fear is at an extreme. Historically
+  such spikes mark short-term equity lows and are followed by rapid mean
+  reversion. Using TQQQ (3x leveraged NASDAQ) amplifies the expected bounce
+  while accepting higher volatility. Exit when VIX drops below 20, confirming
+  fear has subsided.
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

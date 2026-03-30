@@ -1,0 +1,64 @@
+# Research Spec: lqd-tqqq-sprint (Track D — D6)
+strategy_slug: "lqd-tqqq-sprint"
+strategy_type: "lead_lag"
+
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: LQD credit spread signal leads TQQQ (leveraged tech).
+# Investment-grade corporate bond ETF (LQD) captures credit-market risk appetite
+# before it propagates to leveraged equities. When LQD's 10-day return exceeds 1%
+# (credit healthy/risk-on), go long TQQQ for levered upside.
+# When LQD's 10-day return falls below -0.5% (credit stress), exit TQQQ.
+# Track D strategy: aggressive alpha, target CAGR > 40%.
+# Same architecture as tlt-tqqq-sprint but using LQD as leader (corporate credit vs duration).
+
+parameters:
+  leader_symbol: "LQD"
+  follower_symbol: "TQQQ"
+  lag_days: 3
+  signal_window: 10
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  target_weight: 0.30
+  inverse: false
+  rebalance_frequency_days: 1
+
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 5.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  leader_symbol: "LQD as credit risk signal — investment-grade corporate bond ETF"
+  follower_symbol: "TQQQ — 3x leveraged QQQ for maximum CAGR in Track D"
+  lag_days: "3-day propagation from credit market to leveraged equities"
+  signal_window: "10-day window to capture short-term LQD directional momentum"
+  entry_threshold: "1% LQD move threshold. Pre-specified, mirrors tlt-tqqq-sprint."
+  exit_threshold: "Exit on -0.5% LQD decline (credit stress). Pre-specified."
+  inverse: "False — LQD rising (credit healthy, risk-on) predicts TQQQ upswing."
+  target_weight: "30% base — Track D allows up to 15% per position; higher weights tested."
+
+backtest_spec:
+  symbols: ["LQD", "TQQQ"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+
+benchmark:
+  symbols:
+    QQQ: 1.00
+
+family: "lqd_tqqq_lead_lag"
+family_trial_number: 1
+family_prior_trials: 0
+track: "D"
+
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

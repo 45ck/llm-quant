@@ -1,0 +1,44 @@
+strategy_slug: "sector-sprint-top1"
+strategy_type: "momentum"
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: "FROZEN."
+track: "D"
+sub_type: "D4"
+parameters:
+  top_n: 1
+  lookback_days: 20
+  target_weight: 0.90
+  rebalance_frequency_days: 5
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 2.0
+  slippage_volatility_factor: 0.1
+  commission_per_share: 0.0
+  min_commission: 0.0
+parameter_rationale:
+  top_n: "Hold 1 sector ETF only — maximum concentration for sprint alpha. Pre-specified."
+  lookback_days: "20-day momentum lookback (one month). Pre-specified. Standard short-term momentum window."
+  target_weight: "0.90 weight — concentrated single-sector exposure. Pre-specified."
+  rebalance_frequency_days: "Weekly rebalance (5 days) reduces turnover while capturing sector rotation. Pre-specified."
+backtest_spec:
+  symbols: ["XLK", "XLE", "XLF", "XLV", "XLI", "XLY", "XLB", "XLU", "XLRE", "XLC"]
+  years: 10
+  initial_capital: 100000
+  warmup_days: 40
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+family: "sector_sprint"
+family_trial_number: 1
+family_prior_trials: 0
+hypothesis: >
+  Sector momentum persists over 1-month horizons due to earnings revisions,
+  capital flows, and macro rotation. Concentrating in the single top-performing
+  sector ETF each week captures the strongest momentum signal without diversifying
+  the alpha away.
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

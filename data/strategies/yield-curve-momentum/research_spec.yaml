@@ -1,0 +1,37 @@
+slug: yield-curve-momentum
+frozen: true
+strategy_class: yield_curve_regime
+symbols: [^TNX, ^IRX, SPY, TLT]
+signal_mode_primary: momentum       # 60-day change in spread direction
+signal_mode_secondary: steepener    # absolute level of spread (positive vs negative)
+lookback: 60                        # days for momentum computation
+target_weight: 0.60                 # SPY weight when risk-on; TLT weight when risk-off
+modes_to_test:
+  - mode: momentum
+    description: Trade based on direction of spread change (steepening vs flattening)
+  - mode: steepener
+    description: Trade based on absolute spread level (positive = risk-on, negative = risk-off)
+backtest_start: 2000-01-01
+backtest_end: 2025-12-31
+oos_start: 2023-01-01
+sub_period_analysis:
+  - label: pre_hike_cycle
+    start: 2000-01-01
+    end: 2021-02-28
+    purpose: Primary in-sample; normal rate environment
+  - label: rate_hike_stress
+    start: 2021-03-01
+    end: 2025-12-31
+    purpose: Out-of-sample stress test; document mechanism breakdown conditions
+sensitivity_tests:
+  - lookback: [20, 40, 60, 90, 120]
+  - target_weight: [0.50, 0.60, 0.70, 0.80]
+structural_break_flag: >
+  2021-2026 rate hike cycle is a known structural break. Report IS and stress
+  period metrics separately. Do not blend them into a single Sharpe figure
+  without disclosing the break — that would be misleading.
+notes: >
+  Correlation with credit family (Family 1) expected ~0.35 — both are macro
+  regime signals but Family 1 operates at higher frequency (daily microstructure)
+  while this strategy uses monthly-horizon yield curve shifts. Verify empirically
+  during robustness phase.

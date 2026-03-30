@@ -1,0 +1,50 @@
+# Research Spec: agg-spy-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "agg-spy-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Broad aggregate bond ETF (AGG) as leading indicator for SPY.
+  When AGG's 5-day return exceeds 0.3% (credit/rates healthy), hold SPY at 0.80.
+  When AGG's 5-day return falls below -0.3% (broad bond stress), exit SPY.
+  Credit and rate conditions aggregate in AGG before equity markets reprice.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "AGG"
+  follower_symbol: "SPY"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.003
+  exit_threshold: -0.003
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. entry_threshold=0.003 and
+  exit_threshold=-0.003 are symmetric ±0.3% for AGG 5d return, calibrated
+  to AGG's lower volatility versus LQD/HYG. No in-sample optimization of
+  lookback or threshold. Template derived from lqd-spy-credit-lead (Sharpe=1.250).
+
+spec_version: "1.0"

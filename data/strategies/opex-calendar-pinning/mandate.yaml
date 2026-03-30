@@ -1,0 +1,12 @@
+slug: opex-calendar-pinning
+track: A
+family: 5
+objective: maximize Sharpe subject to drawdown constraints
+benchmark: SPY
+target_sharpe: 0.8
+target_max_drawdown: 0.15
+target_cagr_min: 0.08
+min_trades: 50
+beta_target: 0.30  # low directional exposure — pure calendar edge
+position_limit_per_asset: 0.80
+universe: [SPY]

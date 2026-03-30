@@ -1,0 +1,20 @@
+slug: crypto-funding-rate-arb
+data_sources:
+  - name: funding_rates
+    provider: CCXT (Binance, OKX, Bybit)
+    symbols: [BTC/USDT:USDT, ETH/USDT:USDT]
+    frequency: 8h
+    fields: [funding_rate, timestamp, symbol, exchange]
+    quality_grade: B (exchange API, no guaranteed SLA)
+  - name: spot_prices
+    provider: yfinance or CCXT
+    symbols: [BTC-USD, ETH-USD]
+    frequency: 1d
+    fields: [open, high, low, close, volume]
+    quality_grade: A
+cost_model:
+  trading_fee_pct: 0.04
+  funding_collection: funding_rate * notional (every 8h)
+  slippage_bps: 5
+minimum_history_days: 365
+known_gaps: Weekend/holiday data complete (24/7 crypto)

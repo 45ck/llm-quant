@@ -1,0 +1,48 @@
+experiment_id: "2aa10448"
+run_date: "2026-03-30"
+strategy: "vix_regime"
+period: "2013-01-22 to 2026-03-27"
+symbols: ["TQQQ", "VIX"]
+initial_capital: 100000
+
+metrics_1x:
+  total_return: -0.0811
+  annualized_return: -0.0064
+  sharpe_ratio: 0.103
+  sortino_ratio: 0.134
+  calmar_ratio: -0.012
+  max_drawdown: 0.5436
+  dsr: 0.6441
+  total_trades: 131
+  win_rate: 0.282
+
+track_d_gate_assessment:
+  track: "D"
+  gate_sharpe_min: 0.80
+  gate_maxdd_max: 0.40
+  gate_dsr_min: 0.90
+  sharpe_pass: false   # 0.103 < 0.80
+  maxdd_pass: false    # 0.544 > 0.40
+  dsr_pass: false      # 0.644 < 0.90
+  overall: FAIL
+
+verdict: >
+  FAIL. VIX spike contrarian (20% daily spike → buy TQQQ) does not produce
+  alpha. Sharpe 0.10, MaxDD 54.4%, DSR 0.64 — all three gates fail decisively.
+  Negative total return (-8.1%) over 13 years.
+
+diagnosis: >
+  Root cause: VIX spike events (>=20% 1-day jump) are relatively rare. When
+  they occur, they often precede sustained volatility regimes, not just a brief
+  spike (e.g., COVID March 2020). TQQQ with spike_exit_vix=20 means positions
+  stay open for extended drawdown periods while VIX remains elevated.
+  The exit logic (VIX < 20) is too slow to protect against multi-week drawdowns
+  in leveraged instruments. Win rate only 28% confirms the signal timing is poor.
+
+  Additional issue: using TQQQ (3x leveraged) amplifies losses from mistimed
+  entries. A non-leveraged version (QQQ) might have better risk-adjusted return
+  but would not meet Track D's return target.
+
+next_steps: RETIRED. The spike_exit_vix=20 threshold is too slow; the 3x leverage
+  magnifies drawdowns during extended risk-off regimes. Would need fundamental
+  redesign (e.g., time-stop at 5 days, or SPY instead of TQQQ) to be viable.

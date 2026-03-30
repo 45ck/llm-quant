@@ -1,0 +1,10 @@
+slug: l6-obv-divergence-reversal
+family: 5
+title: OBV-price negative divergence predicts SPY peak within 10 days
+mechanism: On-Balance Volume captures cumulative buying/selling pressure. When price makes new highs but OBV fails to confirm (negative divergence), it signals weakening institutional buying conviction — volume is not supporting the price advance, increasing risk of reversal.
+prediction: Negative OBV divergence (SPY 20d price high with OBV below its 20d high) predicts SPY peak within 10 trading days with >60% precision, and subsequent 10d return is negative in >60% of cases.
+falsification: If forward 10d SPY return following negative divergence signal is not statistically different from unconditional 10d return distribution (t-test p > 0.10), or if precision falls below 55%.
+data_required: ["SPY", "QQQ"]
+expected_rho_to_credit_family: 0.15
+quick_kill: false
+notes: OBV computable from daily OHLCV (volume * sign of close change). No intraday data required. Divergence lookback window is a key parameter requiring CPCV validation.

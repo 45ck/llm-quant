@@ -1,0 +1,10 @@
+slug: c7-vix-regime-momentum-failure
+family: 5
+title: VIX >25 regime predicts equity momentum strategy failure and mean-reversion
+mechanism: High volatility regimes are characterized by forced institutional de-risking and crowded momentum unwinds. The return autocorrelation structure inverts — prior winners become sellers' targets, creating momentum crashes documented by Barroso & Santa-Clara (2015). VIX >25 is the empirical threshold for this regime change.
+prediction: MTUM (momentum ETF) Sharpe drops below 0 when VIX >25 regime; VIX-conditioned momentum strategy (hold MTUM only when VIX < 25, hold SPY otherwise) produces higher Sharpe than unconditional MTUM over 10-year backtest.
+falsification: If MTUM Sharpe in VIX >25 periods is not statistically different from VIX <25 periods (Mann-Whitney p > 0.10 on monthly returns), or if regime-switching adds no significant improvement to risk-adjusted returns.
+data_required: ["^VIX", "SPY", "MTUM", "USMV"]
+expected_rho_to_credit_family: 0.30
+quick_kill: false
+notes: This functions as a regime filter for deployment decisions, not a standalone alpha signal. High value as a risk management layer for existing momentum-based strategies.

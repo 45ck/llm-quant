@@ -1,0 +1,7 @@
+slug: cef-discount-mean-reversion
+title: CEF discount z-score mean-reversion
+mechanism: CEF discounts mean-revert due to arbitrage pressure from activist investors and tender offers
+prediction: CEFs with discount z-score < -2.0 outperform by >5% over 60 days as discount normalizes
+falsification: If mean-reversion takes > 90 days on average, transaction costs eliminate edge
+expected_rho_to_credit_family: 0.15
+track: C

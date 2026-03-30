@@ -1,0 +1,14 @@
+slug: cef-discount-mean-reversion
+data_sources:
+  - name: cef_prices_and_nav
+    provider: yfinance (price) + CEFConnect/CEFData (NAV)
+    symbols: [top 50 equity CEFs by AUM]
+    frequency: 1d
+    fields: [price, nav, discount_pct, distribution_rate]
+    quality_grade: B (NAV data often delayed 1 day)
+cost_model:
+  trading_fee_pct: 0.05
+  bid_ask_spread_bps: 20
+  slippage_bps: 10
+minimum_history_days: 730
+known_gaps: NAV updates may lag price by 1 business day

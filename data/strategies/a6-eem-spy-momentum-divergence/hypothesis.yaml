@@ -1,0 +1,9 @@
+slug: a6-eem-spy-momentum-divergence
+family: 8
+title: EEM-SPY 60d momentum divergence signals emerging market rotation reversal
+mechanism: Emerging market vs developed market return differentials exhibit momentum-then-reversion cycles driven by global capital flow dynamics. When EM outperforms strongly (EEM-SPY spread >10% over 60d), it attracts crowded positioning that subsequently mean-reverts as valuation gaps close and capital flow momentum stalls.
+prediction: When EEM 60d return exceeds SPY 60d return by >10%, EEM underperforms SPY over subsequent 30 days with >60% frequency. When differential is between -5% and +5%, no significant directional edge.
+falsification: If EEM-SPY forward 30d return shows no mean-reverting relationship to prior 60d divergence magnitude (regression of forward return on prior divergence shows zero or positive slope), the reversion mechanism is absent.
+data_required: ["EEM", "SPY", "EFA", "VWO"]
+expected_rho_to_credit_family: 0.20
+quick_kill: false

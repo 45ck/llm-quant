@@ -1,0 +1,10 @@
+slug: f6-cpi-tips-drift
+family: 6
+title: CPI release day creates directional price discovery drift in TIP
+mechanism: TIPS are directly linked to CPI via inflation adjustments to principal. On CPI release days, institutional investors reprice TIPS immediately for the new inflation data. This creates a systematic directional drift (positive on high CPI, negative on low CPI) that can be predicted by positioning into the release based on prior CPI trend.
+prediction: TIP returns positive on CPI release days when trailing 3-month CPI trend is accelerating (consecutive monthly increases) in >60% of such months over the past 10 years. Event-day TIP returns are statistically different from random trading days (Mann-Whitney p < 0.05).
+falsification: If TIP CPI-day return distribution is not significantly different from a random sample of non-event trading days, the price discovery effect is fully priced-in pre-release or too noisy to exploit.
+data_required: ["TIP", "IEF", "SCHP"]
+expected_rho_to_credit_family: 0.25
+quick_kill: false
+notes: BLS CPI release calendar available free online; dates can be hardcoded or scraped. Requires collecting event dates — approximately 120 events over 10 years, sufficient statistical power.

@@ -1,0 +1,51 @@
+# Research Spec: agg-efa-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "agg-efa-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Broad aggregate bond ETF (AGG) as leading indicator for EFA (international
+  developed equities). When AGG's 5-day return exceeds 0.3% (US credit healthy,
+  global risk-on), hold EFA at 0.80. When AGG falls below -0.3%, exit EFA.
+  Cross-border test of the Family 1 mechanism: US credit conditions leading
+  international equity returns.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "AGG"
+  follower_symbol: "EFA"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.003
+  exit_threshold: -0.003
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 4.0
+    flat_slippage_bps: 1.5
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Same AGG threshold (±0.3%) as agg-spy-credit-lead and agg-qqq-credit-lead.
+  Spread/slippage model slightly wider (4bps vs 3bps) to reflect EFA's lower
+  liquidity versus SPY/QQQ — pre-specified before backtest.
+  No in-sample optimization. Template from lqd-spy-credit-lead.
+
+spec_version: "1.0"

@@ -1,0 +1,37 @@
+strategy: gld-slv-mean-reversion-v4
+run_date: '2026-03-30'
+correlation_to_existing_strategies:
+  soxx-qqq-lead-lag: 0.036
+  lqd-spy-credit-lead: 0.026
+  agg-spy-credit-lead: 0.069
+  hyg-spy-5d-credit-lead: 0.085
+  agg-qqq-credit-lead: 0.049
+  lqd-qqq-credit-lead: 0.033
+  vcit-qqq-credit-lead: 0.034
+  hyg-qqq-credit-lead: 0.089
+  emb-spy-credit-lead: 0.018
+  agg-efa-credit-lead: 0.143
+  spy-overnight-momentum: 0.006
+  tlt-spy-rate-momentum: 0.047
+  tlt-qqq-rate-tech: 0.039
+  ief-qqq-rate-tech: 0.039
+average_pairwise_correlation: 0.0509
+max_pairwise_correlation: 0.143
+max_pairwise_strategy: agg-efa-credit-lead
+r5j4_gate_threshold: 0.3
+r5j4_gate_passed: true
+marginal_sr_contribution:
+  portfolio_sr: 1.35
+  strategy_sr: 0.948
+  avg_rho: 0.0509
+  delta_sr_p: 0.8494
+  taff_gate_threshold: 0.05
+  taff_gate_passed: true
+portfolio_notes:
+- GLD-SLV v4 has very low average pairwise correlation (0.051) to all 14 existing
+  strategies.
+- This is the lowest-correlated strategy in the portfolio -- excellent diversification.
+- Max correlation to any single strategy is 0.143 (vs agg-efa-credit-lead).
+- 'Both portfolio admission gates pass: r5j4 (correlation) and taff (marginal SR).'
+- However, the strategy FAILS fraud detectors -- see fraud_detector_results.yaml.
+- Correlation gate alone is insufficient for promotion. Fraud tests must also pass.

@@ -1,0 +1,13 @@
+slug: dual-momentum-antonacci
+data_sources:
+  - name: asset_prices
+    provider: yfinance
+    symbols: [SPY, TLT, GLD, BIL]
+    frequency: 1d
+    fields: [close, volume]
+    quality_grade: A
+cost_model:
+  trading_fee_pct: 0.02
+  slippage_bps: 2
+minimum_history_days: 730
+known_gaps: none

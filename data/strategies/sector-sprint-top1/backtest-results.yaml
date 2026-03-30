@@ -1,0 +1,45 @@
+experiment_id: "0327ab2f"
+run_date: "2026-03-30"
+strategy: "momentum"
+period: "2017-01-18 to 2026-03-27"
+symbols: ["XLK", "XLE", "XLF", "XLV", "XLI", "XLY", "XLB", "XLU", "XLRE", "XLC"]
+initial_capital: 100000
+
+metrics_1x:
+  total_return: 0.0372
+  annualized_return: 0.0040
+  sharpe_ratio: 0.358
+  sortino_ratio: 0.501
+  calmar_ratio: 0.166
+  max_drawdown: 0.0240
+  dsr: 0.8602
+  total_trades: 493
+  win_rate: 0.254
+
+track_d_gate_assessment:
+  track: "D"
+  gate_sharpe_min: 0.80
+  gate_maxdd_max: 0.40
+  gate_dsr_min: 0.90
+  sharpe_pass: false   # 0.358 < 0.80
+  maxdd_pass: true     # 0.024 < 0.40
+  dsr_pass: false      # 0.860 < 0.90
+  overall: FAIL
+
+verdict: >
+  FAIL. Top-1 sector sprint using 20-day momentum and weekly rebalance generates
+  negligible returns (0.40% annualized). Sharpe 0.36 and DSR 0.86 both fall below
+  Track D gates. MaxDD is surprisingly low (2.4%) because high turnover means
+  positions exit frequently.
+
+diagnosis: >
+  Root cause: The MomentumStrategy generates signals but the top-1 constraint
+  and weekly rebalance creates extremely high turnover (493 trades over 9 years)
+  with low per-trade edge. The 20-day lookback is short enough to capture sector
+  momentum but the signal decays fast. Consider longer lookback (60-day) or
+  top-2 to improve Sharpe, but current spec as written does not clear gates.
+
+  Note: Low MaxDD (2.4%) is somewhat artificial — many positions are small-sized
+  due to risk manager limits being hit on a 0.90 target weight with $100k capital.
+
+next_steps: CONDITIONAL — could retry with lookback_days 60 and top_n 2 as new trial

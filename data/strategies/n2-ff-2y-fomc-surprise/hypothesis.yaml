@@ -1,0 +1,10 @@
+slug: n2-ff-2y-fomc-surprise
+family: 3
+title: Fed funds vs 2-year Treasury spread predicts hawkish FOMC surprise
+mechanism: 2-year Treasuries price in expected Fed policy path 6-18 months ahead. When effective fed funds rate lags the 2Y yield by >100bps, the market has priced in hikes the Fed has not yet delivered, creating high probability of hawkish surprise at next FOMC meeting and adverse TLT reaction.
+prediction: When FEDFUNDS - DGS2 < -100bps, TLT produces negative return over the 2-day FOMC window in >65% of meetings. When spread is >-50bps (converged), FOMC surprises are neutral to dovish.
+falsification: If TLT FOMC-day return distribution is not statistically different between wide-gap and narrow-gap regimes (Mann-Whitney p > 0.10), or if the effect disappears post-2015 (rate normalization era).
+data_required: ["TLT", "IEF"]
+expected_rho_to_credit_family: 0.30
+quick_kill: false
+notes: FEDFUNDS and DGS2 available via FRED API (free). FOMC meeting dates from Federal Reserve website.

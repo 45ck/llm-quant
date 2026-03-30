@@ -1,0 +1,55 @@
+strategy_slug: gld-slv-mean-reversion-v4
+strategy_type: pairs_ratio
+base_sharpe: 1.1967
+base_max_dd: 0.096
+dsr: 0.991
+cpcv:
+  oos_mean_sharpe: 1.2437
+  oos_std: 0.0
+  oos_is_ratio: 1.0393
+  pct_positive_folds: 1.0
+perturbation:
+  variants:
+    - variant: windows=[45,75,105] (shift -15d)
+      sharpe: 1.029
+      max_dd: 0.11
+      change_pct: -14.0
+      status: STABLE
+    - variant: windows=[75,105,135] (shift +15d)
+      sharpe: 1.35
+      max_dd: 0.09
+      change_pct: 13.0
+      status: STABLE
+    - variant: bb_std=1.5
+      sharpe: 1.124
+      max_dd: 0.10
+      change_pct: -6.0
+      status: STABLE
+    - variant: bb_std=2.5
+      sharpe: 0.379
+      max_dd: 0.13
+      change_pct: -68.3
+      status: UNSTABLE
+    - variant: target_weight=0.30
+      sharpe: 1.191
+      max_dd: 0.08
+      change_pct: -0.5
+      status: STABLE
+  pct_stable: 80.0
+gates:
+  sharpe_gt_0.80: true
+  maxdd_lt_15pct: true
+  dsr_gte_0.95: true
+  cpcv_oos_positive: true
+  perturbation_gte_60pct: true
+verdict: PASS
+overall_gate: pass
+robustness_date: '2026-03-27'
+notes: >
+  All 5 gates pass. Base Sharpe=1.1967, MaxDD=9.60%, DSR=0.9910.
+  CPCV OOS Mean=1.2437, OOS/IS=1.0393, 100% positive folds.
+  Perturbation 4/5 stable (80%): window shifts STABLE, bb_std=1.5 STABLE,
+  bb_std=2.5 UNSTABLE (-68%), target_weight=0.30 STABLE.
+  Consensus window approach (60/90/120) robust to timing variation.
+  bb_std=2.5 instability noted as one-sided sensitivity (wider bands reduce
+  trading frequency but hurt Sharpe in this regime). Not a red flag.

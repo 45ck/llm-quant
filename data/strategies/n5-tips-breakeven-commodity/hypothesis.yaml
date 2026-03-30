@@ -1,0 +1,10 @@
+slug: n5-tips-breakeven-commodity
+family: 3
+title: TIPS breakeven inflation above 2.5% predicts commodity outperformance
+mechanism: The 5Y5Y forward breakeven rate reflects institutional inflation expectations embedded in Treasury markets. When breakeven exceeds 2.5%, inflation regime is priced in; commodity ETFs (real assets) outperform financial assets as inflation hedge demand increases.
+prediction: When T5YIFR > 2.5%, DJP outperforms SPY by >3% over subsequent 60 days with >60% frequency. Regression of forward 60d DJP-SPY spread on breakeven level shows positive slope (p < 0.05).
+falsification: If forward 60d DJP-SPY return differential shows no significant relationship to breakeven level, or if commodity outperformance is purely contemporaneous (no predictive lead).
+data_required: ["TIP", "GLD", "USO", "SPY", "DJP"]
+expected_rho_to_credit_family: 0.20
+quick_kill: false
+notes: T5YIFR and DFII5 available via FRED API. DJP availability on yfinance to verify.

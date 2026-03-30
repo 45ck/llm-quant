@@ -1,0 +1,10 @@
+slug: l5-nr7-volatility-expansion
+family: 5
+title: NR7 narrow range day precedes volatility expansion within 3 days
+mechanism: Range contraction reflects market indecision and equilibrium between buyers and sellers. Accumulated order imbalance releases when new information resolves the uncertainty, producing a volatility expansion. NR7 captures the narrowest compression point, which historically precedes directional moves.
+prediction: SPY NR7 days (narrowest high-low range in trailing 7 days) are followed by range expansion >1.5x 20d average range within next 3 days in >65% of cases.
+falsification: If NR7 expansion frequency is not statistically different from random 3-day expansion frequency, or if post-NR7 expansion is bidirectional with no tradeable directional component (making it un-monetizable).
+data_required: ["SPY", "QQQ"]
+expected_rho_to_credit_family: 0.10
+quick_kill: false
+notes: NR7 predicts vol expansion but not direction — implementation requires combining with momentum or breakout filter to generate signed signal.

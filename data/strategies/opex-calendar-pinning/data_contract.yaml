@@ -1,0 +1,25 @@
+slug: opex-calendar-pinning
+data_sources:
+  - name: asset_prices
+    provider: yfinance
+    symbols: [SPY]
+    frequency: 1d
+    fields: [open, high, low, close, volume]
+    quality_grade: A
+  - name: opex_calendar
+    provider: static
+    description: >
+      Monthly OPEX dates (3rd Friday of each month) from 2000-01-01 to 2025-12-31.
+      Pre-computed as a static list; no external feed required.
+    symbols: []
+    frequency: monthly
+    fields: [opex_date]
+    quality_grade: A
+cost_model:
+  trading_fee_pct: 0.02
+  slippage_bps: 3  # slightly higher — entering near high-volume OPEX days
+minimum_history_days: 730
+known_gaps: >
+  Expiry moved to weekly starting ~2005 but monthly 3rd-Friday remains the
+  dominant gamma-weighted expiry through 2025. Weekly expiries dilute but do
+  not eliminate the monthly effect — test sensitivity.

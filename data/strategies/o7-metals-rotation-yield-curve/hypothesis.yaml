@@ -1,0 +1,9 @@
+slug: o7-metals-rotation-yield-curve
+family: 3
+title: Base vs precious metals rotation conditioned on yield curve regime
+mechanism: Base metals (copper/lithium) are growth-sensitive and outperform during economic expansion (2s10s > 0); precious metals (gold) are recession/inflation hedges and outperform during inversion. Yield curve regime provides a forward-looking economic filter.
+prediction: Long LIT+CPER / short GLD when 2s10s > 0 produces positive risk-adjusted return; reverse positioning when 2s10s < 0 also produces positive return. Regime-conditioned strategy beats equal-weight metals over 5-year backtest.
+falsification: If Sharpe < 0.5 on regime-conditioned strategy, or if 2s10s has no statistically significant predictive relationship (p > 0.10) to forward 30d return differential between base and precious metals.
+data_required: ["LIT", "CPER", "GLD", "^TNX", "^IRX"]
+expected_rho_to_credit_family: 0.25
+quick_kill: false

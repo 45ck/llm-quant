@@ -1,0 +1,27 @@
+slug: yield-curve-momentum
+mechanism: >
+  The slope of the yield curve (10y-2y spread) carries macro regime information.
+  A steepening curve signals improving growth expectations and risk appetite —
+  overweight equities (SPY). A flattening or inverted curve signals tightening
+  conditions and recession risk — rotate to fixed income (TLT) or cash.
+  This differs from the credit lead-lag family (Family 1): that family exploits
+  microstructure lead-lag between credit spreads and equity prices; this family
+  uses the yield curve as a macro regime indicator with a multi-week signal horizon.
+prediction: |
+  When 10y-2y spread momentum (60-day change) is positive (steepening trend),
+  SPY outperforms TLT over the subsequent 20 trading days in 60%+ of observations.
+  When momentum is negative (flattening trend), TLT outperforms SPY.
+falsification: >
+  If SPY/TLT relative return is not significantly correlated with curve momentum
+  direction (p > 0.05) on a pre-2021 sample, the mechanism is not operating.
+  The 2021-2026 rate hike cycle is an out-of-sample stress test, not the
+  primary falsification test — see structural_break_note below.
+structural_break_note: >
+  The 2021-2026 rapid rate hike cycle (Fed funds 0% -> 5.25%) compressed the
+  10y-2y spread dramatically and introduced an inversion that persisted 2022-2024.
+  This is a historically unusual regime. Test pre-2021 sample as the primary
+  in-sample period; treat 2021-2026 as a stress test to understand mechanism
+  breakdown conditions, NOT as evidence the strategy doesn't work in normal regimes.
+  Separate reporting required: IS (2000-2020) vs stress period (2021-2025).
+expected_rho_to_credit_family: 0.35  # both use macro signals but different frequencies
+expected_rho_to_dual_momentum: 0.30  # both rotate between SPY and fixed income

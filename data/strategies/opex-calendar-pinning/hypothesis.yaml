@@ -1,0 +1,23 @@
+slug: opex-calendar-pinning
+mechanism: >
+  Dealer gamma hedging creates mean-reversion around dominant strike prices
+  in the days surrounding monthly options expiry. Net gamma exposure peaks
+  near the 3rd Friday; dealers buy dips and sell rallies to stay delta-neutral,
+  suppressing realized volatility and producing a predictable drift pattern.
+prediction: |
+  SPY held from T-2 (2 trading days before 3rd Friday) through T+1 (day after OPEX)
+  produces a positive mean return with lower-than-average volatility, yielding
+  Sharpe > 0.8 on the calendar sub-set of trading days.
+opex_date_definition: 3rd Friday of each calendar month
+hold_window:
+  entry: T-2 trading days before OPEX Friday
+  exit: T+1 trading day after OPEX Friday
+falsification: >
+  If mean return over the hold window is not significantly positive (p > 0.05)
+  across 2000-2024, or if realized vol during the window exceeds full-period average,
+  the gamma-pinning mechanism is not operating as hypothesized.
+prior_evidence: >
+  Empirical literature on "OPEX week effect"; gamma exposure reports from CBOE;
+  Collin-Dufresne & Hugonnier (2012) on option market-maker hedging dynamics.
+expected_rho_to_credit_family: 0.15  # purely calendar-driven, low macro correlation
+expected_rho_to_dual_momentum: 0.20

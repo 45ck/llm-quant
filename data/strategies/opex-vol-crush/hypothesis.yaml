@@ -1,0 +1,54 @@
+slug: opex-vol-crush
+family: F  # Options / Structural Volatility
+issue: llm-quant-d5c
+mechanism: >
+  Implied volatility systematically peaks before monthly options expiry and
+  collapses as options expire worthless or settle. This "volatility crush"
+  creates a predictable short-vol opportunity: long SVXY (short VIX ETF at 0.5x)
+  or short VXX in the 5-7 trading days immediately preceding OPEX Friday.
+  The mechanism is distinct from opex-calendar-pinning (which exploits gamma
+  hedging's effect on SPY *price*) — this exploits the *implied vol* term
+  structure collapse as time value decays into expiry.
+  Post-Volmageddon (Feb 2018), SVXY was reformulated to 0.5x leverage reducing
+  tail risk. The mechanism operates on the VIX term structure (front < back =
+  contango), which is independent of price pinning.
+prediction: |
+  Short VXX (or long SVXY) entered T-5 trading days before OPEX Friday and
+  exited T+0 (OPEX close) produces positive mean return with Sharpe > 0.8
+  on the calendar sub-set of trading days, measured over 2012-2024.
+  Vol crush magnitude expected larger in low-VIX regimes (VIX < 20) than
+  high-VIX regimes, consistent with steeper contango in calm markets.
+universe:
+  primary: VXX   # iPath VIX Short-Term Futures ETN
+  alternative: SVXY  # ProShares Short VIX Short-Term Futures ETF (0.5x post-2018)
+hold_window:
+  entry: "T-5 trading days before OPEX Friday (3rd Friday of month)"
+  exit: "T+0 OPEX Friday close"
+regime_conditioning:
+  vix_below_20: "Higher expected crush magnitude, higher position sizing"
+  vix_above_25: "Reduce or skip — vol crush may be overwhelmed by macro shock"
+risk_notes: >
+  Volmageddon (2018-02-05): VXX +100% intraday. SVXY lost ~92% of value.
+  Post-reform SVXY at 0.5x has survived subsequent vol spikes without blowup.
+  Strategy requires hard stop-loss: exit if VXX +20% intraday at any point
+  during hold window.
+falsification: >
+  If mean return over the T-5 to T+0 window is not significantly positive
+  (p > 0.05) across 2012-2024, or if the strategy is correlated > 0.5 with
+  the existing vxx-short-contango strategy (same return source, not additive),
+  the vol-crush mechanism does not provide standalone edge.
+  Also fails if transaction costs (VXX bid-ask, overnight financing) consume
+  the raw edge.
+data_availability:
+  vxx: "VXX via yfinance — available (2009-present)"
+  svxy: "SVXY via yfinance — available (2012-present, reformulated 2018)"
+  vix: "^VIX via yfinance — available"
+overlap_check:
+  vxx_short_contango: >
+    vxx-short-contango exploits persistent VIX term structure contango as a
+    continuous carry trade. opex-vol-crush exploits the discrete calendar event
+    of OPEX-driven theta decay. Different holding periods, different triggers.
+    Correlation expected ~0.4-0.5 — review carefully before combining.
+expected_rho_to_credit_family: 0.20  # Vol instruments have some macro correlation
+expected_rho_to_vxx_contango: 0.45   # Both short volatility — monitor for crowding
+track: B  # Aggressive alpha — higher vol, concentrated calendar bets

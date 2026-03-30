@@ -1,0 +1,61 @@
+# Research Spec: tlt-tqqq-sprint
+strategy_slug: "tlt-tqqq-sprint"
+strategy_type: "lead_lag"
+
+frozen: true
+frozen_at: "2026-03-26T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: TLT credit/duration risk-off signal leads TQQQ (leveraged tech).
+# When TLT rises (flight to safety), risk-on momentum in leveraged tech weakens.
+# When TLT falls (risk appetite rising), go long TQQQ for levered upside.
+# Track D strategy: aggressive alpha, target CAGR > 40%.
+
+parameters:
+  leader_symbol: "TLT"
+  follower_symbol: "TQQQ"
+  lag_days: 3
+  signal_window: 10
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  target_weight: 0.30
+  inverse: false
+  rebalance_frequency_days: 1
+
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 5.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  leader_symbol: "TLT as risk-off signal — flight-to-quality bond ETF"
+  follower_symbol: "TQQQ — 3x leveraged QQQ for maximum CAGR in Track D"
+  lag_days: "3-day propagation from bond market to leveraged equities"
+  signal_window: "5-day window to capture short-term TLT directional momentum"
+  entry_threshold: "0.5% TLT move threshold. Pre-specified, not optimized."
+  exit_threshold: "Exit on +0.3% TLT bounce (inverse exit). Pre-specified."
+  inverse: "False — TLT up (risk-on momentum in bonds) correlates with TQQQ momentum; when bonds rally and TLT rises, tech also tends to rally. Signal: TLT 10-day return > 1% over 3-day lag predicts TQQQ upswing."
+  target_weight: "30% — Track D allows up to 15% per position, using moderate sizing for risk mgmt"
+
+backtest_spec:
+  symbols: ["TLT", "TQQQ"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+
+benchmark:
+  symbols:
+    QQQ: 1.00
+
+family: "tlt_tqqq_lead_lag"
+family_trial_number: 1
+family_prior_trials: 0
+track: "D"
+
+created_at: "2026-03-26"
+updated_at: "2026-03-26"

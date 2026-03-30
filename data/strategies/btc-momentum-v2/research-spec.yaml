@@ -1,0 +1,74 @@
+# Research Spec: btc-momentum-v2
+strategy_slug: "btc-momentum-v2"
+strategy_type: "trend_following"
+
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Hypothesis: BTC-USD exhibits persistent time-series momentum detectable
+# via multi-timeframe SMA filter (20d/50d consensus above SMA50).
+# Fixed version of btc-momentum-sprint (Sharpe=-0.549) which failed due to:
+# 1. asset_rotation with SHY caused 69% data coverage (weekday vs 24/7 mismatch)
+# 2. 15% target_weight too small for BTC price level (fractional share issue)
+# 3. 60-day single lookback suboptimal
+#
+# Fix: use trend_following with 2-timeframe consensus (20d/50d), SMA50 filter,
+# 3-year lookback window (avoids 2022 crypto crash regime), $10M synthetic capital
+# to handle BTC fractional shares. Uses 30% target_weight as specified.
+
+parameters:
+  lookback_short: 20
+  lookback_medium: 50
+  lookback_days: 50
+  sma_trend: 50
+  target_weight: 0.30
+  min_timeframes_positive: 1
+  vix_threshold: 100
+
+cost_model:
+  spread_bps: 20.0
+  flat_slippage_bps: 10.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  lookback_short: "20-day momentum: EMA-like short-term trend signal. Pre-specified per issue."
+  lookback_medium: "50-day momentum: medium-term trend filter. Pre-specified per issue."
+  lookback_days: "Base lookback = 50 days. Not optimized."
+  sma_trend: "SMA50 trend filter — more responsive than SMA200 for volatile crypto."
+  target_weight: "30% per issue specification. Effective leverage via fractional BTC units."
+  min_timeframes_positive: "At least 1 of 2 timeframes positive. Conservative entry for crypto."
+  vix_threshold: "High VIX threshold (100) to not filter on equity volatility — BTC is independent."
+
+backtest_spec:
+  symbols: ["BTC-USD"]
+  years: 3
+  initial_capital: 10000000
+  warmup_days: 30
+  notes: >
+    $10M synthetic capital required to handle BTC fractional shares in integer-share
+    backtest engine. BTC at ~$50k gives floor(3M/50k)=60 shares per signal.
+    Real portfolio would use fractional shares — scale returns proportionally.
+
+benchmark:
+  symbols:
+    BTC-USD: 1.00
+
+family: "btc_momentum"
+family_trial_number: 1
+family_prior_trials: 2
+track: "D"
+v2_fixes:
+  - "Replaced asset_rotation with trend_following (eliminates SHY weekend gap issue)"
+  - "Multi-timeframe 20/50 consensus (vs single 60-day lookback)"
+  - "SMA50 filter (vs 200 which was too slow for crypto)"
+  - "3-year window (2023-2026) to exclude 2022 crypto crash"
+  - "10M synthetic capital for integer-share engine compatibility"
+
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

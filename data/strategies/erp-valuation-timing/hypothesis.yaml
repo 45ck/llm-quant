@@ -1,0 +1,39 @@
+slug: erp-valuation-timing
+family: K  # Valuation / Macro Timing
+issue: llm-quant-srq
+mechanism: >
+  When the equity risk premium (ERP = earnings yield minus 10Y treasury yield)
+  exceeds 6%, equities are historically cheap relative to bonds. Mean-reversion
+  in valuations drives above-average SPY returns over a 2-year forward horizon
+  as ERP compresses back toward equilibrium (~2-3%). The mechanism is
+  fundamental repricing — not momentum — so it operates on multi-year cycles
+  with low correlation to short-horizon credit signals.
+prediction: |
+  When ERP > 6% at month-end, SPY 2-year forward return (annualized) exceeds
+  the unconditional mean by at least 5 percentage points, with hit rate > 65%
+  across all signal episodes from 1995-2024.
+  Shiller CAPE < 15 (a natural ERP proxy) should produce a similar result.
+erp_definition:
+  earnings_yield: "1 / Shiller CAPE (10-year cyclically adjusted P/E)"
+  yield_source: "10Y US Treasury yield (^TNX via yfinance)"
+  threshold: 0.06  # ERP > 6% is extreme cheapness
+signal_type: slow_tactical  # Monthly rebalance, 2-year forward horizon
+falsification: >
+  If mean 2-year forward SPY return conditioned on ERP > 6% is not statistically
+  different from the unconditional mean (p > 0.10), or if the relationship
+  reverses (high-ERP episodes predict underperformance), the valuation mechanism
+  is not operating as hypothesized. Also fails if < 5 signal episodes exist
+  in the 1995-2024 window (insufficient sample).
+prior_evidence: >
+  Shiller (2000, 2015) — CAPE predicts 10-year returns; Asness et al. (2012)
+  "Fight the Fed Model" — ERP a valid cross-asset valuation signal;
+  historical 2009, 2011, 2022 episodes all showed elevated ERP followed by
+  strong forward equity returns.
+data_availability:
+  spy: "SPY via yfinance — available"
+  cape: "Computed from Shiller data (monthly P/E10) — public, requires CSV import or manual series"
+  treasury_yield: "^TNX via yfinance — available"
+  note: "Shiller CAPE not directly on yfinance; need to source from shiller website or compute proxy"
+expected_rho_to_credit_family: 0.15  # Valuation cycle vs micro credit spread mechanism
+expected_rho_to_dual_momentum: 0.10  # Slow tactical vs 1-12m momentum
+track: A  # Conservative alpha — low turnover, high Sharpe

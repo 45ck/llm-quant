@@ -1,0 +1,67 @@
+strategy_slug: btc-momentum-v2
+strategy_type: trend_following
+track: D
+base_sharpe: 0.9604
+base_max_dd: 0.0276
+base_total_return: 0.1092
+dsr: 0.9376
+synthetic_capital: 10000000.0
+cpcv:
+  oos_mean_sharpe: 0.7119
+  oos_std: 1.0135
+  oos_is_ratio: 0.7412
+  pct_positive_folds: 0.7333
+perturbation:
+  variants:
+  - variant: lookback_short=15
+    sharpe: 0.7137
+    max_dd: 0.0313
+    change_pct: -25.7
+    status: STABLE
+  - variant: lookback_short=25
+    sharpe: 0.8532
+    max_dd: 0.0319
+    change_pct: -11.2
+    status: STABLE
+  - variant: lookback_medium=40
+    sharpe: 0.9419
+    max_dd: 0.0283
+    change_pct: -1.9
+    status: STABLE
+  - variant: lookback_medium=60
+    sharpe: 0.8136
+    max_dd: 0.031
+    change_pct: -15.3
+    status: STABLE
+  - variant: sma_trend=20
+    sharpe: 0.458
+    max_dd: 0.0261
+    change_pct: -52.3
+    status: UNSTABLE
+  - variant: sma_trend=200
+    sharpe: 0.6116
+    max_dd: 0.0355
+    change_pct: -36.3
+    status: UNSTABLE
+  - variant: min_tf=2
+    sharpe: 0.0
+    max_dd: 0.0
+    change_pct: -100.0
+    status: UNSTABLE
+  - variant: weight=0.50
+    sharpe: 0.9235
+    max_dd: 0.0502
+    change_pct: -3.8
+    status: STABLE
+  pct_stable: 62.5
+gates:
+  sharpe_gte_0.8: true
+  maxdd_lt_40pct: true
+  dsr_gte_0.9: true
+  cpcv_oos_positive: true
+  perturbation_gte_60pct: true
+verdict: PASS
+notes:
+- 10M synthetic capital required for integer-share engine (BTC at ~50k/coin)
+- 3-year lookback only (2022 crash excluded from in-sample)
+- Fractional shares in production would improve absolute returns

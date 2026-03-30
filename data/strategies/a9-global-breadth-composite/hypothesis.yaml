@@ -1,0 +1,10 @@
+slug: a9-global-breadth-composite
+family: 3
+title: Global macro breadth composite (EFA/EEM/TLT/GLD momentum) predicts SPY 20d return
+mechanism: When multiple global asset classes trend simultaneously in risk-on direction, it reflects synchronized global growth momentum that tends to persist. The composite breadth signal aggregates uncorrelated macro information into a single risk-on/risk-off regime indicator with higher signal-to-noise than any single asset.
+prediction: The equal-weight 20d return z-score composite of EFA/EEM/TLT/GLD achieves Spearman rank correlation > 0.20 with SPY forward 20d return out-of-sample. High-breadth regime (composite z-score > 0.5) predicts positive SPY 20d return with >60% frequency.
+falsification: If Spearman rho of composite vs SPY forward return falls below 0.10 in walk-forward OOS test, or if composite adds no incremental predictive power over SPY momentum alone (partial correlation test).
+data_required: ["EFA", "EEM", "TLT", "GLD", "SPY"]
+expected_rho_to_credit_family: 0.35
+quick_kill: false
+notes: Pure price-based composite, fully implementable via yfinance. Potential overlap with existing correlation-regime and dual-momentum strategies — check correlation before promoting.

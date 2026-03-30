@@ -1,0 +1,29 @@
+slug: yield-curve-momentum
+data_sources:
+  - name: yield_curve
+    provider: yfinance
+    symbols: [^TNX, ^IRX]  # 10-year Treasury yield, 3-month Treasury yield
+    frequency: 1d
+    fields: [close]
+    quality_grade: A
+    notes: >
+      ^TNX = 10-year Treasury Constant Maturity Rate (CBOE/Fed).
+      ^IRX = 13-week Treasury Bill yield.
+      Spread computed as ^TNX minus ^IRX (10y-3m proxy for curve slope).
+      Alternative: use ^TNX minus ^TYX (10y-30y) or Fred 10y2y if yfinance
+      data quality for IRX proves unreliable — flag during data validation.
+  - name: trading_instruments
+    provider: yfinance
+    symbols: [SPY, TLT]
+    frequency: 1d
+    fields: [close, volume]
+    quality_grade: A
+cost_model:
+  trading_fee_pct: 0.02
+  slippage_bps: 2
+minimum_history_days: 730
+known_gaps: >
+  ^IRX (3-month T-bill yield) has sporadic missing values in yfinance around
+  2000-2003. Fill forward up to 5 business days; flag gaps > 5 days as data
+  quality failures. Pre-2000 curve data not available via yfinance; backtest
+  starts 2000-01-01.

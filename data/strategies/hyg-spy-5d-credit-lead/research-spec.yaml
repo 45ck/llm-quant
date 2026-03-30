@@ -1,0 +1,50 @@
+# Research Spec: hyg-spy-5d-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "hyg-spy-5d-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  High-yield corporate bond ETF (HYG) as leading indicator for SPY.
+  When HYG's 5-day return exceeds 0.5% (risk appetite healthy), hold SPY at 0.80.
+  When HYG's 5-day return falls below -0.5% (high-yield stress / risk-off), exit SPY.
+  HYG is the most credit-sensitive signal — leads equities sharply at risk cycle turns.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "HYG"
+  follower_symbol: "SPY"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  target_weight: 0.80
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Parameters pre-specified before any backtest. entry_threshold=0.005 and
+  exit_threshold=-0.005 are symmetric ±0.5% for HYG 5d return, matching the
+  validated lqd-spy-credit-lead thresholds (±0.5%). HYG has similar weekly
+  volatility to LQD so the same threshold applies. No in-sample optimization.
+
+spec_version: "1.0"

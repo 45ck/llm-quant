@@ -1,0 +1,12 @@
+slug: dual-momentum-antonacci
+frozen: true
+strategy_class: asset_rotation
+symbols: [SPY, TLT, GLD, BIL]
+absolute_momentum_threshold: 0.0
+lookbacks_to_test: [60, 90, 120, 180]
+primary_lookback: 120
+target_weight: 0.90
+backtest_start: 2000-01-01
+backtest_end: 2025-12-31
+oos_start: 2023-01-01
+notes: Test multiple lookbacks to avoid sharp-peak sensitivity found in prior run

@@ -1,0 +1,53 @@
+# Research Spec: hyg-qqq-credit-lead
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "hyg-qqq-credit-lead"
+strategy_name: "lead_lag"
+created_at: "2026-03-30"
+frozen: true
+frozen_at: "2026-03-30"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  High-yield corporate bond ETF (HYG) as leading indicator for QQQ.
+  When HYG's 5-day return exceeds 0.5% (risk appetite healthy), hold QQQ at 0.75.
+  When HYG's 5-day return falls below -0.5% (high-yield stress / risk-off), exit QQQ.
+  Most aggressive Family 1 pairing: highest signal sensitivity × highest equity sensitivity.
+  Reduced target weight (0.75 vs 0.80) reflects compounded volatility of this pairing.
+
+strategy_class: "lead_lag"
+parameters:
+  leader_symbol: "HYG"
+  follower_symbol: "QQQ"
+  lag_days: 1
+  signal_window: 5
+  entry_threshold: 0.005
+  exit_threshold: -0.005
+  target_weight: 0.75
+  rebalance_frequency_days: 5
+
+execution:
+  rebalance_frequency_days: 5
+  warmup_days: 50
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  Threshold ±0.5% matches HYG-SPY to avoid pair-specific optimization.
+  Target weight 0.75 (vs 0.80 for others) reflects mandate's conservative
+  constraint on this aggressive pairing — set before backtest. If weight
+  needed further adjustment to hit MaxDD<15%, that would indicate the
+  pairing is too volatile and should fail at backtesting rather than
+  survive by parameter-tuning.
+
+spec_version: "1.0"

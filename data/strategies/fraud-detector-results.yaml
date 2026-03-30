@@ -1,0 +1,11 @@
+- slug: gld-slv-mean-reversion-v4
+  shuffle_real_sharpe: 0.9478
+  shuffle_95th: 1.429
+  shuffle_p_value: 0.274
+  shuffle_passed: false
+  time_in_market_pct: 0.3191
+  time_in_market_passed: true
+  inversion_original_sharpe: 0.9478
+  inversion_inverted_sharpe: 1.0753
+  inversion_differential: -0.1274
+  inversion_passed: false

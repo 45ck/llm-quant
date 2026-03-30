@@ -1,0 +1,49 @@
+strategy_slug: tqqq-stacked-credit
+strategy_type: stacked_lead_lag
+track: D
+created_at: '2026-03-30'
+hypothesis: Three credit bond leaders (TLT 20yr Treasury, LQD IG Corporate, IEF 7-10yr
+  Treasury) each independently signal TQQQ direction via the same lead-lag mechanism.
+  When all 3 agree (bullish), TQQQ allocation = 90%; 2/3 agree = 60%; 1/3 = 30%; 0/3
+  = 0%.
+signal_params:
+  lag_days: 3
+  signal_window: 10
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  weight_per_leader: 0.3
+individual_results:
+  TLT:
+    sharpe: 1.4345
+    max_dd: 0.1266
+    cagr: 0.1855
+    dsr: 0.9941
+  LQD:
+    sharpe: 0.8647
+    max_dd: 0.1824
+    cagr: 0.0985
+    dsr: 0.9739
+  IEF:
+    sharpe: 1.1637
+    max_dd: 0.1574
+    cagr: 0.1452
+    dsr: 0.9966
+signal_correlations:
+  tlt_lqd: 0.7132
+  tlt_ief: 0.8744
+  lqd_ief: 0.7268
+  avg: 0.7715
+  adds_diversification: false
+combined_portfolio:
+  sharpe: 1.2597
+  max_dd: 0.3345
+  cagr: 0.4422
+  total_return: 5.1041
+  dsr: 0.9224
+  theoretical_sr: 1.2538
+  passes_track_d: true
+verdict: PASS
+notes:
+- Combined returns = sum of individual 30%-weighted returns (each leader independent)
+- 'Voting: 3 active = 90% TQQQ, 2 active = 60%, 1 active = 30%'
+- 'Next step: full robustness with CPCV and perturbation analysis'

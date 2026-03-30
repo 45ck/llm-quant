@@ -1,0 +1,9 @@
+slug: dual-momentum-antonacci
+mechanism: Momentum in asset classes is persistent over 3-12 month horizons; absolute momentum filter avoids bear markets
+prediction: |
+  When SPY 12m return > 0%, SPY outperforms over next 3 months 60%+ of time.
+  When ALL assets have negative 12m return, BIL outperforms by avoiding drawdown.
+falsification: If Sharpe < 0.8 after 2018-2024 period, regime change has broken the mechanism
+prior_evidence: Antonacci 2012 paper, 40-year backtest Sharpe 0.81
+lookback_sensitivity: test 60/90/120/180 days to avoid sharp-peak overfitting
+expected_rho_to_credit_family: 0.25

@@ -1,0 +1,43 @@
+experiment_id: "5eb5068d"
+run_date: "2026-03-30"
+strategy: "pairs_ratio"
+period: "2013-01-22 to 2026-03-27"
+symbols: ["TQQQ", "TMF"]
+initial_capital: 100000
+
+metrics_1x:
+  total_return: -0.0119
+  annualized_return: -0.0009
+  sharpe_ratio: 0.080
+  sortino_ratio: 0.110
+  calmar_ratio: -0.002
+  max_drawdown: 0.4350
+  dsr: 0.4093
+  total_trades: 208
+  win_rate: 0.216
+
+track_d_gate_assessment:
+  track: "D"
+  gate_sharpe_min: 0.80
+  gate_maxdd_max: 0.40
+  gate_dsr_min: 0.90
+  sharpe_pass: false   # 0.080 < 0.80
+  maxdd_pass: false    # 0.435 > 0.40
+  dsr_pass: false      # 0.409 < 0.90
+  overall: FAIL
+
+verdict: >
+  FAIL. TQQQ/TMF ratio mean-reversion with 60-day BB, 2-sigma entry does not
+  generate alpha. The pair is too volatile (leveraged 3x instruments) and the
+  ratio exhibits extended non-stationary trends (2020, 2022 rate shock) rather
+  than clean mean reversion. Sharpe 0.08, MaxDD 43.5%, DSR 0.41 — all gates
+  fail. Strategy is retired.
+
+diagnosis: >
+  Root cause: TQQQ and TMF are both decay-prone leveraged ETFs. The ratio
+  is not mean-reverting over the 60-day window — it exhibits regime-dependent
+  trending behavior (bond bull vs. bond bear). The backtest shows positive
+  P&L at base cost (barely) but Sharpe <0.1. The strategy needs a regime
+  filter or longer look-back to be viable, but that would add free parameters.
+
+next_steps: RETIRED
