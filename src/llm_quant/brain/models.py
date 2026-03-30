@@ -111,3 +111,6 @@ class MarketContext:
     cot_crowding: dict[str, str] | None = None
     # Task llm-quant-bbt: execution cost lookup (symbol → round-trip bps)
     execution_costs: dict[str, float] | None = None
+    # Task llm-quant-773: HMM regime detection confidence
+    regime_confidence: float = 0.0  # HMM state probability (0–1)
+    hmm_regime_fallback: bool = True  # True if HMM fell back to heuristic

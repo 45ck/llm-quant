@@ -22,3 +22,8 @@ vix_regime_percentile_window = 252
 # Task ev8: credit spread thresholds for silent stress detection
 credit_spread_silent_stress_zscore = 1.5   # z-score above which credit is elevated
 credit_spread_silent_stress_vix_cap = 20.0  # VIX must be below this for silent_stress=True
+
+[regime]
+hmm_lookback_days = 130
+hmm_confidence_threshold = 0.65
+hmm_enabled = true

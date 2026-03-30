@@ -425,6 +425,115 @@ def _get_vix_percentile_126d(
     return percentile
 
 
+def _get_hmm_regime(
+    conn: duckdb.DuckDBPyConnection,
+    lookback_days: int = 130,
+) -> tuple[MarketRegime | None, float, bool]:
+    """Fit 2-state GaussianHMM on VIX, yield slope, SPY momentum.
+
+    Returns
+    -------
+    (regime, confidence, fallback_used)
+        - regime: MarketRegime from HMM, or None if fallback was used
+        - confidence: HMM state probability (0–1); 0.5 if fallback
+        - fallback_used: True when the HMM could not produce a result
+    """
+    try:
+        from llm_quant.regime.hmm import HmmRegimeConfig, HmmRegimeDetector  # noqa: PLC0415
+        import polars as pl  # noqa: PLC0415
+
+        # VIX series
+        vix_rows = None
+        for vix_symbol in ("^VIX", "VIX"):
+            rows = conn.execute(
+                """
+                SELECT close
+                FROM market_data_daily
+                WHERE symbol = ?
+                ORDER BY date DESC
+                LIMIT ?
+                """,
+                [vix_symbol, lookback_days],
+            ).fetchall()
+            if rows:
+                vix_rows = rows
+                break
+
+        if not vix_rows:
+            logger.warning("HMM: no VIX data; skipping HMM regime detection")
+            return None, 0.5, True
+
+        vix_series = pl.Series([float(r[0]) for r in reversed(vix_rows) if r[0] is not None])
+
+        # Yield slope: T10Y2Y from fred_data_daily if available, else zeros
+        try:
+            slope_rows = conn.execute(
+                """
+                SELECT value
+                FROM fred_data_daily
+                WHERE series_id = 'T10Y2Y'
+                ORDER BY date DESC
+                LIMIT ?
+                """,
+                [lookback_days],
+            ).fetchall()
+            if slope_rows:
+                slope_values = [float(r[0]) if r[0] is not None else 0.0 for r in reversed(slope_rows)]
+            else:
+                slope_values = [0.0] * len(vix_series)
+        except Exception:
+            slope_values = [0.0] * len(vix_series)
+
+        # Align length with VIX
+        n = len(vix_series)
+        if len(slope_values) >= n:
+            slope_values = slope_values[-n:]
+        else:
+            slope_values = [0.0] * (n - len(slope_values)) + slope_values
+
+        yield_slope = pl.Series(slope_values)
+
+        # SPY 20d momentum from market data
+        spy_rows = conn.execute(
+            """
+            SELECT close
+            FROM market_data_daily
+            WHERE symbol = 'SPY'
+            ORDER BY date DESC
+            LIMIT ?
+            """,
+            [lookback_days + 20],
+        ).fetchall()
+
+        spy_closes = [float(r[0]) for r in reversed(spy_rows) if r[0] is not None]
+        spy_momentum_values: list[float] = []
+        for i in range(len(spy_closes)):
+            if i < 20:
+                spy_momentum_values.append(0.0)
+            else:
+                pct = (spy_closes[i] - spy_closes[i - 20]) / spy_closes[i - 20]
+                spy_momentum_values.append(pct)
+
+        # Trim/pad momentum to match n
+        spy_momentum_values = spy_momentum_values[-n:] if len(spy_momentum_values) >= n else [0.0] * (n - len(spy_momentum_values)) + spy_momentum_values
+        spy_momentum = pl.Series(spy_momentum_values)
+
+        config = HmmRegimeConfig(lookback_days=lookback_days)
+        result = HmmRegimeDetector(config).fit_predict(vix_series, yield_slope, spy_momentum)
+
+        if result.fallback_used:
+            return None, 0.5, True
+
+        hmm_regime = (
+            MarketRegime.RISK_ON if result.regime == "risk_on" else MarketRegime.RISK_OFF
+        )
+        return hmm_regime, result.confidence, False
+
+    except Exception:
+        logger.warning("HMM regime detection failed; keeping heuristic", exc_info=True)
+        return None, 0.5, True
+
+
 def _get_cot_crowding(
     universe_symbols: list[str],
 ) -> dict[str, str] | None:
@@ -615,6 +724,45 @@ def build_market_context(
     # vts: 126-day VIX percentile rank
     vix_percentile_126d = _get_vix_percentile_126d(conn, vix)
 
+    # llm-quant-773: 2-state HMM regime detection
+    hmm_lookback: int = 130
+    hmm_enabled: bool = True
+    try:
+        hmm_lookback = getattr(config, "hmm_lookback_days", 130)
+        hmm_enabled = getattr(config, "hmm_enabled", True)
+    except Exception:
+        pass
+
+    hmm_confidence_threshold: float = 0.65
+    try:
+        hmm_confidence_threshold = getattr(config, "hmm_confidence_threshold", 0.65)
+    except Exception:
+        pass
+
+    regime_confidence: float = 0.5
+    hmm_regime_fallback: bool = True
+
+    if hmm_enabled:
+        hmm_regime, regime_confidence, hmm_regime_fallback = _get_hmm_regime(
+            conn, lookback_days=hmm_lookback
+        )
+        if not hmm_regime_fallback and hmm_regime is not None:
+            # Only override heuristic when HMM is confident
+            if regime_confidence >= hmm_confidence_threshold:
+                market_regime = hmm_regime
+                logger.info(
+                    "HMM regime override: %s (confidence=%.3f)",
+                    market_regime,
+                    regime_confidence,
+                )
+            else:
+                logger.debug(
+                    "HMM confidence %.3f below threshold %.3f; keeping heuristic regime %s",
+                    regime_confidence,
+                    hmm_confidence_threshold,
+                    market_regime,
+                )
+
     # llm-quant-56k: COT crowding overlay for applicable symbols
     cot_crowding = _get_cot_crowding(universe_symbols)
 
@@ -649,6 +797,8 @@ def build_market_context(
         vix_percentile_126d=vix_percentile_126d,
         cot_crowding=cot_crowding,
         execution_costs=execution_costs if execution_costs else None,
+        regime_confidence=round(regime_confidence, 4),
+        hmm_regime_fallback=hmm_regime_fallback,
     )
 
     logger.info(
