@@ -126,3 +126,20 @@ max_drawdown_pct = 0.10              # 10% — arb should be market-neutral; dra
 max_beta_to_spy = 0.25               # rolling-30d beta breach triggers review
 min_spread_bps = 5.0                 # spread below 5 bps → spread collapse warning
 max_funding_rate_pct = 0.50          # funding > 50 bps/day → funding reversal warning
+
+# =============================================================================
+# EXECUTION COST ESTIMATES (round-trip, in basis points)
+# These are mid-range estimates for a ~$2,500-10,000 notional retail/paper trade.
+# Used to surface friction context in the decision prompt:
+# "Entering XYZ costs ~N bps round-trip. Expected daily alpha must exceed this."
+# =============================================================================
+
+[execution_costs]
+us_equity_bps = 4      # 2-6 bps round-trip (SPY, QQQ, sector ETFs)
+international_bps = 12 # 7-18 bps (EFA, VGK, EWJ)
+em_bps = 22            # 12-33 bps (EEM)
+treasury_bps = 6       # 3-9 bps (TLT, IEF, SHY, TIP)
+hy_credit_bps = 16     # 8-24 bps (HYG)
+commodity_bps = 6      # ~crypto_etf level (GLD, SLV, USO, DBA)
+crypto_etf_bps = 6     # 3-9 bps (BTC-USD, ETH-USD proxy)
+forex_bps = 17         # 17-18 bps at ~$2500 notional

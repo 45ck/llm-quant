@@ -494,4 +494,28 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run fraud detectors")
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        default=None,
+        help="Run only the strategy with this slug (default: run all)",
+    )
+    args = parser.parse_args()
+
+    if args.strategy:
+        # Filter STRATEGIES to just the requested slug
+        matching = [s for s in STRATEGIES if s["slug"] == args.strategy]
+        if not matching:
+            print(f"ERROR: strategy '{args.strategy}' not found in STRATEGIES list")
+            print(f"Available: {[s['slug'] for s in STRATEGIES]}")
+            sys.exit(1)
+        # Temporarily override STRATEGIES and run
+        orig = STRATEGIES[:]
+        STRATEGIES[:] = matching
+        main()
+        STRATEGIES[:] = orig
+    else:
+        main()
