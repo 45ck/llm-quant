@@ -1,0 +1,77 @@
+# Data Contract: vxx-short-contango
+strategy_slug: "vxx-short-contango"
+sources:
+  - symbol: "VXX"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 16
+    quality_grade: "B"
+    notes: >
+      iPath S&P 500 VIX Short-Term Futures ETN. AVAILABLE FROM APPROXIMATELY
+      2009-01-30 (IPO date). Note: VXX underwent a significant restructuring in
+      2019 when Barclays reissued as VXX (new series). Historical data prior to
+      2019 may reflect the original series with different exact return
+      characteristics. Reverse splits have occurred — verify price series continuity.
+      Use adjusted close for all return calculations. Data quality grade B due to
+      structural changes and potential discontinuities.
+  - symbol: "SVXY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 12
+    quality_grade: "B"
+    notes: >
+      ProShares Short VIX Short-Term Futures ETF. Used as comparison/validation
+      instrument — NOT traded directly. SVXY underwent a leverage change from -1x
+      to -0.5x after February 2018 Volmageddon event. Pre-2018 data reflects -1x
+      exposure. Note this discontinuity when using as comparison benchmark.
+      Available from approximately 2011.
+  - symbol: "^VIX"
+    internal_symbol: "VIX"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close"]
+    lookback_years: 16
+    quality_grade: "A"
+    notes: >
+      CBOE Volatility Index — 30-day implied volatility. Used for spike exit
+      trigger (VIX > 30). Primary risk management signal.
+  - symbol: "^VIX9D"
+    internal_symbol: "VIX9D"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close"]
+    lookback_years: 15
+    quality_grade: "B"
+    notes: >
+      CBOE 9-day Short-Term Volatility Index. Available from ~2011. Used to compute
+      contango_ratio as proxy for VIX futures term structure slope.
+computed_signals:
+  - name: "contango_ratio"
+    formula: "vix9d_close / vix_close"
+    causal: true
+    notes: >
+      Ratio of near-dated (9D) to medium-dated (30D) implied vol. Values > 1.0
+      indicate contango (near < medium → normal, roll yield positive for short VXX).
+      Values < 1.0 indicate backwardation (near > medium → crisis, cover short VXX).
+      Note: this is the INVERSE of the backwardation_ratio in the companion strategy.
+  - name: "entry_signal"
+    formula: "1 if contango_ratio > 1.05 else 0"
+    causal: true
+    notes: "Short VXX entry signal. 1 = in position, 0 = flat."
+  - name: "spike_exit"
+    formula: "1 if vix_close > 30 else 0"
+    causal: true
+    notes: "Emergency exit signal — cover short VXX immediately when VIX spikes above 30."
+validation:
+  min_data_points: 2000
+  max_missing_pct: 0.02
+  start_date: "2009-02-01"
+  end_date: "2025-12-31"
+  quality_grade: "B"
+  known_discontinuities:
+    - date: "2019-01-17"
+      description: "VXX reissued by Barclays as new series. Price series may show gap."
+    - date: "2018-02-06"
+      description: >
+        Volmageddon — VXX approximately doubled in one day. XIV (inverse VIX ETN)
+        was liquidated. SVXY changed leverage from -1x to -0.5x after this event.
+        This is the primary stress test for the strategy.
+created_at: "2026-03-30"

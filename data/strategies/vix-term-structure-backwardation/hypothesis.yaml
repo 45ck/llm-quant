@@ -1,0 +1,49 @@
+# Hypothesis: vix-term-structure-backwardation
+strategy_slug: "vix-term-structure-backwardation"
+statement: >
+  When VIX (30-day implied volatility) exceeds VIX9D (9-day implied volatility),
+  the term structure is in backwardation — the market is pricing acute near-term
+  stress above longer-term uncertainty. This condition predicts SPY underperformance
+  over the next 5-10 days. Shifting to SHY (short-term Treasuries) during
+  backwardation and returning to SPY during normal contango (VIX < VIX9D)
+  generates Sharpe > 0.80 with max drawdown < 15% over 2011-2025.
+mechanism: >
+  The VIX term structure encodes the market's relative fear about near-term vs.
+  medium-term outcomes. Contango (VIX9D > VIX) is the normal state: near-term
+  uncertainty resolves faster than medium-term, so near-dated options are cheaper.
+  Backwardation (VIX > VIX9D) is an anomaly: it signals acute, concentrated
+  near-term fear — a specific shock is expected imminently, not diffuse medium-term
+  risk. This is qualitatively different from elevated absolute VIX (which can persist
+  during extended bear markets). Backwardation typically occurs at crisis inflection
+  points — FOMC shocks, geopolitical events, flash crashes — when institutional
+  hedgers aggressively bid short-dated protection. Historical evidence: backwardation
+  preceded and coincided with the sharpest 5-10 day SPY drawdowns in 2011 (US
+  downgrade), 2015 (China devaluation), 2018 (vol spike), 2020 (COVID), 2022
+  (Ukraine). The edge is NOT shorting VIX — it's reducing equity exposure before
+  the acute stress materialises in prices.
+universe: ["SPY", "SHY"]
+signal_universe: ["^VIX", "^VIX9D"]
+measurement: >
+  Signal: VIX / VIX9D ratio (backwardation_ratio).
+  Backwardation zone: ratio > 1.05 → reduce to 20% SPY, 80% SHY (risk-off).
+  Contango zone: ratio < 0.95 → 80% SPY, 20% SHY (risk-on).
+  Neutral zone: 0.95 <= ratio <= 1.05 → hold current allocation.
+  Evaluation window: 5-day and 10-day forward SPY returns.
+falsification_criteria:
+  - "Signal accuracy < 60% in predicting SPY return < 0% over next 5 days during backwardation"
+  - "Sharpe < 0.80 over 2011-2025 backtest"
+  - "Max drawdown > 15%"
+  - "Strategy Sharpe not materially higher than buy-and-hold SPY Sharpe"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95"
+  - "No improvement in risk-adjusted return vs. naive VIX level threshold (VIX > 25)"
+expected_rho_to_credit_family: 0.10
+conviction: "medium"
+created_at: "2026-03-30"
+notes: >
+  IMPORTANT: This is not the contango-as-equity-timing strategy. Prior attempt
+  (vix-contango-equity-timing) was REJECTED: Sharpe=0.473, MaxDD=22.06%, DSR=0.850.
+  Root cause: contango is the normal state (~80% of days), so the strategy was
+  almost always long SPY — equivalent to buy-and-hold with no alpha.
+  This strategy uses BACKWARDATION (rare, ~5-10% of days) as the stress signal.
+  Backwardation is structurally informative precisely because it is rare.

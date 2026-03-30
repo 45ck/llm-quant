@@ -1,0 +1,90 @@
+# Research Spec: vix-term-structure-backwardation
+strategy_slug: "vix-term-structure-backwardation"
+strategy_class: "vix_regime"
+strategy_mode: "backwardation"
+
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+parameters:
+  signal_symbol_near: "^VIX9D"
+  signal_symbol_medium: "^VIX"
+  trading_symbol_risk_on: "SPY"
+  trading_symbol_risk_off: "SHY"
+
+  # Regime thresholds — pre-specified from economic reasoning
+  backwardation_threshold: 1.05     # VIX/VIX9D > 1.05 → backwardation (risk-off)
+  contango_threshold: 0.95          # VIX/VIX9D < 0.95 → normal contango (risk-on)
+  # Neutral zone [0.95, 1.05] → hold current allocation (no whipsaw)
+
+  # Allocation weights
+  weight_spy_risk_on: 0.80          # 80% SPY, 20% SHY during contango
+  weight_spy_risk_off: 0.20         # 20% SPY, 80% SHY during backwardation
+
+  # Execution
+  rebalance_frequency: "daily"
+  execution_lag_days: 1             # Signal on close T, execute at open T+1
+
+cost_model:
+  spread_bps: 3.0
+  flat_slippage_bps: 1.0
+  slippage_volatility_factor: 0.05
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  backwardation_threshold: >
+    1.05 provides a 5% buffer above parity to filter noise around VIX ≈ VIX9D.
+    Economic basis: backwardation must be meaningfully positive to indicate
+    genuine acute stress rather than random oscillation near flat term structure.
+    Not optimised — set from domain knowledge.
+  contango_threshold: >
+    0.95 creates a symmetric neutral buffer. Returns to risk-on only after
+    VIX has meaningfully reverted below VIX9D (crisis passing). Pre-specified.
+  weight_spy_risk_on: >
+    80% SPY during normal conditions. Retains market exposure consistent with
+    Track A mandate while maintaining diversification via 20% SHY.
+  weight_spy_risk_off: >
+    20% SPY during backwardation. Significant risk reduction but not zero —
+    preserves some equity optionality and avoids full-in/full-out whipsaw.
+    Rationale: backwardation can persist for several days; a 5-day hold at
+    20% SPY is less harmful than being completely out during a false signal.
+  rebalance_frequency: >
+    Daily rebalance to respond promptly to regime changes. VIX backwardation
+    events are short-duration (typically 1-5 days) so daily monitoring required.
+
+backtest_spec:
+  symbols: ["SPY", "SHY"]
+  signal_symbols: ["^VIX", "^VIX9D"]
+  start_date: "2011-01-01"
+  end_date: "2025-12-31"
+  initial_capital: 100000
+  warmup_days: 10
+
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+
+track: "A"
+family: "vix_term_structure"
+family_trial_number: 1
+family_prior_trials: 0
+prior_rejected_slug: "vix-contango-equity-timing"
+prior_rejection_reason: >
+  Contango-as-equity-timing: Sharpe=0.473, MaxDD=22.06%, DSR=0.850.
+  Mechanism failure: contango is normal (~80% of days) → nearly always long
+  SPY → no alpha. Redesigned to use backwardation as the rare stress signal.
+
+target_metrics:
+  sharpe_min: 0.80
+  max_drawdown_max: 0.15
+  sortino_min: 1.0
+  calmar_min: 0.5
+
+created_at: "2026-03-30"
+updated_at: "2026-03-30"

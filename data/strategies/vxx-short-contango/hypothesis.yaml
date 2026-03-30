@@ -1,0 +1,57 @@
+# Hypothesis: vxx-short-contango
+strategy_slug: "vxx-short-contango"
+statement: >
+  VXX (iPath S&P 500 VIX Short-Term Futures ETN) loses approximately 50-75%
+  of its value annually during sustained contango environments due to negative
+  roll yield. By holding a short position in VXX when the VIX term structure
+  is in contango (VIX futures front month < back month), this strategy harvests
+  the roll yield premium and generates Sharpe > 1.0 with max drawdown < 30%
+  over 2009-2025.
+mechanism: >
+  VXX holds long positions in front-month and second-month VIX futures, rolling
+  continuously. In contango (normal state: ~75-80% of trading days), the front
+  month futures trade below the spot VIX and below the second month futures.
+  As VXX rolls — selling expiring front-month contracts and buying more expensive
+  second-month contracts — it incurs a structural negative roll yield. This is not
+  a timing strategy. The edge is the STRUCTURAL COST of owning volatility as
+  insurance: the market systematically prices near-dated volatility protection
+  above its realised value, and VXX buyers pay this insurance premium continuously.
+  Short VXX collects this premium on the other side.
+
+  This mechanism is FUNDAMENTALLY DIFFERENT from the rejected contango strategy:
+  - Rejected approach: use contango to time EQUITY exposure (wrong — contango is
+    too common, no timing signal)
+  - This approach: harvest roll yield by being SHORT VXX in contango (correct —
+    the edge is the VXX structural bleed, not equity timing)
+
+  The primary risk is VIX spikes: during crises, VIX futures shift to backwardation,
+  VXX can increase 50-200% in days. Risk management via VIX spike exit is mandatory.
+  SVXY (ProShares Short VIX Short-Term Futures ETF) is the ETF analog — compare
+  returns to validate mechanism, but VXX short is preferable for tax treatment.
+universe: ["VXX"]
+comparison_instruments: ["SVXY"]
+signal_universe: ["^VIX", "^VIX9D"]
+measurement: >
+  Entry signal: contango_ratio (VIX9D / VIX front month proxy) > 1.05 → initiate
+  or maintain short VXX position at 15% of NAV.
+  Exit signal: VIX > 30 → immediately cover short VXX (spike protection).
+  Secondary exit: VIX / VIX9D > 1.05 (backwardation) → cover short VXX.
+  Evaluation: compare cumulative return of short VXX vs. SVXY and SPY benchmark.
+falsification_criteria:
+  - "Sharpe < 1.0 over 2009-2025 backtest (accounting for crash periods)"
+  - "Tail risk makes strategy non-viable: max drawdown > 50% in any single event"
+  - "After-cost roll yield insufficient: net annual return < 15%"
+  - "CPCV mean OOS Sharpe non-positive"
+  - "DSR < 0.95"
+  - "VXX data discontinuity (reverse splits, ETN restructuring) contaminates results"
+expected_rho_to_credit_family: 0.25
+expected_rho_to_vix_term_structure: 0.55
+conviction: "medium"
+tail_risk_flag: true
+tail_risk_notes: >
+  SHORT VOLATILITY STRATEGIES HAVE LEFT-TAIL EVENT RISK. VXX can spike 50-200%
+  during acute crises. This strategy MUST include a hard VIX spike exit at VIX > 30.
+  Position size capped at 15% of NAV. Do not add to short in rising VIX environment.
+  February 2018 "Volmageddon" (VXX +100% in one day) and March 2020 are the
+  canonical stress tests — results must show these drawdowns were survivable.
+created_at: "2026-03-30"

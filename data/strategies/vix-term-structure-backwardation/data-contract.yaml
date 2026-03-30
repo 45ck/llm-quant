@@ -1,0 +1,66 @@
+# Data Contract: vix-term-structure-backwardation
+strategy_slug: "vix-term-structure-backwardation"
+sources:
+  - symbol: "^VIX"
+    internal_symbol: "VIX"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close"]
+    lookback_years: 15
+    quality_grade: "A"
+    notes: >
+      CBOE Volatility Index — 30-day implied volatility of S&P 500 options.
+      Available from 1990. No material gaps. This is the term structure signal's
+      longer-dated leg.
+  - symbol: "^VIX9D"
+    internal_symbol: "VIX9D"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close"]
+    lookback_years: 15
+    quality_grade: "B"
+    notes: >
+      CBOE Short-Term Volatility Index — 9-day implied volatility.
+      AVAILABLE FROM APPROXIMATELY 2011 ONWARD. Backtest window must start
+      no earlier than 2011-01-01. Data availability should be validated before
+      backtesting. This is the near-term leg of the term structure signal.
+  - symbol: "SPY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 15
+    quality_grade: "A"
+    notes: "S&P 500 ETF. Risk-on allocation target. Highest liquidity."
+  - symbol: "SHY"
+    provider: "Yahoo Finance (yfinance)"
+    fields: ["close", "open", "high", "low", "volume"]
+    lookback_years: 15
+    quality_grade: "A"
+    notes: >
+      iShares 1-3 Year Treasury Bond ETF. Risk-off allocation target.
+      Low duration, minimal drawdown during equity stress. Serves as cash proxy
+      during backwardation periods.
+computed_signals:
+  - name: "backwardation_ratio"
+    formula: "vix_close / vix9d_close"
+    causal: true
+    notes: >
+      VIX / VIX9D ratio. Values > 1.0 indicate backwardation (near-term fear
+      exceeds medium-term fear). Values < 1.0 indicate normal contango.
+      Signal computed using today's closing values; position entered at
+      next open (no look-ahead bias).
+  - name: "regime"
+    formula: >
+      'backwardation' if backwardation_ratio > 1.05
+      else 'contango' if backwardation_ratio < 0.95
+      else 'neutral'
+    causal: true
+    notes: "Regime classification with 5% buffer to avoid excessive trading in the neutral zone."
+validation:
+  min_data_points: 2500
+  max_missing_pct: 0.02
+  start_date: "2011-01-01"
+  end_date: "2025-12-31"
+  quality_grade: "B"
+  notes: >
+    Quality grade B (not A) because VIX9D has a shorter history than VIX and
+    may have occasional data gaps. Validate VIX9D coverage before accepting
+    backtest results.
+created_at: "2026-03-30"

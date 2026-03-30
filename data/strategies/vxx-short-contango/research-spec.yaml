@@ -1,0 +1,102 @@
+# Research Spec: vxx-short-contango
+strategy_slug: "vxx-short-contango"
+strategy_class: "short_vol"
+strategy_mode: "contango_roll_harvest"
+
+frozen: true
+frozen_at: "2026-03-30T00:00:00Z"
+frozen_by: "claude-sonnet-4-6"
+frozen_hash: "placeholder-computed-on-freeze"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+parameters:
+  trading_symbol: "VXX"
+  direction: "short"
+
+  # Entry condition: contango must be meaningfully positive
+  entry_contango_threshold: 1.05     # VIX9D / VIX > 1.05 → enter/maintain short VXX
+
+  # Exit conditions (multiple — first triggered wins)
+  exit_spike_threshold: 30.0         # VIX > 30 → emergency cover (spike protection)
+  exit_backwardation_threshold: 1.05 # VIX / VIX9D > 1.05 → backwardation → cover
+
+  # Position sizing — small due to tail risk
+  position_size_pct_nav: 0.15        # 15% of NAV maximum
+
+  # Execution
+  rebalance_frequency: "daily"
+  execution_lag_days: 1              # Signal on close T, execute at open T+1
+
+cost_model:
+  spread_bps: 8.0
+  flat_slippage_bps: 3.0
+  slippage_volatility_factor: 0.15
+  borrow_cost_annual_bps: 50.0       # Short VXX borrow cost estimate (~50bps/year)
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  entry_contango_threshold: >
+    1.05 (5% above flat) ensures a meaningfully positive contango before entering
+    the short. Near-flat term structure provides insufficient roll yield to justify
+    the carry risk. Pre-specified, not optimised.
+  exit_spike_threshold: >
+    VIX > 30 is a historically well-validated crisis threshold. Above this level,
+    VXX can gap +30-100% in a single session. The spike exit takes priority over
+    all other signals. Must execute at open T+1 — cannot wait for end-of-day signal.
+    Consider using intraday monitoring in production.
+  exit_backwardation_threshold: >
+    VIX/VIX9D > 1.05 signals the term structure has flipped — contango roll
+    yield is no longer being harvested, and near-term stress is acute. Cover
+    short position.
+  position_size_pct_nav: >
+    15% of NAV is the Track B maximum for leveraged/volatility instruments.
+    Smaller than typical position size due to the non-linear tail risk:
+    VXX can increase 50-200% in an acute crisis. At 15% NAV, a 100% VXX spike
+    = 15% NAV loss — approaching but not exceeding 30% drawdown gate.
+  borrow_cost: >
+    Short VXX requires borrowing shares. Borrow cost estimated at 50bps/year
+    (liquid ETN, widely available to borrow). Actual cost varies — validate
+    with broker. In practice, the roll yield (~50-75% annual VXX decay during
+    contango) dwarfs borrow cost.
+
+backtest_spec:
+  symbols: ["VXX"]
+  comparison_symbols: ["SVXY"]
+  signal_symbols: ["^VIX", "^VIX9D"]
+  start_date: "2009-02-01"
+  end_date: "2025-12-31"
+  initial_capital: 100000
+  warmup_days: 10
+  required_stress_tests:
+    - period: "2018-02-01_to_2018-02-28"
+      name: "Volmageddon"
+      description: "VXX approximately doubled. Short vol funds annihilated. Strategy must survive."
+    - period: "2020-02-15_to_2020-04-01"
+      name: "COVID crash"
+      description: "VIX spiked to 85. Maximum spike exit stress test."
+    - period: "2011-08-01_to_2011-09-30"
+      name: "US downgrade / European debt crisis"
+      description: "Prolonged elevated VIX."
+
+benchmark:
+  symbols:
+    SPY: 1.00
+
+track: "B"
+family: "vix_term_structure"
+family_trial_number: 2
+family_prior_trials: 1
+prior_trial_slug: "vix-term-structure-backwardation"
+prior_trial_relationship: "companion — different mechanism from same family"
+
+target_metrics:
+  sharpe_min: 1.0
+  max_drawdown_max: 0.30
+  cagr_min: 0.20
+  dsr_min: 0.95
+  cpcv_oos_is_min: 0.0
+
+created_at: "2026-03-30"
+updated_at: "2026-03-30"
