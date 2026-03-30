@@ -12,6 +12,76 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Execution cost estimates (round-trip, in basis points)
+# Source: config/risk.toml [execution_costs] — values are mid-range estimates.
+# These are embedded here as fallback constants; config values override them
+# when available via AppConfig.
+# ---------------------------------------------------------------------------
+
+_EXECUTION_COSTS_BPS: dict[str, float] = {
+    "equity": 4.0,          # US equity: 2-6 bps round-trip
+    "international": 12.0,  # International developed: 7-18 bps
+    "emerging": 22.0,       # Emerging markets: 12-33 bps
+    "fixed_income": 6.0,    # Treasury ETFs: 3-9 bps
+    "hy_credit": 16.0,      # HY credit: 8-24 bps
+    "commodity": 6.0,       # Commodity ETFs (GLD/SLV/USO): ~crypto_etf level
+    "crypto": 6.0,          # Crypto ETF proxy: 3-9 bps
+    "forex": 17.0,          # Forex at ~$2500 notional: 17-18 bps
+    "volatility": 0.0,      # Non-tradeable (VIX reference only)
+}
+
+# Sector-level overrides for fixed income sub-types
+_HY_CREDIT_SYMBOLS: frozenset[str] = frozenset({"HYG", "JNK"})
+_EMERGING_EQUITY_SYMBOLS: frozenset[str] = frozenset({"EEM", "VWO"})
+_INTL_EQUITY_SYMBOLS: frozenset[str] = frozenset({"EFA", "VGK", "EWJ"})
+
+
+def get_execution_cost(symbol: str, asset_class: str) -> float:
+    """Return the estimated round-trip execution cost in basis points.
+
+    Uses symbol-level overrides first, then asset_class bucketing.
+    Values represent the mid-range of typical market-impact + spread costs
+    for a ~$2,500–10,000 notional retail/paper trade.
+
+    Example context: "Entering GLD costs ~6 bps round-trip.
+    Expected daily alpha must exceed this."
+
+    Parameters
+    ----------
+    symbol:
+        Ticker symbol (e.g. ``"GLD"``, ``"HYG"``, ``"EEM"``).
+    asset_class:
+        Asset class string from universe config
+        (``"equity"``, ``"fixed_income"``, ``"crypto"``, ``"forex"``,
+        ``"commodity"``, ``"volatility"``).
+
+    Returns
+    -------
+    float
+        Estimated round-trip cost in basis points.
+    """
+    # Symbol-level overrides (finer granularity than asset_class)
+    if symbol in _HY_CREDIT_SYMBOLS:
+        return _EXECUTION_COSTS_BPS["hy_credit"]
+    if symbol in _EMERGING_EQUITY_SYMBOLS:
+        return _EXECUTION_COSTS_BPS["emerging"]
+    if symbol in _INTL_EQUITY_SYMBOLS:
+        return _EXECUTION_COSTS_BPS["international"]
+
+    # Asset class bucket
+    ac = asset_class.lower()
+    if ac in _EXECUTION_COSTS_BPS:
+        return _EXECUTION_COSTS_BPS[ac]
+
+    # Unknown asset class → default to US equity cost
+    logger.debug(
+        "get_execution_cost: unknown asset_class '%s' for %s, defaulting to equity",
+        asset_class,
+        symbol,
+    )
+    return _EXECUTION_COSTS_BPS["equity"]
+
 
 @dataclass
 class RiskCheckResult:

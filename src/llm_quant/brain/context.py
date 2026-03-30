@@ -10,6 +10,7 @@ import duckdb
 
 from llm_quant.brain.models import MarketContext, MarketRegime, MarketRow, PositionRow
 from llm_quant.config import AppConfig
+from llm_quant.risk.limits import get_execution_cost
 
 logger = logging.getLogger(__name__)
 
@@ -424,6 +425,41 @@ def _get_vix_percentile_126d(
     return percentile
 
 
+def _get_cot_crowding(
+    universe_symbols: list[str],
+) -> dict[str, str] | None:
+    """Fetch COT crowding signals for applicable universe symbols.
+
+    Returns a dict mapping symbol -> signal string, or None on any failure.
+    Only symbols with a CFTC code mapping are included.
+
+    Friday-published data applied on Monday open (look-ahead bias prevention).
+    COT signals are confirmation/warning overlays only — never independent entries.
+    """
+    try:
+        from llm_quant.data.cot_fetcher import CotFetcher, SYMBOL_TO_COT_KEY
+
+        cot_symbols = [s for s in universe_symbols if s in SYMBOL_TO_COT_KEY]
+        if not cot_symbols:
+            return None
+
+        fetcher = CotFetcher()
+        crowding: dict[str, str] = {}
+        for symbol in cot_symbols:
+            try:
+                result = fetcher.get_regime_signal(symbol)
+                signal = result.get("signal", "neutral")
+                if signal != "neutral":
+                    crowding[symbol] = signal
+            except Exception:
+                logger.debug("COT signal fetch failed for %s", symbol, exc_info=True)
+
+        return crowding if crowding else None
+    except Exception:
+        logger.warning("COT crowding overlay unavailable", exc_info=True)
+        return None
+
+
 def _build_position_rows(
     positions: list[dict[str, Any]],
     market_prices: dict[str, dict[str, Any]],
@@ -579,6 +615,16 @@ def build_market_context(
     # vts: 126-day VIX percentile rank
     vix_percentile_126d = _get_vix_percentile_126d(conn, vix)
 
+    # llm-quant-56k: COT crowding overlay for applicable symbols
+    cot_crowding = _get_cot_crowding(universe_symbols)
+
+    # llm-quant-bbt: execution cost lookup for all symbols in context
+    execution_costs: dict[str, float] = {}
+    for asset in config.universe.assets:
+        execution_costs[asset.symbol] = get_execution_cost(
+            asset.symbol, asset.asset_class
+        )
+
     from datetime import datetime
 
     today = datetime.now(tz=UTC).date()
@@ -601,6 +647,8 @@ def build_market_context(
         vix_regime_thresholds=vix_regime_thresholds,
         market_regime=market_regime,
         vix_percentile_126d=vix_percentile_126d,
+        cot_crowding=cot_crowding,
+        execution_costs=execution_costs if execution_costs else None,
     )
 
     logger.info(

@@ -451,6 +451,8 @@ Be direct. If the strategy is not ready, say so and explain why.
 - If PBO > 0.10 → REJECT (overfitting risk too high)
 - If data grade < B → REJECT (data quality insufficient)
 - If research spec was not frozen before backtesting → REJECT (methodology violation)
+- If dSR_P < 0.05 → REJECT (strategy does not improve portfolio risk-adjusted return)
+- If rolling 60-day correlation to portfolio NAV >= 0.30 → REJECT (insufficient diversification)
 - If paper trading minimums not met → CONDITIONAL (needs more paper time)
 - If canary gate not run → CONDITIONAL (deploy to canary first)
 

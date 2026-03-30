@@ -7,7 +7,7 @@ import duckdb
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 DDL_STATEMENTS = [
     """
@@ -168,6 +168,18 @@ DDL_STATEMENTS = [
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """,
+    # --- COT (Commitments of Traders) weekly data (v5) ---
+    """
+    CREATE TABLE IF NOT EXISTS cot_weekly (
+        symbol VARCHAR NOT NULL,
+        report_date DATE NOT NULL,
+        commercial_net DOUBLE,
+        noncommercial_net DOUBLE,
+        open_interest DOUBLE,
+        cot_index DOUBLE,
+        PRIMARY KEY (symbol, report_date)
+    )
+    """,
     # --- Pod indexes (v4) ---
     """
     CREATE INDEX IF NOT EXISTS idx_trades_pod_id
@@ -318,6 +330,29 @@ def _migrate_v3_to_v4(conn: duckdb.DuckDBPyConnection) -> None:
     logger.info("Migrated schema to v4: multi-pod support added.")
 
 
+def _migrate_v4_to_v5(conn: duckdb.DuckDBPyConnection) -> None:
+    """Add cot_weekly table for CFTC COT regime overlay."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT table_name FROM information_schema.tables"
+        ).fetchall()
+    }
+    if "cot_weekly" not in tables:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS cot_weekly (
+                symbol VARCHAR NOT NULL,
+                report_date DATE NOT NULL,
+                commercial_net DOUBLE,
+                noncommercial_net DOUBLE,
+                open_interest DOUBLE,
+                cot_index DOUBLE,
+                PRIMARY KEY (symbol, report_date)
+            )
+            """)
+    logger.info("Migrated schema to v5: cot_weekly table added.")
+
+
 def init_schema(db_path: str | Path) -> duckdb.DuckDBPyConnection:
     """Create all tables in DuckDB. Returns the connection."""
     db_path = Path(db_path)
@@ -338,6 +373,8 @@ def init_schema(db_path: str | Path) -> duckdb.DuckDBPyConnection:
         _migrate_v2_to_v3(conn)
     if old_version < 4:
         _migrate_v3_to_v4(conn)
+    if old_version < 5:
+        _migrate_v4_to_v5(conn)
 
     conn.execute(
         "INSERT OR REPLACE INTO schema_meta VALUES ('version', ?)",

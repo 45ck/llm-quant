@@ -240,6 +240,19 @@ STRATEGIES = [
             "rebalance_frequency_days": 5,
         },
     ),
+    (
+        "gld-slv-mean-reversion-v4",
+        "pairs_ratio",
+        ["GLD", "SLV"],
+        {
+            "symbol_a": "GLD",
+            "symbol_b": "SLV",
+            "consensus_windows": [60, 90, 120],
+            "bb_std": 2.0,
+            "exit_z": 0.5,
+            "target_weight": 0.40,
+        },
+    ),
 ]
 
 LOOKBACK_DAYS = 5 * 365  # match run_backtest.py
@@ -344,6 +357,7 @@ def compute_correlation_matrix(df: pl.DataFrame, slugs: list[str]) -> None:
         "tlt-spy-rate-momentum": "TLT-SPY",
         "tlt-qqq-rate-tech": "TLT-QQQ",
         "ief-qqq-rate-tech": "IEF-QQQ",
+        "gld-slv-mean-reversion-v4": "GLD-SLV",
     }
 
     # Extract return arrays
@@ -419,6 +433,10 @@ SHARPES = {
     "emb-spy-credit-lead": 1.005,
     "agg-efa-credit-lead": 0.860,
     "spy-overnight-momentum": 1.043,
+    "tlt-spy-rate-momentum": 0.900,
+    "tlt-qqq-rate-tech": 0.920,
+    "ief-qqq-rate-tech": 0.950,
+    "gld-slv-mean-reversion-v4": 1.100,  # placeholder; updated after backtest
 }
 
 

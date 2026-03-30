@@ -128,6 +128,20 @@ db.close()
 "
 ```
 
+**Step 2b: Generate quantstats tearsheet**
+
+```bash
+cd E:/llm-quant && PYTHONPATH=src python scripts/generate_tearsheet.py "$SLUG"
+```
+
+This writes `data/strategies/$SLUG/evaluate-tearsheet.html` and prints a key metrics table
+(Sharpe, Sortino, MaxDD, Calmar, CAGR) vs the appropriate benchmark:
+- Track A strategies: 60/40 SPY/TLT blended benchmark
+- Track B strategies: SPY benchmark
+
+Use `--track b` to override the benchmark if the strategy is Track B but not auto-detected.
+Use `--no-html` to print the metrics table only without generating the HTML file.
+
 **Step 3: Compare live vs backtest performance**
 
 ```
