@@ -49,6 +49,12 @@ COT_CROWDED_LONG_THRESHOLD: int = 80   # COT index > 80 → commercials net shor
 COT_CROWDED_SHORT_THRESHOLD: int = 20  # COT index < 20 → commercials net long (crowded short)
 COT_LOOKBACK_WEEKS: int = 156          # 3-year (156-week) min-max window — fixed
 
+# Symbols explicitly excluded from COT analysis.
+# USO: post-April 2020 fund restructuring broke the WTI futures COT mapping —
+# the fund now rolls across multiple contract months rather than the front-month
+# WTI contract that the CFTC code 067651 covers.
+COT_INELIGIBLE_SYMBOLS: frozenset[str] = frozenset({"USO"})
+
 
 class CotFetcher:
     """Fetch and process CFTC Commitments of Traders (COT) data.
@@ -246,6 +252,11 @@ class CotFetcher:
             "commercial_net": None,
             "signal": "neutral",
         }
+
+        # Skip symbols explicitly flagged as COT-ineligible
+        if symbol in COT_INELIGIBLE_SYMBOLS:
+            logger.info("Skipping %s: cot_eligible=False", symbol)
+            return default
 
         cot_key = SYMBOL_TO_COT_KEY.get(symbol)
         if cot_key is None:

@@ -222,6 +222,7 @@ class AssetEntry(BaseModel):
     asset_class: str = "equity"  # equity, crypto, forex
     tradeable: bool = True
     cftc_code: str | None = None  # 6-digit CFTC code for COT overlay (GLD, SLV, USO)
+    cot_eligible: bool = True  # False for USO: post-Apr 2020 restructuring broke WTI COT mapping
 
 
 # Backward-compatible alias

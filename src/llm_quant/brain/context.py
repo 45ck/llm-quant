@@ -536,6 +536,7 @@ def _get_hmm_regime(
 
 def _get_cot_crowding(
     universe_symbols: list[str],
+    cot_stale: bool = False,
 ) -> dict[str, str] | None:
     """Fetch COT crowding signals for applicable universe symbols.
 
@@ -544,7 +545,22 @@ def _get_cot_crowding(
 
     Friday-published data applied on Monday open (look-ahead bias prevention).
     COT signals are confirmation/warning overlays only — never independent entries.
+
+    Parameters
+    ----------
+    universe_symbols:
+        List of tradeable symbols from the universe config.
+    cot_stale:
+        If True, COT data in the DB is stale (> 10 days old). Returns None
+        immediately with a warning rather than serving outdated signals.
     """
+    if cot_stale:
+        logger.warning(
+            "COT crowding overlay skipped: data is stale (>10 days). "
+            "Run pq fetch to refresh COT data.",
+        )
+        return None
+
     try:
         from llm_quant.data.cot_fetcher import CotFetcher, SYMBOL_TO_COT_KEY
 
@@ -617,6 +633,7 @@ def build_market_context(
     conn: duckdb.DuckDBPyConnection,
     portfolio_state: dict[str, Any],
     config: AppConfig,
+    cot_stale: bool = False,
 ) -> MarketContext:
     """Build a complete MarketContext from the DB and portfolio state.
 
@@ -629,6 +646,10 @@ def build_market_context(
         with ``symbol``, ``shares``, ``avg_cost``, ``stop_loss``).
     config:
         Application configuration (used to determine the asset universe).
+    cot_stale:
+        If True, COT data in cot_weekly is stale (>10 days old). Passes the
+        flag to ``_get_cot_crowding`` so it returns None rather than serving
+        outdated crowding signals.
 
     Returns
     -------
@@ -764,7 +785,8 @@ def build_market_context(
                 )
 
     # llm-quant-56k: COT crowding overlay for applicable symbols
-    cot_crowding = _get_cot_crowding(universe_symbols)
+    # cot_stale=True skips fetching and returns None when DB data is >10 days old
+    cot_crowding = _get_cot_crowding(universe_symbols, cot_stale=cot_stale)
 
     # llm-quant-bbt: execution cost lookup for all symbols in context
     execution_costs: dict[str, float] = {}

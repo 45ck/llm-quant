@@ -79,6 +79,148 @@ MECHANISM_FAMILIES: dict[str, str] = {
 
 TRADING_DAYS_PER_YEAR = 252
 
+# Track A vs Track B membership for 70/30 split enforcement
+TRACK_A_SLUGS: list[str] = [
+    "lqd-spy-credit-lead",
+    "agg-spy-credit-lead",
+    "hyg-spy-5d-credit-lead",
+    "agg-qqq-credit-lead",
+    "lqd-qqq-credit-lead",
+    "vcit-qqq-credit-lead",
+    "hyg-qqq-credit-lead",
+    "emb-spy-credit-lead",
+    "agg-efa-credit-lead",
+    "spy-overnight-momentum",
+    "tlt-spy-rate-momentum",
+    "tlt-qqq-rate-tech",
+    "ief-qqq-rate-tech",
+    "behavioral-structural",
+    "gld-slv-mean-reversion-v4",
+]
+
+TRACK_B_SLUGS: list[str] = [
+    "soxx-qqq-lead-lag",
+]
+
+# Max weight per strategy for validation (Track B limit is binding)
+MAX_STRATEGY_WEIGHT = 0.15
+
+
+# ---------------------------------------------------------------------------
+# HRP allocation
+# ---------------------------------------------------------------------------
+
+
+def compute_hrp_weights(
+    strategies: dict[str, dict],
+    slugs: list[str],
+    min_len: int,
+) -> dict[str, float]:
+    """Compute HRP weights using Riskfolio-Lib, then enforce 70/30 A/B split.
+
+    Parameters
+    ----------
+    strategies:
+        Dict of slug -> strategy data (must include ``daily_returns``).
+    slugs:
+        Ordered list of slugs (must match the order in the returns matrix).
+    min_len:
+        Number of aligned return days to use (tail of each series).
+
+    Returns
+    -------
+    dict mapping slug -> portfolio weight (sums to 1.0, 70% Track A / 30% Track B).
+    """
+    import pandas as pd
+
+    try:
+        import Riskfolio as rp
+    except ImportError as exc:
+        raise ImportError(
+            "Riskfolio-Lib is required for --method hrp. "
+            "Install with: pip install 'Riskfolio-Lib>=6.0'"
+        ) from exc
+
+    # Build returns DataFrame (columns = slugs, rows = trading days)
+    data: dict[str, list[float]] = {}
+    for slug in slugs:
+        dr = strategies[slug]["daily_returns"]
+        data[slug] = dr[-min_len:]
+
+    returns_pd = pd.DataFrame(data)
+
+    # Fit HRP — ward linkage, Pearson codependence, MV risk measure
+    port = rp.HCPortfolio(returns=returns_pd)
+    weights_df = port.optimization(
+        model="HRP",
+        codependence="pearson",
+        rm="MV",
+        rf=0,
+        linkage="ward",
+        max_k=10,
+        leaf_order=True,
+    )
+
+    # weights_df: DataFrame with strategy names as index, 'weights' column
+    raw_weights: dict[str, float] = weights_df["weights"].to_dict()
+
+    # Determine which loaded slugs belong to each track
+    a_slugs_loaded = [s for s in slugs if s in TRACK_A_SLUGS]
+    b_slugs_loaded = [s for s in slugs if s in TRACK_B_SLUGS]
+
+    a_total = sum(raw_weights.get(s, 0.0) for s in a_slugs_loaded)
+    b_total = sum(raw_weights.get(s, 0.0) for s in b_slugs_loaded)
+
+    adjusted: dict[str, float] = {}
+
+    # Rescale Track A to 70% of portfolio
+    for slug in a_slugs_loaded:
+        adjusted[slug] = (
+            raw_weights.get(slug, 0.0) * (0.70 / a_total) if a_total > 0 else 0.0
+        )
+
+    # Rescale Track B to 30% of portfolio
+    for slug in b_slugs_loaded:
+        adjusted[slug] = (
+            raw_weights.get(slug, 0.0) * (0.30 / b_total) if b_total > 0 else 0.0
+        )
+
+    # Any slugs not assigned to a track get raw HRP weights (edge case)
+    untracked = [s for s in slugs if s not in a_slugs_loaded and s not in b_slugs_loaded]
+    for slug in untracked:
+        adjusted[slug] = raw_weights.get(slug, 0.0)
+        logger.warning(
+            "Slug '%s' is not assigned to Track A or B — using raw HRP weight %.4f",
+            slug,
+            adjusted[slug],
+        )
+
+    return adjusted
+
+
+def validate_weights(weights: dict[str, float], method: str) -> None:
+    """Validate weight constraints: sum = 1.0 ± 0.001, no strategy > 15%.
+
+    Logs a warning for any violation but does not raise — the report still
+    shows the violation so the PM can decide how to handle it.
+    """
+    total = sum(weights.values())
+    if abs(total - 1.0) > 0.001:
+        logger.warning(
+            "WEIGHT VALIDATION [%s]: weights sum to %.6f (expected 1.000 ± 0.001)",
+            method,
+            total,
+        )
+    for slug, w in weights.items():
+        if w > MAX_STRATEGY_WEIGHT + 1e-9:
+            logger.warning(
+                "WEIGHT VALIDATION [%s]: %s weight=%.4f exceeds Track B limit of %.0f%%",
+                method,
+                slug,
+                w,
+                MAX_STRATEGY_WEIGHT * 100,
+            )
+
 
 # ---------------------------------------------------------------------------
 # Data loading
@@ -559,6 +701,50 @@ def _format_diversification_section(
     return lines
 
 
+def _format_hrp_weights_section(
+    selected: list[str],
+    strategies: dict[str, dict],
+    hrp_weights: dict[str, float],
+    equal_weights: dict[str, float],
+    method: str,
+) -> list[str]:
+    """Format the HRP weights table with delta vs equal-weight column."""
+    lines: list[str] = [
+        f"## 7. Allocation Weights ({method.upper()} method)",
+        "",
+        f"{'Strategy':<32} {'Track':<8} {'HRP Wt':>8} {'EW Wt':>8} {'Delta':>8}",
+        "-" * 68,
+    ]
+    for slug in sorted(selected, key=lambda s: -hrp_weights.get(s, 0.0)):
+        track = "A" if slug in TRACK_A_SLUGS else ("B" if slug in TRACK_B_SLUGS else "?")
+        hrp_w = hrp_weights.get(slug, 0.0)
+        ew_w = equal_weights.get(slug, 0.0)
+        delta = hrp_w - ew_w
+        delta_str = f"+{delta:.4f}" if delta >= 0 else f"{delta:.4f}"
+        lines.append(
+            f"{slug:<32} {track:<8} {hrp_w:>8.4f} {ew_w:>8.4f} {delta_str:>8}"
+        )
+    total_hrp = sum(hrp_weights.values())
+    total_ew = sum(equal_weights.values())
+    lines.append("-" * 68)
+    lines.append(
+        f"{'TOTAL':<32} {'':8} {total_hrp:>8.4f} {total_ew:>8.4f} {'':>8}"
+    )
+    lines.append("")
+    lines.append(
+        f"  Track A ({len([s for s in selected if s in TRACK_A_SLUGS])} strategies): "
+        f"{sum(hrp_weights.get(s, 0) for s in selected if s in TRACK_A_SLUGS):.4f} "
+        f"(target 0.7000)"
+    )
+    lines.append(
+        f"  Track B ({len([s for s in selected if s in TRACK_B_SLUGS])} strategies): "
+        f"{sum(hrp_weights.get(s, 0) for s in selected if s in TRACK_B_SLUGS):.4f} "
+        f"(target 0.3000)"
+    )
+    lines.append("")
+    return lines
+
+
 def format_report(
     strategies: dict[str, dict],
     corr_matrix: np.ndarray,
@@ -568,6 +754,9 @@ def format_report(
     portfolio_metrics: dict,
     all_portfolio_metrics: dict,
     threshold: float,
+    hrp_weights: dict[str, float] | None = None,
+    equal_weights: dict[str, float] | None = None,
+    method: str = "equal",
 ) -> str:
     """Generate the full markdown report."""
     lines: list[str] = []
@@ -629,6 +818,15 @@ def format_report(
     lines.extend(
         _format_diversification_section(strategies, selected, portfolio_metrics)
     )
+
+    # Section 7: HRP weights table (only when --method hrp is used)
+    if hrp_weights is not None and equal_weights is not None:
+        lines.extend(
+            _format_hrp_weights_section(
+                selected, strategies, hrp_weights, equal_weights, method
+            )
+        )
+
     lines.append("=" * 80)
     return "\n".join(lines)
 
@@ -682,6 +880,16 @@ def main() -> None:
             "Bypass the minimum-strategies guard and run on whatever artifacts "
             "are available. For development use only — output is not reliable "
             "when fewer than --min-strategies strategies are loaded."
+        ),
+    )
+    parser.add_argument(
+        "--method",
+        choices=["equal", "hrp"],
+        default="equal",
+        help=(
+            "Weight allocation method. 'equal' = equal weight (default). "
+            "'hrp' = Hierarchical Risk Parity via Riskfolio-Lib with 70/30 A/B "
+            "split enforcement. Requires: pip install 'Riskfolio-Lib>=6.0'."
         ),
     )
     args = parser.parse_args()
@@ -761,6 +969,25 @@ def main() -> None:
         list(strategies.keys()), strategies, corr_matrix, slugs
     )
 
+    # 5b. HRP allocation (if requested)
+    hrp_weights: dict[str, float] | None = None
+    equal_weights: dict[str, float] = {s: 1.0 / len(selected) for s in selected}
+
+    if args.method == "hrp":
+        logger.info("Computing HRP weights via Riskfolio-Lib...")
+        # Use the same min_len alignment as the correlation matrix
+        min_len = min(len(strategies[s]["daily_returns"]) for s in selected)
+        try:
+            hrp_weights = compute_hrp_weights(strategies, selected, min_len)
+            validate_weights(hrp_weights, "hrp")
+            logger.info(
+                "HRP weights: %s",
+                {s: f"{w:.4f}" for s, w in sorted(hrp_weights.items(), key=lambda x: -x[1])},
+            )
+        except Exception:
+            logger.exception("HRP optimization failed — falling back to equal weight")
+            hrp_weights = None
+
     # 6. Generate report
     report = format_report(
         strategies=strategies,
@@ -771,6 +998,9 @@ def main() -> None:
         portfolio_metrics=portfolio_metrics,
         all_portfolio_metrics=all_portfolio_metrics,
         threshold=args.threshold,
+        hrp_weights=hrp_weights,
+        equal_weights=equal_weights,
+        method=args.method,
     )
 
     if args.output:

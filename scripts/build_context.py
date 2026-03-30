@@ -83,6 +83,51 @@ def _fetch_and_store(conn, config) -> None:
     print(f"Stored {len(df)} rows with indicators", file=sys.stderr)
 
 
+COT_STALENESS_THRESHOLD_DAYS = 10  # COT data older than this triggers exclusion
+
+
+def _check_cot_staleness(conn) -> tuple[bool, str | None, int]:
+    """Check if the most recent COT record in cot_weekly is stale.
+
+    Returns (cot_stale, last_cot_date_str, days_stale).
+    If cot_weekly table is empty or missing, returns (False, None, 0) —
+    empty table is handled separately, not treated as stale.
+    """
+    try:
+        row = conn.execute(
+            "SELECT MAX(report_date) FROM cot_weekly"
+        ).fetchone()
+    except Exception:
+        return False, None, 0
+
+    if row is None or row[0] is None:
+        return False, None, 0
+
+    last_cot_date = row[0]
+    last_cot_date_str = str(last_cot_date)
+
+    today = datetime.now(tz=UTC).date()
+    # DuckDB may return a date object or a string depending on version
+    if hasattr(last_cot_date, "timetuple"):
+        import datetime as dt_mod
+        last_date_obj = last_cot_date if isinstance(last_cot_date, dt_mod.date) else dt_mod.date.fromisoformat(last_cot_date_str[:10])
+    else:
+        from datetime import date as date_cls
+        last_date_obj = date_cls.fromisoformat(last_cot_date_str[:10])
+
+    days_stale = (today - last_date_obj).days
+
+    if days_stale > COT_STALENESS_THRESHOLD_DAYS:
+        logger.warning(
+            "COT data stale: last update %s, %d days ago. Excluding COT signals.",
+            last_cot_date_str,
+            days_stale,
+        )
+        return True, last_cot_date_str, days_stale
+
+    return False, last_cot_date_str, days_stale
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build market context for LLM trading")
     parser.add_argument("--pod", default="default", help="Pod ID to build context for")
@@ -126,9 +171,12 @@ def main() -> None:
 
         portfolio.update_prices(prices)
 
+        # Check COT data staleness before building context
+        cot_stale, last_cot_date, days_stale = _check_cot_staleness(conn)
+
         # Build context
         portfolio_state = portfolio.to_snapshot_dict()
-        context = build_market_context(conn, portfolio_state, config)
+        context = build_market_context(conn, portfolio_state, config, cot_stale=cot_stale)
 
         # Load system prompt
         system_prompt = load_system_prompt()
@@ -179,6 +227,11 @@ def main() -> None:
             },
             "governance": governance_status,
             "date": str(context.date),
+            "cot_status": {
+                "stale": cot_stale,
+                "last_update": last_cot_date,
+                "days_stale": days_stale,
+            },
         }
 
         print(json.dumps(output, indent=2))

@@ -191,6 +191,7 @@ category = "commodity"
 sector = "precious_metals"
 asset_class = "commodity"
 cftc_code = "088691"
+cot_eligible = true
 
 [[assets]]
 symbol = "SLV"
@@ -199,6 +200,7 @@ category = "commodity"
 sector = "precious_metals"
 asset_class = "commodity"
 cftc_code = "084691"
+cot_eligible = true
 
 [[assets]]
 symbol = "USO"
@@ -207,6 +209,7 @@ category = "commodity"
 sector = "energy"
 asset_class = "commodity"
 cftc_code = "067651"
+cot_eligible = false  # Post-April 2020 restructuring broke WTI COT mapping
 
 [[assets]]
 symbol = "VIX"
@@ -273,6 +276,7 @@ name = "EUR/USD"
 category = "forex"
 sector = "major_pairs"
 asset_class = "forex"
+cot_eligible = true
 
 [[assets]]
 symbol = "GBPUSD=X"
@@ -280,6 +284,7 @@ name = "GBP/USD"
 category = "forex"
 sector = "major_pairs"
 asset_class = "forex"
+cot_eligible = true
 
 [[assets]]
 symbol = "USDJPY=X"
@@ -287,6 +292,7 @@ name = "USD/JPY"
 category = "forex"
 sector = "major_pairs"
 asset_class = "forex"
+cot_eligible = true
 
 [[assets]]
 symbol = "AUDUSD=X"
@@ -294,6 +300,7 @@ name = "AUD/USD"
 category = "forex"
 sector = "major_pairs"
 asset_class = "forex"
+cot_eligible = true
 
 [[assets]]
 symbol = "USDCHF=X"
