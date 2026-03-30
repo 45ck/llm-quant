@@ -1,0 +1,40 @@
+# Mandate: vix-percentile-spike-reversion (H7.1)
+# Family 7 — Sentiment / Volatility Extremes
+
+mandate_id: "H7.1"
+strategy_slug: "vix-percentile-spike-reversion"
+created_at: "2026-03-31"
+
+objective: >
+  Exploit panic exhaustion in SPY by entering mean-reversion trades when VIX
+  reaches extreme percentile levels with a simultaneous daily spike, while
+  filtering out sustained-crisis regimes where VIX keeps climbing.
+
+mechanism: >
+  VIX at 90th+ percentile of its 252-day distribution, combined with a 15%+
+  single-day spike and RSI(5) SPY < 30, signals panic exhaustion — selling is
+  overdone and a bounce is imminent. The VIX < 1.5*VIX_50MA regime filter
+  excludes sustained-crisis environments (2008/2020 meltdowns) where VIX spikes
+  repeatedly. This is a well-documented short-term mean-reversion effect in
+  volatility literature (Whaley 2000, Simon & Wiggins 2001).
+
+universe:
+  equity: "SPY"
+  signal: "VIX"
+  defensive: "CASH"
+
+benchmark: "60/40 SPY/TLT (Sharpe ~0.765)"
+benchmark_rationale: >
+  Short-term VIX-based mean-reversion should capture equity dips with tight
+  risk management, generating Sharpe above passive multi-asset baseline.
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.15"
+  max_position_weight: 0.90
+
+trial_family: "vix_percentile_spike_reversion"
+family_trial_number: 1
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

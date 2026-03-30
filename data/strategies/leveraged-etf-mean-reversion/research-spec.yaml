@@ -1,0 +1,66 @@
+# Research Spec: leveraged-etf-mean-reversion (H7.3)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "leveraged-etf-mean-reversion"
+strategy_name: "leveraged_mean_rev"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Leveraged ETF mean-reversion with VIX band gate. Buy TQQQ/UPRO/SOXL after
+  3+ consecutive down days with cumulative decline >-8%, when VIX is 20-35
+  and VIX RSI(5) > 70. Exit: first profitable close, 5d time stop, -5% stop.
+  Family 7 (sentiment/volatility extremes), Track D.
+
+strategy_class: "leveraged_mean_rev"
+parameters:
+  etf_symbols: "TQQQ,UPRO,SOXL"
+  vix_symbol: "VIX"
+  min_down_days: 3
+  min_decline: -0.08
+  vix_low: 20
+  vix_high: 35
+  vix_rsi_period: 5
+  vix_rsi_threshold: 70
+  time_stop: 5
+  stop_loss: 0.05
+  target_weight: 0.30
+  rebalance_frequency_days: 1
+
+parameter_rationale:
+  min_down_days: "3 consecutive down days — overshoot threshold for 3x ETFs. Pre-specified."
+  min_decline: "-8% cumulative — meaningful overshoot (3x3% underlying). Pre-specified."
+  vix_low: "20 — below this, no fear → no mean-reversion setup. Pre-specified."
+  vix_high: "35 — above this, sustained crash risk → avoid. Pre-specified."
+  vix_rsi_period: "RSI(5) on VIX — short-term overbought/oversold of fear. Pre-specified."
+  vix_rsi_threshold: "70 — VIX overbought = fear peaking. Pre-specified."
+  time_stop: "5 days — Track D max hold (beta decay beyond 5d). Pre-specified."
+  stop_loss: "5% — wider for leveraged ETFs. Pre-specified."
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 30
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 10.0
+    flat_slippage_bps: 5.0
+    slippage_volatility_factor: 0.20
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.40"
+    - "DSR >= 0.90"
+
+anti_snooping_attestation: >
+  All parameters pre-specified before any backtest. Consecutive day and decline
+  thresholds based on leveraged ETF multiplicative math. VIX band 20-35 is
+  standard elevated/extreme boundary. No optimization against backtest data.
+
+family: "leveraged_etf_mean_reversion"
+family_trial_number: 1
+track: "D"
+spec_version: "1.0"

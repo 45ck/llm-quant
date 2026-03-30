@@ -1,0 +1,43 @@
+# Data Contract: leveraged-etf-mean-reversion (H7.3)
+
+strategy_slug: "leveraged-etf-mean-reversion"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "TQQQ"
+    description: "ProShares UltraPro QQQ (3x leveraged Nasdaq 100)"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2010-02, ~3750 days"
+    notes: "3x daily leveraged ETF. Not in universe.toml but fetchable."
+
+  - symbol: "UPRO"
+    description: "ProShares UltraPro S&P 500 (3x leveraged S&P 500)"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2009-06, ~3900 days"
+    notes: "3x daily leveraged ETF. Not in universe.toml but fetchable."
+
+  - symbol: "SOXL"
+    description: "Direxion Daily Semiconductor Bull 3X (3x leveraged SOX)"
+    source: "Yahoo Finance"
+    quality_grade: "B"
+    availability: "since 2010-03, ~3700 days"
+    notes: "3x daily leveraged ETF. Not in universe.toml but fetchable."
+
+  - symbol: "VIX"
+    description: "CBOE Volatility Index (^VIX via yfinance)"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1990, 1255 days in 5yr window"
+    notes: "Non-tradeable reference. Fetcher maps VIX -> ^VIX."
+
+lookback:
+  years: 5
+  warmup_days: 30
+  rationale: "30 days for VIX RSI(5) computation + consecutive day tracking"
+
+data_status: "available"
+data_quality_grade: "B"
+infrastructure: "existing"
+validated_at: "2026-03-31"

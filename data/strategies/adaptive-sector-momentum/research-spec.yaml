@@ -1,0 +1,68 @@
+# Research Spec: adaptive-sector-momentum (H3.2)
+# FROZEN — do not modify after backtest is run
+
+strategy_slug: "adaptive-sector-momentum"
+strategy_name: "adaptive_sector_momentum"
+created_at: "2026-03-31"
+frozen: true
+frozen_at: "2026-03-31"
+frozen_hash: "placeholder-computed-on-freeze"
+
+design_summary: >
+  Adaptive dual momentum sector rotation. Rank 7 sector ETFs by Accelerating
+  Momentum Score (AMS = 1M*12 + 3M*4 + 6M*2 + 12M ret). VIX regime gate:
+  VIX<20 → top 3 sectors, VIX 20-30 → top 2 + 50% GLD, VIX>=30 → 100% SHY.
+  Absolute momentum filter: only allocate to sectors if SPY 12M > SHY 12M.
+  Family 3 (cross-sectional momentum), Track A.
+
+strategy_class: "adaptive_sector_momentum"
+parameters:
+  sector_symbols: "XLF,XLE,XLK,XLV,XLU,XLI,XLP"
+  spy_symbol: "SPY"
+  gld_symbol: "GLD"
+  shy_symbol: "SHY"
+  vix_symbol: "VIX"
+  top_n_low_vix: 3
+  top_n_mid_vix: 2
+  vix_low: 20
+  vix_high: 30
+  gld_weight_mid: 0.50
+  rebalance_days: 10
+  target_weight: 0.90
+  rebalance_frequency_days: 1
+
+parameter_rationale:
+  sector_symbols: "7 SPDR sector ETFs available in universe. Pre-specified."
+  top_n_low_vix: "3 sectors — diversified momentum concentration. Pre-specified."
+  top_n_mid_vix: "2 sectors + GLD hedge in moderate vol. Pre-specified."
+  vix_low: "20 — standard risk-on/off boundary. Pre-specified."
+  vix_high: "30 — extreme fear threshold. Pre-specified."
+  gld_weight_mid: "50% GLD in mid-vol — hedge against equity drawdown. Pre-specified."
+  rebalance_days: "10 trading days — biweekly rebalance avoids excessive turnover. Pre-specified."
+
+execution:
+  rebalance_frequency_days: 1
+  warmup_days: 252
+  fill_delay: 1
+  initial_capital: 100000.0
+  cost_model:
+    spread_bps: 3.0
+    flat_slippage_bps: 1.0
+    slippage_volatility_factor: 0.05
+
+acceptance_criteria:
+  primary:
+    - "Sharpe > 0.8"
+    - "MaxDD < 0.15"
+    - "DSR >= 0.95"
+
+anti_snooping_attestation: >
+  All parameters pre-specified before any backtest. AMS weighting follows
+  standard momentum literature (recency-weighted multi-horizon). VIX thresholds
+  are standard risk-on/off boundaries. Rebalance period chosen to minimize
+  turnover. No optimization against backtest data.
+
+family: "adaptive_sector_momentum"
+family_trial_number: 1
+track: "A"
+spec_version: "1.0"

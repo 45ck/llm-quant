@@ -1,0 +1,28 @@
+# Data Contract: vix-percentile-spike-reversion (H7.1)
+
+strategy_slug: "vix-percentile-spike-reversion"
+created_at: "2026-03-31"
+
+symbols:
+  - symbol: "SPY"
+    description: "SPDR S&P 500 ETF Trust"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1993, 1255 days in 5yr window"
+
+  - symbol: "VIX"
+    description: "CBOE Volatility Index (^VIX via yfinance)"
+    source: "Yahoo Finance"
+    quality_grade: "A"
+    availability: "since 1990, 1255 days in 5yr window"
+    notes: "Non-tradeable reference. Fetcher maps VIX -> ^VIX."
+
+lookback:
+  years: 5
+  warmup_days: 252
+  rationale: "252-day warmup for VIX percentile computation"
+
+data_status: "available"
+data_quality_grade: "A"
+infrastructure: "existing"
+validated_at: "2026-03-31"

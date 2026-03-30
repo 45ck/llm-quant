@@ -1,0 +1,35 @@
+# Hypothesis: vix-percentile-spike-reversion (H7.1)
+
+hypothesis_id: "H7.1"
+strategy_slug: "vix-percentile-spike-reversion"
+created_at: "2026-03-31"
+
+statement: >
+  When VIX is at the 90th percentile of its trailing 252-day distribution AND
+  spikes >15% in a single day AND VIX < 1.5 * VIX 50-day SMA AND SPY RSI(5) < 30,
+  buying SPY generates Sharpe > 0.8 with MaxDD < 15% over a 5-year backtest.
+  Exit when SPY closes above its 5-day SMA, or after 10 days, or at -3% stop.
+
+mechanism: >
+  Four simultaneous conditions isolate panic exhaustion from sustained crisis:
+  1) VIX percentile: extreme fear relative to recent history
+  2) VIX spike: acute panic event, not gradual drift
+  3) VIX regime filter: excludes environments where VIX keeps escalating
+  4) RSI(5) SPY < 30: confirms equity is actually oversold (not just VIX noise)
+  The conjunction of all 4 produces rare but high-conviction entry points.
+  Mean-reversion in SPY post-VIX-spike is documented (Whaley 2000).
+
+measurement:
+  signal: "VIX"
+  equity: "SPY"
+  vix_percentile: 90
+  vix_spike_pct: 0.15
+  vix_regime_mult: 1.5
+  vix_sma_period: 50
+  rsi_period: 5
+  rsi_threshold: 30
+  sma_exit_period: 5
+  time_stop: 10
+  stop_loss: 0.03
+
+status: "backtest_ready"

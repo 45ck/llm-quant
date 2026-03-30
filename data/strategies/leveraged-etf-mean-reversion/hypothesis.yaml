@@ -1,0 +1,33 @@
+# Hypothesis: leveraged-etf-mean-reversion (H7.3)
+
+hypothesis_id: "H7.3"
+strategy_slug: "leveraged-etf-mean-reversion"
+created_at: "2026-03-31"
+
+statement: >
+  Leveraged ETFs (TQQQ, UPRO, SOXL) with 3+ consecutive down days and
+  cumulative decline >-8%, when VIX is between 20-35 and VIX RSI(5) > 70,
+  produce a mean-reversion bounce. Buying at close and exiting at first
+  profitable close (or 5d/5% stop) generates Sharpe > 0.80 with MaxDD < 40%.
+
+mechanism: >
+  Leveraged ETFs compound daily returns, so multi-day consecutive declines
+  produce outsized drawdowns vs the underlying (e.g., 3 days of -3% underlying
+  = ~-26% in 3x ETF vs -8.7% underlying). This mechanical overshoot creates
+  mean-reversion alpha. The VIX band (20-35) ensures we're in elevated fear
+  (reversion likely) but not panic (VIX > 35 = sustained crash risk). VIX
+  RSI(5) > 70 confirms fear is peaking, not still accelerating.
+
+measurement:
+  equity: ["TQQQ", "UPRO", "SOXL"]
+  signal: "VIX"
+  min_down_days: 3
+  min_decline: -0.08
+  vix_low: 20
+  vix_high: 35
+  vix_rsi_period: 5
+  vix_rsi_threshold: 70
+  time_stop: 5
+  stop_loss: 0.05
+
+status: "backtest_ready"

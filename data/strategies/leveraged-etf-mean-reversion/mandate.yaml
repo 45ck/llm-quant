@@ -1,0 +1,41 @@
+# Mandate: leveraged-etf-mean-reversion (H7.3)
+# Family 7 — Sentiment / Volatility Extremes (Track D)
+
+mandate_id: "H7.3"
+strategy_slug: "leveraged-etf-mean-reversion"
+created_at: "2026-03-31"
+
+objective: >
+  Exploit the multiplicative overshoot in leveraged ETFs (TQQQ, UPRO, SOXL)
+  after consecutive down days, using VIX band gating to filter entries
+  to elevated-but-not-extreme volatility regimes.
+
+mechanism: >
+  Leveraged ETFs compound daily, meaning multi-day declines produce larger
+  drawdowns than 3x the underlying's decline (volatility drag + path dependency).
+  After 3+ consecutive down days with cumulative decline >-8%, the ETF has
+  overshot to the downside. VIX between 20-35 with VIX RSI(5) > 70 confirms
+  elevated fear that is peaking (not still rising). This creates a short-term
+  mean-reversion opportunity. Exit at first profitable close, 5d max hold,
+  or -5% stop.
+
+universe:
+  equity: ["TQQQ", "UPRO", "SOXL"]
+  signal: "VIX"
+  defensive: "CASH"
+
+benchmark: "100% TQQQ buy-and-hold"
+benchmark_rationale: >
+  Track D leveraged strategy must beat TQQQ buy-and-hold on risk-adjusted
+  basis (Sharpe, MaxDD).
+
+constraints:
+  target_sharpe: "> 0.8"
+  max_drawdown: "< 0.40"
+  max_position_weight: 0.30
+
+trial_family: "leveraged_etf_mean_reversion"
+family_trial_number: 1
+
+approved_at: "2026-03-31"
+approved_by: "quant-researcher"

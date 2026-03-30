@@ -1,0 +1,32 @@
+# Hypothesis: adaptive-sector-momentum (H3.2)
+
+hypothesis_id: "H3.2"
+strategy_slug: "adaptive-sector-momentum"
+created_at: "2026-03-31"
+
+statement: >
+  Ranking 7 sector ETFs by Accelerating Momentum Score (AMS = 1M*12 + 3M*4
+  + 6M*2 + 12M ret), with VIX regime-adaptive allocation (top 3 at VIX<20,
+  top 2 + 50% GLD at VIX 20-30, 100% SHY at VIX>=30), and an absolute
+  momentum filter (SPY 12M > SHY 12M), generates Sharpe > 0.8 with MaxDD < 15%
+  over a 5-year backtest.
+
+mechanism: >
+  AMS combines 4 return horizons with recency weighting (1M*12 annualized
+  captures recent acceleration, 12M captures trend persistence). This produces
+  a momentum score that is more responsive than simple 12M momentum but less
+  noisy than pure 1M momentum. VIX regime gate provides regime-adaptive risk
+  management: risk-on → concentrated sector bets, risk-off → defensive assets.
+  Absolute momentum (Antonacci 2014) prevents equity allocation during bear
+  markets when even top sectors are declining.
+
+measurement:
+  sectors: ["XLF", "XLE", "XLK", "XLV", "XLU", "XLI", "XLP"]
+  top_n_low_vix: 3
+  top_n_mid_vix: 2
+  vix_low: 20
+  vix_high: 30
+  gld_weight_mid: 0.50
+  rebalance_days: 10
+
+status: "backtest_ready"
