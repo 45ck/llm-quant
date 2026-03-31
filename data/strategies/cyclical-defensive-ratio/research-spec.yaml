@@ -1,0 +1,46 @@
+strategy_slug: cyclical-defensive-ratio
+strategy_type: cyclical_defensive_rotation
+frozen: true
+frozen_at: '2026-03-31T00:00:00Z'
+frozen_by: claude-opus-4-6
+frozen_hash: b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3
+modification_lock: 'This spec is FROZEN. Parameter changes require a new spec version.'
+parameters:
+  signal_long: XLI
+  signal_short: XLU
+  ratio_sma: 42
+  direction_lag: 5
+  persistence_days: 3
+  spy_weight: 0.90
+  tlt_weight: 0.90
+  rebalance_frequency_days: 5
+  target_position_weight: 0.90
+  stop_loss_pct: 0.07
+parameter_rationale:
+  ratio_sma: '42 days (~2 months) — smooths earnings-season noise in sector ratios.'
+  direction_lag: '5 days — compare current SMA to 1 week ago for direction detection.'
+  persistence_days: '3 days — filter 1-2 day reversals (noise reduction).'
+  spy_weight: '0.90 — near-full equity in expansion regime.'
+  tlt_weight: '0.90 — near-full duration in contraction regime.'
+backtest_spec:
+  symbols:
+  - SPY
+  - TLT
+  - XLI
+  - XLU
+  years: 5
+  initial_capital: 100000
+  warmup_days: 60
+  cost_model:
+    spread_bps: 5
+    commission_per_trade: 1.0
+    slippage_bps: 2
+  benchmark:
+    symbols:
+      SPY: 0.60
+      TLT: 0.40
+family: macro_rotation
+family_trial_number: 1
+family_prior_trials: 0
+created_at: '2026-03-31'
+updated_at: '2026-03-31'

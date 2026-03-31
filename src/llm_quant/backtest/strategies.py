@@ -3895,6 +3895,465 @@ class AdaptiveSectorMomentumStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Skip-Month TSMOM (H3.5 — Family 3)
+# ---------------------------------------------------------------------------
+
+
+class SkipMonthTsmomStrategy(Strategy):
+    """12-month TSMOM with skip-month (Novy-Marx 2012 refinement).
+
+    Computes return from t-252 to t-21 (skipping most recent month) per asset.
+    Vol-scaled per Barroso-Santa-Clara (2015). Goes long assets with positive
+    skip-month signal, short those with negative signal.
+
+    Parameters:
+        momentum_lookback (int): Total lookback days, default 252.
+        skip_period (int): Days to skip (most recent), default 21.
+        vol_target (float): Portfolio vol target, default 0.10.
+        vol_window (int): Realized vol window, default 63.
+        max_vol_scalar (float): Max leverage from vol-scaling, default 2.0.
+        allow_short (bool): Allow short positions, default True.
+        flat_threshold (float): Signal threshold for entry, default 0.2.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        params = config.parameters or {}
+        self._lookback = int(params.get("momentum_lookback", 252))
+        self._skip = int(params.get("skip_period", 21))
+        self._vol_target = float(params.get("vol_target", 0.10))
+        self._vol_window = int(params.get("vol_window", 63))
+        self._max_vol_scalar = float(params.get("max_vol_scalar", 2.0))
+        self._allow_short = bool(params.get("allow_short", True))
+        self._flat_threshold = float(params.get("flat_threshold", 0.2))
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        from llm_quant.data.indicators import compute_vol_scalar
+
+        signals: list[TradeSignal] = []
+        symbols = indicators_df.select("symbol").unique().to_series().to_list()
+
+        for symbol in symbols:
+            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
+            n = len(sym_data)
+            if n < self._lookback + 1:
+                continue
+
+            close = prices.get(symbol, 0)
+            if close <= 0:
+                continue
+
+            price_series = sym_data["close"]
+
+            # Skip-month return: from t-lookback to t-skip (not t)
+            price_at_lookback = price_series[-(self._lookback + 1)]
+            price_at_skip = price_series[-(self._skip + 1)]
+            if price_at_lookback <= 0:
+                continue
+
+            skip_ret = (price_at_skip / price_at_lookback) - 1.0
+            raw_signal = 1.0 if skip_ret > 0 else -1.0
+
+            # Vol scalar
+            vol_scalars = compute_vol_scalar(
+                price_series,
+                target_vol=self._vol_target,
+                window=self._vol_window,
+                max_scalar=self._max_vol_scalar,
+            )
+            last_scalar = 1.0
+            for v in reversed(vol_scalars.to_list()):
+                if v is not None:
+                    last_scalar = float(v)
+                    break
+
+            scaled_signal = raw_signal * last_scalar
+
+            has_position = symbol in portfolio.positions
+            current_pos = portfolio.positions.get(symbol)
+            is_long = current_pos is not None and current_pos.shares > 0
+            is_short = current_pos is not None and current_pos.shares < 0
+
+            if scaled_signal > self._flat_threshold:
+                if is_short:
+                    signals.append(
+                        TradeSignal(
+                            symbol=symbol, action=Action.CLOSE,
+                            conviction=Conviction.HIGH, target_weight=0.0,
+                            stop_loss=0.0,
+                            reasoning=f"SkipTSMOM reversal to long: skip_ret={skip_ret:.3f}",
+                        )
+                    )
+                if not is_long:
+                    weight = self.config.target_position_weight * min(abs(scaled_signal), 1.0)
+                    weight = max(weight, self.config.target_position_weight * 0.5)
+                    signals.append(
+                        TradeSignal(
+                            symbol=symbol, action=Action.BUY,
+                            conviction=Conviction.HIGH, target_weight=weight,
+                            stop_loss=close * (1.0 - self.config.stop_loss_pct),
+                            reasoning=(
+                                f"SkipTSMOM long: skip_ret={skip_ret:.3f}, "
+                                f"vol_scalar={last_scalar:.2f}, scaled={scaled_signal:.3f}"
+                            ),
+                        )
+                    )
+
+            elif scaled_signal < -self._flat_threshold and self._allow_short:
+                if is_long:
+                    signals.append(
+                        TradeSignal(
+                            symbol=symbol, action=Action.CLOSE,
+                            conviction=Conviction.HIGH, target_weight=0.0,
+                            stop_loss=0.0,
+                            reasoning=f"SkipTSMOM reversal to short: skip_ret={skip_ret:.3f}",
+                        )
+                    )
+                if not is_short:
+                    weight = self.config.target_position_weight * min(abs(scaled_signal), 1.0)
+                    weight = max(weight, self.config.target_position_weight * 0.5)
+                    signals.append(
+                        TradeSignal(
+                            symbol=symbol, action=Action.SELL,
+                            conviction=Conviction.HIGH, target_weight=-weight,
+                            stop_loss=close * (1.0 + self.config.stop_loss_pct),
+                            reasoning=(
+                                f"SkipTSMOM short: skip_ret={skip_ret:.3f}, "
+                                f"vol_scalar={last_scalar:.2f}, scaled={scaled_signal:.3f}"
+                            ),
+                        )
+                    )
+
+            elif abs(scaled_signal) <= self._flat_threshold and has_position:
+                signals.append(
+                    TradeSignal(
+                        symbol=symbol, action=Action.CLOSE,
+                        conviction=Conviction.MEDIUM, target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"SkipTSMOM flat: scaled={scaled_signal:.3f}, closing",
+                    )
+                )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
+# Cyclical/Defensive Ratio Rotation (H6.2 — Family 6)
+# ---------------------------------------------------------------------------
+
+
+class CyclicalDefensiveRotationStrategy(Strategy):
+    """XLI/XLU ratio-based SPY/TLT rotation (PMI proxy).
+
+    Computes the XLI/XLU ratio and its SMA. When SMA is rising (cyclicals
+    outperforming defensives → expansion), go long SPY. When falling
+    (contraction), rotate to TLT.
+
+    Parameters:
+        signal_long (str): Long signal symbol (XLI), default "XLI".
+        signal_short (str): Short signal symbol (XLU), default "XLU".
+        ratio_sma (int): SMA period for ratio, default 42.
+        direction_lag (int): Days to compare SMA direction, default 5.
+        persistence_days (int): Consecutive days for confirmation, default 3.
+        spy_weight (float): SPY weight in expansion, default 0.90.
+        tlt_weight (float): TLT weight in contraction, default 0.90.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        self._direction_history: list[float] = []
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+        sig_long = str(params.get("signal_long", "XLI"))
+        sig_short = str(params.get("signal_short", "XLU"))
+        sma_period = int(params.get("ratio_sma", 42))
+        direction_lag = int(params.get("direction_lag", 5))
+        persistence = int(params.get("persistence_days", 3))
+        spy_weight = float(params.get("spy_weight", 0.90))
+        tlt_weight = float(params.get("tlt_weight", 0.90))
+
+        # Get signal asset data
+        long_data = indicators_df.filter(pl.col("symbol") == sig_long).sort("date")
+        short_data = indicators_df.filter(pl.col("symbol") == sig_short).sort("date")
+
+        min_len = sma_period + direction_lag + persistence + 10
+        if len(long_data) < min_len or len(short_data) < min_len:
+            return []
+
+        # Compute ratio series
+        long_closes = long_data["close"].to_list()
+        short_closes = short_data["close"].to_list()
+        min_n = min(len(long_closes), len(short_closes))
+        long_closes = long_closes[-min_n:]
+        short_closes = short_closes[-min_n:]
+
+        ratios = [l / s if s > 0 else 0.0 for l, s in zip(long_closes, short_closes)]
+        if len(ratios) < sma_period + direction_lag:
+            return []
+
+        # Compute SMA of ratio
+        sma_values: list[float] = []
+        for i in range(len(ratios)):
+            if i < sma_period - 1:
+                sma_values.append(0.0)
+            else:
+                window = ratios[i - sma_period + 1 : i + 1]
+                sma_values.append(sum(window) / len(window))
+
+        # Direction: current SMA vs lagged SMA
+        if len(sma_values) < direction_lag + 1:
+            return []
+
+        current_sma = sma_values[-1]
+        lagged_sma = sma_values[-(direction_lag + 1)]
+        if lagged_sma <= 0:
+            return []
+
+        direction = 1.0 if current_sma > lagged_sma else -1.0
+        self._direction_history.append(direction)
+
+        # Persistence check: last N directions must agree
+        if len(self._direction_history) < persistence:
+            return []
+
+        recent_dirs = self._direction_history[-persistence:]
+        if not all(d == recent_dirs[0] for d in recent_dirs):
+            return []  # No persistent direction
+
+        is_expansion = recent_dirs[0] > 0
+
+        signals: list[TradeSignal] = []
+        spy_price = prices.get("SPY", 0)
+        tlt_price = prices.get("TLT", 0)
+
+        if is_expansion:
+            # Rotate to SPY
+            if "TLT" in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol="TLT", action=Action.CLOSE,
+                        conviction=Conviction.HIGH, target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"CyclDef rotation to SPY: {sig_long}/{sig_short} SMA rising",
+                    )
+                )
+            if "SPY" not in portfolio.positions and spy_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol="SPY", action=Action.BUY,
+                        conviction=Conviction.HIGH, target_weight=spy_weight,
+                        stop_loss=spy_price * 0.93,
+                        reasoning=(
+                            f"CyclDef expansion: {sig_long}/{sig_short} ratio SMA "
+                            f"rising for {persistence}d, long SPY"
+                        ),
+                    )
+                )
+        else:
+            # Rotate to TLT
+            if "SPY" in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol="SPY", action=Action.CLOSE,
+                        conviction=Conviction.HIGH, target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"CyclDef rotation to TLT: {sig_long}/{sig_short} SMA falling",
+                    )
+                )
+            if "TLT" not in portfolio.positions and tlt_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol="TLT", action=Action.BUY,
+                        conviction=Conviction.HIGH, target_weight=tlt_weight,
+                        stop_loss=tlt_price * 0.93,
+                        reasoning=(
+                            f"CyclDef contraction: {sig_long}/{sig_short} ratio SMA "
+                            f"falling for {persistence}d, long TLT"
+                        ),
+                    )
+                )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
+# GARCH Regime Sizing (H4.4 — Family 4)
+# ---------------------------------------------------------------------------
+
+
+class GarchRegimeStrategy(Strategy):
+    """GARCH(1,1) volatility regime filter for equity sizing.
+
+    Fits GARCH(1,1) on SPY returns. When conditional variance exceeds 75th
+    percentile of trailing 252-day estimates, reduces equity to 30% and moves
+    rest to SHY. Low-vol regime: 90% equity.
+
+    Parameters:
+        target_symbol (str): Equity to size, default "SPY".
+        cash_instrument (str): Cash-like instrument, default "SHY".
+        regime_percentile (int): Percentile for high-vol cutoff, default 75.
+        percentile_window (int): Rolling window for percentile, default 252.
+        high_vol_weight (float): Equity weight in high-vol, default 0.30.
+        low_vol_weight (float): Equity weight in low-vol, default 0.90.
+        garch_p (int): GARCH lag order, default 1.
+        garch_q (int): ARCH lag order, default 1.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        self._last_regime: str | None = None
+        self._cond_var_history: list[float] = []
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        import numpy as np
+
+        params = self.config.parameters or {}
+        target_sym = str(params.get("target_symbol", "SPY"))
+        cash_sym = str(params.get("cash_instrument", "SHY"))
+        pctile = int(params.get("regime_percentile", 75))
+        pctile_window = int(params.get("percentile_window", 252))
+        high_vol_w = float(params.get("high_vol_weight", 0.30))
+        low_vol_w = float(params.get("low_vol_weight", 0.90))
+        garch_p = int(params.get("garch_p", 1))
+        garch_q = int(params.get("garch_q", 1))
+
+        # Get target symbol data
+        sym_data = indicators_df.filter(
+            pl.col("symbol") == target_sym
+        ).sort("date")
+
+        min_obs = pctile_window + 100  # Need enough history for GARCH fit
+        if len(sym_data) < min_obs:
+            return []
+
+        closes = sym_data["close"].to_list()
+        # Compute log returns
+        returns = np.array([
+            np.log(closes[i] / closes[i - 1])
+            for i in range(1, len(closes))
+            if closes[i] > 0 and closes[i - 1] > 0
+        ])
+
+        if len(returns) < min_obs:
+            return []
+
+        # Fit GARCH(1,1) — use recent data for fitting
+        try:
+            from arch import arch_model
+            model = arch_model(
+                returns * 100,  # arch expects percentage returns
+                vol="Garch", p=garch_p, q=garch_q,
+                mean="Zero", rescale=False,
+            )
+            result = model.fit(disp="off", show_warning=False)
+            cond_var = result.conditional_volatility[-1] ** 2
+        except Exception:
+            logger.warning("GARCH fit failed for %s, skipping", target_sym)
+            return []
+
+        self._cond_var_history.append(cond_var)
+
+        # Determine regime using rolling percentile
+        if len(self._cond_var_history) < 10:
+            return []
+
+        window = self._cond_var_history[-pctile_window:]
+        threshold = float(np.percentile(window, pctile))
+        regime = "high_vol" if cond_var > threshold else "low_vol"
+
+        # Only generate signals on regime change
+        if regime == self._last_regime:
+            return []
+
+        self._last_regime = regime
+
+        signals: list[TradeSignal] = []
+        target_price = prices.get(target_sym, 0)
+        cash_price = prices.get(cash_sym, 0)
+
+        if regime == "low_vol":
+            # Scale up equity
+            if cash_sym in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol=cash_sym, action=Action.CLOSE,
+                        conviction=Conviction.HIGH, target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"GARCH regime → low-vol: exit {cash_sym}",
+                    )
+                )
+            if target_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=target_sym, action=Action.BUY,
+                        conviction=Conviction.HIGH, target_weight=low_vol_w,
+                        stop_loss=target_price * 0.93,
+                        reasoning=(
+                            f"GARCH regime → low-vol: {target_sym}@{low_vol_w:.0%} "
+                            f"(cond_var={cond_var:.4f} < threshold={threshold:.4f})"
+                        ),
+                    )
+                )
+        else:
+            # Scale down equity, add cash
+            if target_sym in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol=target_sym, action=Action.CLOSE,
+                        conviction=Conviction.HIGH, target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"GARCH regime → high-vol: reduce {target_sym}",
+                    )
+                )
+            if target_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=target_sym, action=Action.BUY,
+                        conviction=Conviction.MEDIUM, target_weight=high_vol_w,
+                        stop_loss=target_price * 0.90,
+                        reasoning=(
+                            f"GARCH regime → high-vol: {target_sym}@{high_vol_w:.0%} "
+                            f"(cond_var={cond_var:.4f} > threshold={threshold:.4f})"
+                        ),
+                    )
+                )
+            cash_weight = low_vol_w - high_vol_w  # Move remainder to cash
+            if cash_price > 0 and cash_weight > 0.01:
+                signals.append(
+                    TradeSignal(
+                        symbol=cash_sym, action=Action.BUY,
+                        conviction=Conviction.MEDIUM, target_weight=cash_weight,
+                        stop_loss=cash_price * 0.99,
+                        reasoning=(
+                            f"GARCH regime → high-vol: {cash_sym}@{cash_weight:.0%} "
+                            f"(risk-off hedge)"
+                        ),
+                    )
+                )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -3928,6 +4387,9 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "vix_percentile_spike": VIXPercentileSpikeStrategy,
     "leveraged_mean_rev": LeveragedMeanRevStrategy,
     "adaptive_sector_momentum": AdaptiveSectorMomentumStrategy,
+    "skip_month_tsmom": SkipMonthTsmomStrategy,
+    "cyclical_defensive_rotation": CyclicalDefensiveRotationStrategy,
+    "garch_regime": GarchRegimeStrategy,
 }
 
 
