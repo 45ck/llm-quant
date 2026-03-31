@@ -1,0 +1,30 @@
+strategy_slug: "overnight-tqqq-sprint"
+strategy_type: "overnight_momentum"
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "overnight-tqqq-sprint-frozen-hash-placeholder"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+parameters:
+  ticker: "TQQQ"
+  signal: "overnight_return"
+  rebalance_frequency_days: 1
+  target_position_weight: 0.30
+  stop_loss_pct: 0.05
+cost_model:
+  spread_bps: 10.0
+  flat_slippage_bps: 5.0
+  slippage_volatility_factor: 0.2
+backtest_spec:
+  symbols: ["TQQQ"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 30
+benchmark:
+  symbols:
+    QQQ: 1.00
+family: "microstructure_leveraged"
+track: "D"
+created_at: "2026-03-31"
+updated_at: "2026-03-31"
