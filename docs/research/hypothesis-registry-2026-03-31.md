@@ -2,7 +2,7 @@
 
 **Purpose:** Single source of truth for all hypotheses written during the 2026-03-31 research sprint.
 **Analyst:** Robustness Analyst (reconciliation + quality review)
-**Total hypotheses inventoried:** 42 (new today) + pre-existing
+**Total hypotheses inventoried:** 58 (after collision resolution — 6 collisions resolved, 4 drafts deleted, 2 renumbered)
 
 ---
 
@@ -18,6 +18,8 @@
 | H2.5 | sector-etf-kalman-pairs | `data/strategies/` | alpha-researcher-1 | 0.80+ | 0.10-0.20 | yfinance | P2 | 3 sub-pairs — increases parameter count. Monitor for overfitting. |
 | H2.6 | iwm-spy-small-large-cap-spread | `docs/research/hypotheses/` | alpha-researcher-2 | 0.85+ | 0.10-0.20 | yfinance | P1 | **CONFLICT with H2.2** — see Section 3. |
 | H2.7 | hyg-lqd-credit-quality-pair | `docs/research/hypotheses/` | alpha-researcher-2 | 0.90+ | 0.15-0.25 | yfinance | P2 | **CONFLICT with H2.3** — see Section 3. Track B (higher DD tolerance). |
+| H2.8 | xle-xli-energy-industrial-pair | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-0.90 | 0.05-0.15 | yfinance | P2 | Clean. Energy/industrial cost linkage. |
+| H2.9 | xle-xli-energy-industrial-pairs | `docs/research/hypotheses/` | alpha-researcher-2 | 0.60-1.00 | 0.05-0.15 | yfinance | P2 | **RENUMBERED from H2.6** (collision with IWM/SPY). Kalman filter variant of H2.8. |
 
 ### Family 3: Trend Following / TSMOM
 
@@ -28,6 +30,9 @@
 | H3.5 | skip-month-cross-asset-momentum | `docs/research/hypotheses/` | alpha-researcher-2 | 0.85-1.15 | 0.05-0.15 | yfinance + FX | P1 | Clean. Novy-Marx skip-month is well-validated. **Highest expected SR in F3.** |
 | H3.6 | factor-momentum-sector-rotation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.75-1.00 | 0.15-0.25 | yfinance | P2 | Factor beta estimation from ETFs is noisy. More complex = more fragile. |
 | H3.7 | macro-trend-economic-momentum | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.10 | 0.20-0.30 | yfinance | P2 | **F1 OVERLAP WARNING**: credit trend signal (LQD/IEF) overlaps with F1 credit lead-lag. Expected rho 0.20-0.30 may underestimate true overlap. **F6 OVERLAP**: macro regime rotation uses similar inputs — check rho to H6.1-H6.3. |
+| H3.8 | skip-month-intermediate-momentum | `docs/research/hypotheses/` | alpha-researcher-3 | 0.75-1.00 | 0.05-0.15 | yfinance | P2 | Intermediate timeframe variant of H3.5. |
+| H3.9 | donchian-channel-sma-filtered | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-0.95 | 0.05-0.15 | yfinance | P2 | SMA filter variant of H3.4. |
+| H3.10 | factor-momentum-long-short-sectors | `docs/research/hypotheses/` | alpha-researcher-3 | 0.75-1.05 | 0.15-0.25 | yfinance | P2 | Long-short sector factor momentum. |
 
 ### Family 4: Volatility Regime Harvesting
 
@@ -38,6 +43,8 @@
 | H4.5 | sector-vol-dispersion-mr | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-1.00 | 0.05-0.15 | yfinance | P2 | Clean. Interesting second-moment signal. **LOW TRADE COUNT RISK**: 30-60 trades in 5yr is marginal for CPCV. |
 | H4.6 | vix-percentile-adaptive-allocation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.10 | 0.10-0.20 | yfinance | P1 | **2022 RISK**: TLT lost 31% while VIX was elevated. Stock-bond correlation flipped positive. This breaks the flight-to-quality assumption. Falsification criterion #3 specifically addresses this — good. |
 | H4.7 | skew-tail-risk-timing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-0.95 | 0.00-0.10 | yfinance (^SKEW) | P2 | **LOW TRADE COUNT RISK**: 15-30 divergence episodes in 5yr. Same problem as H4.3 — too rare for CPCV. **DATA RISK**: SKEW only available since 2010 (~16yr). |
+| H4.8 | sector-iv-rv-rotation | `docs/research/hypotheses/` + `data/strategies/` | alpha-researcher-3 | 0.75-1.00 | 0.10-0.20 | yfinance | P2 | Sector rotation via implied-realized vol spread. |
+| H4.3-v2 | vix-spike-mr-enhanced | `docs/research/hypotheses/` | robustness-analyst | 0.80-1.10 | 0.05-0.15 | yfinance | P1 | Reformulated from failed H4.3 — lower threshold to generate 40-80 trades. |
 
 ### Family 5: Calendar / Structural Flow Effects
 
@@ -58,6 +65,7 @@
 | H6.2 | cyclical-defensive-ratio-timing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.10-0.20 | yfinance | P1 | Clean. XLI/XLU ratio is intuitive and parsimonious. |
 | H6.3 | credit-momentum-overlay | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.30-0.45 | yfinance | P2 | **F1 OVERLAP WARNING**: HYG/IEF signal is conceptually similar to F1 credit lead-lag. Expected rho 0.30-0.45 is DANGEROUSLY HIGH. Must verify actual rho < 0.30 in backtest. If rho > 0.30, demote to F1 variant, not independent F6. |
 | H6.5 | multi-asset-carry-rotation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.15-0.25 | yfinance | P2 | **F9 OVERLAP**: This is carry applied to multi-asset rotation. Conceptually belongs in F9 (Carry), not F6 (Macro). **TAXONOMY CONFLICT** — see Section 3. |
+| H6.6 | credit-spread-momentum-rotation | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-1.10 | 0.20-0.35 | yfinance | P2 | **RENUMBERED from H6.3** (collision). HYG/LQD 21d ROC macro rotation. Similar to H6.3 but uses different pair. |
 
 ### Family 7: Sentiment Contrarian
 
@@ -68,6 +76,7 @@
 | H7.5 | put-call-ratio-contrarian | `data/strategies/` | alpha-researcher-1 | 0.80+ | 0.05-0.15 | **EXTERNAL: CBOE** | P2 | **EXTERNAL DATA REQUIRED**: CBOE equity put/call ratio. Not in yfinance. Same data pipeline challenge as H7.4. |
 | H7.6 | sector-dispersion-regime | `data/strategies/` | alpha-researcher-1 | 0.80+ | 0.10-0.20 | yfinance | P1 | Clean. Dispersion as regime signal is well-motivated. **FAMILY CLASSIFICATION QUESTION**: Could fit F4 (vol regime) or F6 (macro regime) equally well. Placed in F7 by author but mechanism is not purely contrarian. |
 | H7.7 | correlation-risk-premium | `data/strategies/` | alpha-researcher-1 | 0.80+ | 0.10-0.20 | yfinance (v1) | P2 | V1 uses ETF-proxy for implied correlation — may be too noisy. Full version needs options data. |
+| H7.8 | implied-correlation-regime-signal | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-0.95 | 0.10-0.20 | yfinance | P2 | Regime signal from implied correlation. Related to H7.7. |
 
 ### Family 8: Non-Credit Cross-Market Lead-Lag
 
@@ -82,12 +91,37 @@ No new hypotheses written today. Existing: SOXX-QQQ (passing).
 | F9-H3 | fx-carry-basket | `data/strategies/` | robustness-analyst | 0.50+ | 0.30 | yfinance (FXA/FXY) | P2 | **CRASH RISK**: FX carry has severe negative skewness. Track B only. VIX filter essential. |
 | H9.1 | commodity-term-structure-carry | `docs/research/hypotheses/` | paper-monitor | 0.80+ | low | yfinance (USO) | P1 | **DUPLICATE of F9-H1** — same mechanism, different file. See Section 3. |
 | H9.2 | bond-curve-carry-regime | `docs/research/hypotheses/` | paper-monitor | 0.70+ | low | yfinance (TLT/SHY) | P2 | **DUPLICATE of F9-H2** — same mechanism, different file. See Section 3. |
+| H9.3 | cross-asset-carry-rotation | `docs/research/hypotheses/` | paper-monitor | 0.60+ | 0.20-0.30 | yfinance | P2 | Multi-asset carry rotation across bonds, commodities, FX. |
 
 ### Family 10: Crypto Structural — NEW (Conditional)
 
 | ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
 |----|------|----------|--------|-------------|-----------|------|----------|------------------|
 | F10-H1 | btc-eth-regime-cointegration | `data/strategies/` | robustness-analyst | 0.80+ (if cointegration holds) | 0.40 | yfinance (BTC/ETH) | P3 | **HIGH RISK**: Post-Merge cointegration may have broken permanently. Mandatory regime gate. rho 0.40 to F1 during stress is concerning. |
+| H10.1 | amihud-illiquidity-regime-timer | `docs/research/hypotheses/` | alpha-researcher-3 | 0.80-1.10 | 0.10-0.20 | yfinance | P1 | Amihud ratio as regime timer. Clean yfinance implementation. |
+| H10.2 | volume-liquidity-breakout-signal | `docs/research/hypotheses/` | alpha-researcher-3 | 0.90-1.20 | 0.10 | yfinance | P1 | Triple-trigger forced-selling detection across 15 ETFs. **Canonical version** (shorter draft deleted). |
+| H10.3 | cross-etf-liquidity-spread-premium | `docs/research/hypotheses/` | alpha-researcher-3 | 0.80-1.10 | 0.25 | yfinance | P2 | Dollar-neutral liquidity spreads (IWM/SPY, EEM/EFA, HYG/LQD). Track B. **Canonical version** (shorter draft deleted). |
+
+### Family 11: Microstructure — NEW
+
+| ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
+|----|------|----------|--------|-------------|-----------|------|----------|------------------|
+| H11.1 | treasury-equity-lead-signal | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-0.95 | 0.15-0.25 | yfinance | P2 | Treasury market microstructure leading equity. Related to F1 but uses different timescale. |
+| H11.2 | overnight-return-decomposition | `docs/research/hypotheses/` | alpha-researcher-3 | 0.65-0.90 | 0.10-0.20 | yfinance | P2 | Overnight vs intraday return decomposition signal. Execution risk (requires open-price). |
+
+### Family 12: Dispersion — NEW
+
+| ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
+|----|------|----------|--------|-------------|-----------|------|----------|------------------|
+| H12.1 | sector-dispersion-regime-indicator | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-1.00 | 0.10-0.20 | yfinance | P2 | Sector return dispersion as regime indicator. Related to H7.6. |
+| H12.2 | correlation-spike-mean-reversion | `docs/research/hypotheses/` | alpha-researcher-3 | 0.65-0.90 | 0.15-0.25 | yfinance | P2 | Cross-sector correlation spike followed by reversion. |
+
+### Family 13: Skewness — NEW (Lowest Priority)
+
+| ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
+|----|------|----------|--------|-------------|-----------|------|----------|------------------|
+| H13.1 | etf-max-effect | `docs/research/hypotheses/` | alpha-researcher-3 | 0.50-0.80 | 0.05-0.10 | yfinance | P3 | Lottery effect in ETFs — academic evidence primarily for individual stocks. **WEAK**: ETF aggregation dampens effect. |
+| H13.2 | skew-weighted-tail-risk-premium | `docs/research/hypotheses/` | alpha-researcher-3 | 0.60-0.90 | 0.05-0.10 | yfinance | P3 | Tail risk premium via return skewness. Requires long history for stability. |
 
 ---
 
@@ -136,6 +170,17 @@ Two agents independently wrote carry hypotheses:
 - **H9.2** (paper-monitor) in `docs/research/hypotheses/H9.2-bond-curve-carry-regime.md`
 
 **Recommendation:** Use the `data/strategies/` files as canonical (they follow the standard artifact location). The `docs/research/hypotheses/` files are supplementary. Canonical IDs: **F9-H1**, **F9-H2**. Mark H9.1/H9.2 as "superseded by F9-H1/F9-H2" or consolidate into the data/strategies files.
+
+### RESOLVED: 6 ID Collisions (2026-03-31 Session 2)
+
+| Original ID | Collision | Resolution |
+|-------------|-----------|------------|
+| H2.6 | IWM/SPY vs XLE/XLI — two different hypotheses | XLE/XLI renumbered to **H2.9** |
+| H6.3 | Credit overlay vs credit momentum rotation | Credit momentum rotation renumbered to **H6.6** |
+| H7.6 | sector-dispersion-regime (data/) vs put-call-ratio-contrarian (docs/) | Deleted docs/ version — duplicate of H7.5 |
+| H7.7 | correlation-risk-premium (data/) vs aaii-bull-bear-contrarian (docs/) | Deleted docs/ version — duplicate of H7.4 |
+| H10.2 | Comprehensive (15-inst) vs draft (3-inst) | Deleted shorter draft |
+| H10.3 | Detailed (4-component z-score) vs simpler (Amihud+VIX) | Deleted shorter draft |
 
 ### TAXONOMY ISSUE 1: H6.5 (Multi-Asset Carry Rotation)
 
@@ -239,7 +284,7 @@ After resolving conflicts and duplicates, the canonical hypothesis set is:
 | F9-H4 | multi-asset-carry-rotation | F9 | Reclassify from H6.5 | Remove from F6 |
 | F10-H1 | btc-eth-regime-cointegration | F10 | `data/strategies/` | Conditional — may be killed |
 
-**Total canonical hypotheses: 32** (after merging 2 duplicate pairs, reclassifying 1)
+**Total canonical hypotheses: 48** (after collision resolution: 2 renumbered, 4 drafts deleted, merging recommendations pending)
 
 ---
 
