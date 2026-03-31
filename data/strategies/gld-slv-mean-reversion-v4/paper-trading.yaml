@@ -67,7 +67,7 @@ total_trades: 0
 # Gate thresholds (Track A)
 gate_thresholds:
   min_days: 30
-  min_trades: 20
+  min_trades: 50       # corrected from 20 — model-promotion-policy.md requires 50
   min_sharpe: 0.60
   max_drawdown_pct: 15.0
   max_slippage_drift_bps: 5.0

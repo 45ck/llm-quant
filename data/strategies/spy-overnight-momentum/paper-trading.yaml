@@ -24,7 +24,7 @@ performance:
 # Paper trading gate criteria (must pass ALL before /promote)
 gate_criteria:
   min_days: 30
-  min_trades: 20        # higher min_trades for intraday strategy (more frequent signals)
+  min_trades: 50        # corrected from 20 — model-promotion-policy.md requires 50
   sharpe_floor: 0.50
   max_drawdown_limit: 0.15
   slippage_drift_limit: 5.0

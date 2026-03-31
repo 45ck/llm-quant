@@ -34,7 +34,7 @@ performance:
 # Paper trading gate criteria — Track D gates
 gate_criteria:
   min_days: 60             # Track D: 60-day validation
-  min_trades: 20           # BTC: lower trade frequency expected
+  min_trades: 30           # corrected from 20 — Track D requires 30 trades minimum
   sharpe_floor: 0.50       # OOS Sharpe must stay above floor
   max_drawdown_limit: 0.40 # Track D allows 40% maxDD
   max_hold_days: 5         # Track D forced exit after 5 calendar days
@@ -80,6 +80,10 @@ gate_evaluation:
     60-day validation period required before promotion.
     Note: backtest used $10M synthetic capital for integer-share engine.
     Real deployment uses fractional shares — scale returns proportionally.
+    WARNING: Backtest DSR (0.9376) barely passes Track D minimum gate (0.90).
+    This is the weakest integrity metric in the Track D pipeline. If paper
+    trading DSR drops below 0.90, strategy should be paused for review.
+    Monitor DSR weekly starting 2026-04-14 (when sufficient data exists).
 
 created_at: "2026-03-31"
 updated_at: "2026-03-31"
