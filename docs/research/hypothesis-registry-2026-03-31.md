@@ -3,6 +3,7 @@
 **Purpose:** Single source of truth for all hypotheses written during the 2026-03-31 research sprint.
 **Analyst:** Robustness Analyst (reconciliation + quality review)
 **Total hypotheses inventoried:** 58 (after collision resolution — 6 collisions resolved, 4 drafts deleted, 2 renumbered)
+**Backtested this session:** 22 strategies across Sprints 1-6 — 5 passed (22.7% pass rate)
 
 ---
 
@@ -27,7 +28,7 @@
 |----|------|----------|--------|-------------|-----------|------|----------|------------------|
 | H3.3 | multi-timeframe-tsmom-ensemble | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.05 | 0.05-0.15 | yfinance + FX | P1 | Clean. Majority vote is a good de-noising approach. FX data needs `EURUSD=X` format. |
 | H3.4 | donchian-breakout-multi-asset | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-0.95 | 0.05-0.15 | yfinance + FX | P2 | Clean. Fewest parameters (2) = lowest overfitting risk. Good Occam baseline. |
-| H3.5 | skip-month-cross-asset-momentum | `docs/research/hypotheses/` | alpha-researcher-2 | 0.85-1.15 | 0.05-0.15 | yfinance + FX | P1 | Clean. Novy-Marx skip-month is well-validated. **Highest expected SR in F3.** |
+| H3.5 | skip-month-cross-asset-momentum | `docs/research/hypotheses/` | alpha-researcher-2 | 0.85-1.15 | 0.05-0.15 | yfinance + FX | P1 | **BACKTESTED Sprint 2: FAIL** — Sharpe 0.585, MaxDD 6.44%. Worse than H3.1. Skip-month removes helpful recent info. |
 | H3.6 | factor-momentum-sector-rotation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.75-1.00 | 0.15-0.25 | yfinance | P2 | Factor beta estimation from ETFs is noisy. More complex = more fragile. |
 | H3.7 | macro-trend-economic-momentum | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.10 | 0.20-0.30 | yfinance | P2 | **F1 OVERLAP WARNING**: credit trend signal (LQD/IEF) overlaps with F1 credit lead-lag. Expected rho 0.20-0.30 may underestimate true overlap. **F6 OVERLAP**: macro regime rotation uses similar inputs — check rho to H6.1-H6.3. |
 | H3.8 | skip-month-intermediate-momentum | `docs/research/hypotheses/` | alpha-researcher-3 | 0.75-1.00 | 0.05-0.15 | yfinance | P2 | Intermediate timeframe variant of H3.5. |
@@ -39,7 +40,7 @@
 | ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
 |----|------|----------|--------|-------------|-----------|------|----------|------------------|
 | H4.3 | vix-spike-mean-reversion | `data/strategies/` | quant-researcher | 1.08 (backtest) | 0.05-0.15 | yfinance | — | **FAILED ROBUSTNESS** — 8 trades, DSR misleading, CPCV cannot run. See `docs/research/results/h4.3-vix-spike-mr-robustness.md`. Needs reformulation as v2. |
-| H4.4 | garch-regime-equity-sizing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.05 | 0.10-0.20 | yfinance | P1 | Clean. GARCH(1,1) is well-established. Requires `arch` Python package. |
+| H4.4 | garch-regime-equity-sizing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.05 | 0.10-0.20 | yfinance | P1 | **BACKTESTED Sprint 2+3: FAIL** — v1 Sharpe 0.605, v2 (persistence filter) 0.723. Improved but still misses 0.80 gate. Best F4 candidate. |
 | H4.5 | sector-vol-dispersion-mr | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-1.00 | 0.05-0.15 | yfinance | P2 | Clean. Interesting second-moment signal. **LOW TRADE COUNT RISK**: 30-60 trades in 5yr is marginal for CPCV. |
 | H4.6 | vix-percentile-adaptive-allocation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80-1.10 | 0.10-0.20 | yfinance | P1 | **2022 RISK**: TLT lost 31% while VIX was elevated. Stock-bond correlation flipped positive. This breaks the flight-to-quality assumption. Falsification criterion #3 specifically addresses this — good. |
 | H4.7 | skew-tail-risk-timing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.70-0.95 | 0.00-0.10 | yfinance (^SKEW) | P2 | **LOW TRADE COUNT RISK**: 15-30 divergence episodes in 5yr. Same problem as H4.3 — too rare for CPCV. **DATA RISK**: SKEW only available since 2010 (~16yr). |
@@ -50,7 +51,7 @@
 
 | ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
 |----|------|----------|--------|-------------|-----------|------|----------|------------------|
-| H5.4 | turn-of-month-broad-equities | `docs/research/hypotheses/` | alpha-researcher-2 | 0.65-0.90 | 0.10-0.20 | yfinance | P1 | Clean. Well-documented anomaly. ~120 trades in 5yr = adequate for CPCV. |
+| H5.4 | turn-of-month-broad-equities | `docs/research/hypotheses/` | alpha-researcher-2 | 0.65-0.90 | 0.10-0.20 | yfinance | P1 | **BACKTESTED Sprint 2: KILL** — Sharpe -0.226, return -7.28%. TOM anomaly arbitraged away in 2022-2026 period. |
 | H5.5 | pre-holiday-equity-drift | `docs/research/hypotheses/` | alpha-researcher-2 | 0.40-0.70 | 0.05-0.10 | yfinance | P3 | **LOW TRADE COUNT**: ~50 trades in 5yr. **LOW SR**: expected 0.40-0.70 may not pass Sharpe >= 0.80 gate. Best as portfolio diversifier, not standalone. |
 | H5.6 | january-small-cap-premium | `docs/research/hypotheses/` | alpha-researcher-2 | 0.35-0.60 | 0.05-0.10 | yfinance | P3 | **CRITICALLY LOW TRADE COUNT**: 5 trades in 5yr (1/year). **CANNOT PASS any robustness gate.** Needs 20+ years of data minimum. Effect weakened since publication. |
 | H5.7 | btc-tuesday-effect | `docs/research/hypotheses/` | alpha-researcher-2 | 0.40-0.70 | 0.00-0.10 | yfinance (crypto) | P3 | **WEAK MECHANISM**: Day-of-week effects in crypto are unstable. BTC market structure changed dramatically (ETF approvals, institutional adoption). Likely data-mined in short sample. |
@@ -62,7 +63,7 @@
 | ID | Slug | Location | Author | Expected SR | rho to F1 | Data | Priority | Robustness Notes |
 |----|------|----------|--------|-------------|-----------|------|----------|------------------|
 | H6.1 | real-yield-threshold-rotation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.15-0.25 | yfinance (TIP/IEF proxy) | P1 | Clean. Real yield is a strong macro signal. TIP/IEF proxy avoids FRED dependency. |
-| H6.2 | cyclical-defensive-ratio-timing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.10-0.20 | yfinance | P1 | Clean. XLI/XLU ratio is intuitive and parsimonious. |
+| H6.2 | cyclical-defensive-ratio-timing | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.10-0.20 | yfinance | P1 | **BACKTESTED Sprint 2: KILL** — Sharpe -0.622, MaxDD 37.48%, return -30.90%. Devastated by 2022 regime break. |
 | H6.3 | credit-momentum-overlay | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.30-0.45 | yfinance | P2 | **F1 OVERLAP WARNING**: HYG/IEF signal is conceptually similar to F1 credit lead-lag. Expected rho 0.30-0.45 is DANGEROUSLY HIGH. Must verify actual rho < 0.30 in backtest. If rho > 0.30, demote to F1 variant, not independent F6. |
 | H6.5 | multi-asset-carry-rotation | `docs/research/hypotheses/` | alpha-researcher-2 | 0.80+ | 0.15-0.25 | yfinance | P2 | **F9 OVERLAP**: This is carry applied to multi-asset rotation. Conceptually belongs in F9 (Carry), not F6 (Macro). **TAXONOMY CONFLICT** — see Section 3. |
 | H6.6 | credit-spread-momentum-rotation | `docs/research/hypotheses/` | alpha-researcher-3 | 0.70-1.10 | 0.20-0.35 | yfinance | P2 | **RENUMBERED from H6.3** (collision). HYG/LQD 21d ROC macro rotation. Similar to H6.3 but uses different pair. |
@@ -235,13 +236,35 @@ H6.3 uses HYG/IEF as a credit momentum signal. This is dangerously close to F1 (
 | H2.5 | Sector pairs portfolio — diversified across 3 sub-pairs |
 | H3.3 | Multi-timeframe TSMOM — well-motivated majority vote |
 | H3.4 | Donchian breakout — simplest F3 model, good Occam baseline |
-| H3.5 | Skip-month TSMOM — highest expected SR in F3, Novy-Marx validated |
-| H4.4 | GARCH regime — well-established model |
 | H4.6 | VIX percentile adaptive — continuous allocation avoids whipsaw |
-| H5.4 | Turn-of-month — ~120 trades, well-documented |
 | H6.1 | Real yield rotation — strong macro signal |
-| H6.2 | Cyclical/defensive ratio — parsimonious |
 | H7.6 | Sector dispersion regime — clean, yfinance data |
+
+### BACKTESTED — Sprint 1-6 Results (2026-03-31)
+
+| Hypothesis | Family | Sharpe | MaxDD | DSR | Verdict | Sprint |
+|------------|--------|--------|-------|-----|---------|--------|
+| SPY Overnight Momentum | F11 | 1.044 | 8.68% | 0.982 | **PASS A+B** | 5 |
+| AGG-SPY Credit Lead | F1 | 1.012 | 8.34% | 0.981 | **PASS A+B** | 4 |
+| LQD-TQQQ Sprint | F1/D | 0.963 | 11.88% | 0.977 | **PASS A** | 6 |
+| AGG-QQQ Credit Lead | F1 | 0.888 | 12.30% | 0.965 | **PASS A** | 3 |
+| EMB-SPY Credit Lead | F1 | 0.829 | 12.85% | 0.955 | **PASS A** | 4 |
+| VCIT-QQQ Credit Lead | F1 | 0.783 | 16.00% | 0.944 | FAIL | 5 |
+| HYG-SPY-5D Credit Lead | F1 | 0.752 | 14.02% | 0.937 | FAIL | 4 |
+| AGG-EFA Credit Lead | F1 | 0.724 | 12.16% | 0.931 | FAIL | 3 |
+| H4.4-v2 GARCH Persist. | F4 | 0.723 | 10.23% | 0.931 | FAIL (best F4) | 3 |
+| H3.1 Vol-Scaled TSMOM | F3 | 0.719 | 2.77% | 0.698 | FAIL (best F3) | 1 |
+| LQD-QQQ Credit Lead | F1 | 0.719 | 16.00% | 0.928 | FAIL | 5 |
+| HYG-QQQ Credit Lead | F1 | 0.609 | 17.44% | 0.893 | FAIL | 5 |
+| H4.4 GARCH Regime | F4 | 0.605 | 12.44% | 0.891 | FAIL | 2 |
+| H3.1-v2 Relaxed TSMOM | F3 | 0.593 | 3.82% | 0.875 | FAIL (regressed) | 3 |
+| H3.5 Skip-Month TSMOM | F3 | 0.585 | 6.44% | 0.882 | FAIL | 2 |
+| H4.2 VRP Timing | F4 | 0.539 | 10.69% | 0.604 | FAIL | 1 |
+| H6.4 Macro Barometer | F6 | 0.446 | 20.79% | 0.649 | FAIL | 1 |
+| VIX Backwardation | F4 | 0.273 | 19.33% | 0.383 | FAIL | 5 |
+| H7.2 RSI-2 Contrarian | F7 | -0.023 | 4.20% | 0.184 | **KILL** | 1 |
+| H5.4 Turn-of-Month | F5 | -0.226 | 12.81% | 0.321 | **KILL** | 2 |
+| H6.2 Cyclical/Defensive | F6 | -0.622 | 37.48% | 0.102 | **KILL** | 2 |
 
 ---
 

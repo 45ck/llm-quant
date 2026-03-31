@@ -178,14 +178,18 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (5 questions, stop at first "no")
 
-**Current status:** 2 of 8 mechanism families with passing strategies.
-- Family 1 (Cross-Asset Information Flow): 10 strategies passing — STRONG, stop adding
+**Current status:** 3 of 13 mechanism families with passing strategies.
+- Family 1 (Cross-Asset Information Flow): 13+ strategies passing — SATURATED, stop adding
 - Family 8 (Non-Credit Lead-Lag): 1 strategy (SOXX-QQQ) — expand
-- Families 2-7: UNTESTED — highest priority research targets
+- Family 11 (Microstructure): 1 strategy (SPY Overnight Momentum, Sharpe 1.044) — NEW, expand
+- Families 2-7, 9-10, 12-13: tested F3/F4/F5/F6/F7 — all failed. F2/F9/F10/F12/F13 untested.
+- **Sprint 1-6 results** (2026-03-31): 22 strategies tested, 5 passed (22.7% pass rate).
+  Top results: SPY Overnight (1.044), AGG-SPY (1.012), LQD-TQQQ (0.963), AGG-QQQ (0.888), EMB-SPY (0.829).
+  See `docs/research/results/sprint-{1-6}-backtest-results-2026-03-31.md`.
 
 **Corrected portfolio SR estimate (with correlation):**
-- Current 11 strategies, avg ρ=0.584 → actual combined SR ≈ 1.35 (not 2.3)
-- The 2.3 estimate assumed zero correlation — incorrect for a credit-heavy portfolio
+- Current 14+ strategies, avg ρ~0.50 → actual combined SR ≈ 1.4-1.6 (F1-heavy)
+- Adding F11 (SPY Overnight, ρ~0.10 to F1) improves effective diversification
 - Formula: SR_P = SR × √(N / (1 + (N-1)×ρ))
 - Target: 8+ strategies across 5+ families, avg ρ < 0.20 → SR ~2.0–2.5
 
