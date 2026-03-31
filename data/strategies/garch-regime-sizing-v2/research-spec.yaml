@@ -1,0 +1,59 @@
+# Research Spec: garch-regime-sizing-v2 (H4.4 iteration — persistence filter)
+strategy_slug: garch-regime-sizing-v2
+strategy_type: garch_regime
+
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Iteration of H4.4: add 3-day regime persistence filter + 80th percentile threshold.
+# H4.4 showed anomalous improvement at 1.5x costs (Sharpe 0.605→0.802) because
+# higher costs filtered marginal trades (77→59 trades). The persistence filter
+# replicates this effect at base costs by requiring the GARCH regime to persist
+# for 3 consecutive days before switching.
+
+parameters:
+  target_symbol: SPY
+  cash_instrument: SHY
+  regime_percentile: 80
+  percentile_window: 252
+  high_vol_weight: 0.30
+  low_vol_weight: 0.90
+  garch_p: 1
+  garch_q: 1
+  regime_persistence: 3
+  rebalance_frequency_days: 1
+  target_position_weight: 0.90
+  stop_loss_pct: 0.07
+
+parameter_rationale:
+  regime_percentile: "80th (up from 75th). Wider band reduces whipsaw, only reacts to stronger vol signals."
+  regime_persistence: "3 days. Require GARCH regime to persist 3 consecutive days before switching. Mimics the cost-filtering effect observed at 1.5x costs in H4.4 v1."
+
+backtest_spec:
+  symbols:
+  - SPY
+  - SHY
+  years: 5
+  initial_capital: 100000
+  warmup_days: 300
+  cost_model:
+    spread_bps: 5
+    commission_per_trade: 1.0
+    slippage_bps: 2
+  benchmark:
+    symbols:
+      SPY: 0.60
+      TLT: 0.40
+
+family: volatility_regime
+family_trial_number: 2
+family_prior_trials: 1
+track: "A"
+mechanism_family: 4
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"

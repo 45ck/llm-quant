@@ -4216,6 +4216,8 @@ class GarchRegimeStrategy(Strategy):
         super().__init__(config)
         self._last_regime: str | None = None
         self._cond_var_history: list[float] = []
+        self._pending_regime: str | None = None
+        self._pending_count: int = 0
 
     def generate_signals(
         self,
@@ -4235,6 +4237,7 @@ class GarchRegimeStrategy(Strategy):
         low_vol_w = float(params.get("low_vol_weight", 0.90))
         garch_p = int(params.get("garch_p", 1))
         garch_q = int(params.get("garch_q", 1))
+        regime_persistence = int(params.get("regime_persistence", 0))
 
         # Get target symbol data
         sym_data = indicators_df.filter(
@@ -4280,11 +4283,28 @@ class GarchRegimeStrategy(Strategy):
         threshold = float(np.percentile(window, pctile))
         regime = "high_vol" if cond_var > threshold else "low_vol"
 
-        # Only generate signals on regime change
-        if regime == self._last_regime:
+        # Persistence filter: require N consecutive days in new regime
+        if regime_persistence > 0:
+            if regime != self._last_regime:
+                if regime == self._pending_regime:
+                    self._pending_count += 1
+                else:
+                    self._pending_regime = regime
+                    self._pending_count = 1
+                if self._pending_count < regime_persistence:
+                    return []  # Not enough consecutive days yet
+            else:
+                self._pending_regime = None
+                self._pending_count = 0
+                return []
+
+        # Only generate signals on regime change (no persistence) or confirmed change
+        if regime_persistence == 0 and regime == self._last_regime:
             return []
 
         self._last_regime = regime
+        self._pending_regime = None
+        self._pending_count = 0
 
         signals: list[TradeSignal] = []
         target_price = prices.get(target_sym, 0)

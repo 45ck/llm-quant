@@ -1,0 +1,58 @@
+# Research Spec: vol-scaled-tsmom-v2 (H3.1 iteration — relaxed parameters)
+strategy_slug: "vol-scaled-tsmom-v2"
+strategy_type: "vol_scaled_tsmom"
+
+frozen: true
+frozen_at: "2026-03-31T00:00:00Z"
+frozen_by: "claude-opus-4-6"
+frozen_hash: "e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2"
+modification_lock: >
+  This spec is FROZEN. Parameter changes require a new spec version.
+
+# Iteration of H3.1: increase vol_target from 10% to 15%, allow shorts.
+# H3.1 had Sharpe 0.719 with excellent risk (MaxDD 2.77%) but insufficient return.
+# This iteration aims to increase return by relaxing conservatism.
+
+parameters:
+  lookbacks: [21, 63, 252]
+  blend_weights: [0.333, 0.333, 0.334]
+  vol_target: 0.15
+  vol_window: 126
+  max_vol_scalar: 2.0
+  flat_threshold: 0.2
+  rebalance_frequency_days: 5
+  target_weight: 0.15
+  allow_short: true
+
+cost_model:
+  spread_bps: 5.0
+  flat_slippage_bps: 3.0
+  slippage_volatility_factor: 0.2
+  commission_per_share: 0.0
+  min_commission: 0.0
+
+parameter_rationale:
+  vol_target: "15% annualized (up from 10%). Increases position sizing to boost returns while staying within Track A risk limits."
+  allow_short: "True (was false). Allows shorting down-trending assets. Captures both legs of momentum signal."
+  lookbacks: "21/63/252 days — unchanged from H3.1. Same signal construction."
+  blend_weights: "Equal-weight 1/3 — unchanged."
+
+backtest_spec:
+  symbols: ["SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "IEF", "AGG", "HYG", "GLD", "SLV", "USO", "DBC", "UUP"]
+  years: 5
+  initial_capital: 100000
+  warmup_days: 300
+
+benchmark:
+  symbols:
+    SPY: 0.60
+    TLT: 0.40
+
+family: "vol_scaled_tsmom"
+family_trial_number: 4
+family_prior_trials: 3
+track: "A"
+mechanism_family: 3
+
+created_at: "2026-03-31"
+updated_at: "2026-03-31"
