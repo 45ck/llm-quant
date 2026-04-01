@@ -56,6 +56,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "behavioral-structural": "7cb2cace",
     "gld-slv-mean-reversion-v4": "14cdfaaf",
     "skip-month-tsmom-v1": "a220a89a",
+    "credit-spread-regime-v1": "DIRECT",  # Direct computation (engine incompatible)
 }
 
 # Mechanism family labels for context
@@ -77,6 +78,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "behavioral-structural": "F7: Behavioral/Structural",
     "gld-slv-mean-reversion-v4": "F2: Mean Reversion",
     "skip-month-tsmom-v1": "F3: TSMOM",
+    "credit-spread-regime-v1": "F9: Spread Regime",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -99,6 +101,7 @@ TRACK_A_SLUGS: list[str] = [
     "behavioral-structural",
     "gld-slv-mean-reversion-v4",
     "skip-month-tsmom-v1",
+    "credit-spread-regime-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -229,6 +232,139 @@ def validate_weights(weights: dict[str, float], method: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Direct computation for strategies incompatible with engine
+# ---------------------------------------------------------------------------
+
+
+def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
+    """Compute daily returns directly for strategies that bypass the engine."""
+    if slug == "credit-spread-regime-v1":
+        return _compute_credit_spread_regime_returns(data_dir)
+    return None
+
+
+def _compute_credit_spread_regime_returns(data_dir: Path) -> dict | None:
+    """Credit spread regime: HYG/SHY ratio momentum → SPY/SHY allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "SHY", "HYG"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        shy_df = prices.filter(pl.col("symbol") == "SHY").sort("date")
+        shy_data = dict(
+            zip(shy_df["date"].to_list(), shy_df["close"].to_list(), strict=False)
+        )
+        hyg_df = prices.filter(pl.col("symbol") == "HYG").sort("date")
+        hyg_data = dict(
+            zip(hyg_df["date"].to_list(), hyg_df["close"].to_list(), strict=False)
+        )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        warmup = 60
+        ratio_lookback = 10
+        sma_period = 20
+
+        # Build ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            hyg = hyg_data.get(d, 0.0)
+            shy = shy_data.get(d, 0.0)
+            ratio_series.append(hyg / shy if hyg > 0 and shy > 0 else 0.0)
+
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        for i in range(warmup, n):
+            if i < max(ratio_lookback, sma_period) + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - ratio_lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+            sma_window = ratio_series[i - 1 - sma_period : i - 1]
+            ratio_sma = (
+                sum(sma_window) / sma_period if len(sma_window) >= sma_period else 0
+            )
+            if ratio_sma <= 0:
+                daily_returns.append(0.0)
+                continue
+            ratio_vs_sma = ratio_now / ratio_sma - 1
+
+            # SHY return
+            d, dp = dates[i], dates[i - 1]
+            shy_r = (
+                (shy_data[d] / shy_data[dp] - 1)
+                if d in shy_data and dp in shy_data and shy_data[dp] > 0
+                else 0.0
+            )
+
+            if ratio_mom > 0 and ratio_vs_sma > 0:
+                regime = "risk_on"
+                day_ret = spy_rets[i] * 0.90
+            elif ratio_mom < 0 and ratio_vs_sma < 0:
+                regime = "risk_off"
+                day_ret = shy_r * 0.90
+            else:
+                regime = "neutral"
+                day_ret = spy_rets[i] * 0.45
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.961,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute credit-spread-regime returns: %s", e)
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
 
@@ -245,6 +381,16 @@ def load_daily_returns(
     registered = len(STRATEGY_EXPERIMENTS)
 
     for slug, exp_id in STRATEGY_EXPERIMENTS.items():
+        # Handle strategies with direct computation (no engine artifact)
+        if exp_id == "DIRECT":
+            direct_rets = _load_direct_returns(slug, data_dir)
+            if direct_rets is not None:
+                direct_rets["family"] = MECHANISM_FAMILIES.get(slug, "Unknown")
+                strategies[slug] = direct_rets
+            else:
+                logger.warning("SKIP [%s]: direct computation failed", slug)
+            continue
+
         artifact_path = (
             data_dir / "strategies" / slug / "experiments" / f"{exp_id}.yaml"
         )

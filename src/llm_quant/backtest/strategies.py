@@ -4434,6 +4434,182 @@ class GarchRegimeStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Credit Spread Regime Strategy (H13.1, Family 9 — Spread Regime)
+# ---------------------------------------------------------------------------
+
+
+class CreditSpreadRegimeStrategy(Strategy):
+    """Credit spread regime timing via HYG/SHY ratio momentum (H13.1, F9).
+
+    Mechanism: the HYG/SHY ratio is a proxy for credit spreads.  When the ratio
+    is rising (spreads tightening) AND above its moving average, credit
+    conditions are improving and equity exposure is warranted.  When falling AND
+    below the SMA, spreads are widening and the strategy goes defensive.
+
+    This is DIFFERENT from the Family 1 credit lead-lag strategies:
+    - Lead-lag uses short-term HYG returns with a threshold to predict SPY
+    - Spread regime uses HYG/SHY ratio trend + SMA to determine regime state
+
+    Parameters
+    ----------
+    equity_symbol : str  (default "SPY")
+    safe_symbol : str  (default "SHY")
+    credit_symbol : str  (default "HYG")
+    rate_symbol : str  (default "SHY")   — denominator for spread ratio
+    ratio_lookback : int  (default 10)   — days for ratio momentum
+    sma_period : int  (default 20)       — SMA period for ratio regime
+    target_weight : float  (default 0.90)
+    defensive_weight : float  (default 0.90) — weight in safe asset when risk-off
+    neutral_weight : float  (default 0.45) — weight in equity when neutral
+    """
+
+    def generate_signals(
+        self,
+        date: object,
+        prices_df: object,
+        indicators_df: object,
+        portfolio: object,
+    ) -> list:
+        import polars as pl
+
+        params = self.config.parameters
+        equity_sym = params.get("equity_symbol", "SPY")
+        safe_sym = params.get("safe_symbol", "SHY")
+        credit_sym = params.get("credit_symbol", "HYG")
+        rate_sym = params.get("rate_symbol", "SHY")
+        ratio_lookback = int(params.get("ratio_lookback", 10))
+        sma_period = int(params.get("sma_period", 20))
+        target_weight = float(params.get("target_weight", 0.90))
+        defensive_weight = float(params.get("defensive_weight", 0.90))
+        neutral_weight = float(params.get("neutral_weight", 0.45))
+
+        signals: list[TradeSignal] = []
+
+        # Get historical data up to current date for credit and rate symbols
+        credit_df = (
+            prices_df.filter(
+                (pl.col("symbol") == credit_sym) & (pl.col("date") <= date)
+            )
+            .sort("date")
+            .tail(sma_period + ratio_lookback + 5)
+        )
+        rate_df = (
+            prices_df.filter((pl.col("symbol") == rate_sym) & (pl.col("date") <= date))
+            .sort("date")
+            .tail(sma_period + ratio_lookback + 5)
+        )
+
+        if len(credit_df) < sma_period + ratio_lookback or len(rate_df) < sma_period:
+            return signals
+
+        # Build ratio series: credit_close / rate_close on matching dates
+        credit_prices = dict(
+            zip(
+                credit_df["date"].to_list(),
+                credit_df["close"].to_list(),
+            )
+        )
+        rate_prices = dict(
+            zip(
+                rate_df["date"].to_list(),
+                rate_df["close"].to_list(),
+            )
+        )
+
+        # Get dates where both have data
+        common_dates = sorted(set(credit_prices.keys()) & set(rate_prices.keys()))
+        if len(common_dates) < sma_period + ratio_lookback:
+            return signals
+
+        ratios = []
+        for d in common_dates:
+            r_val = rate_prices[d]
+            if r_val > 0:
+                ratios.append(credit_prices[d] / r_val)
+            else:
+                ratios.append(0.0)
+
+        if len(ratios) < sma_period + 1:
+            return signals
+
+        # Current ratio and lookback ratio
+        ratio_now = ratios[-1]
+        if len(ratios) < ratio_lookback + 1 or ratio_now <= 0:
+            return signals
+        ratio_lb = ratios[-(ratio_lookback + 1)]
+        if ratio_lb <= 0:
+            return signals
+
+        ratio_mom = ratio_now / ratio_lb - 1
+
+        # SMA of ratio
+        ratio_sma = sum(ratios[-sma_period:]) / sma_period
+        if ratio_sma <= 0:
+            return signals
+        ratio_vs_sma = ratio_now / ratio_sma - 1
+
+        # Get equity close for stop-loss
+        eq_df = prices_df.filter(
+            (pl.col("symbol") == equity_sym) & (pl.col("date") <= date)
+        ).sort("date")
+        eq_close = eq_df["close"][-1] if len(eq_df) > 0 else 100.0
+        stop_loss = eq_close * (1.0 - self.config.stop_loss_pct)
+
+        # Determine regime
+        if ratio_mom > 0 and ratio_vs_sma > 0:
+            # Risk-on: credit improving
+            signals.append(
+                TradeSignal(
+                    symbol=equity_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.HIGH,
+                    target_weight=target_weight,
+                    stop_loss=stop_loss,
+                    reasoning=(
+                        f"Credit spread regime RISK-ON: {credit_sym}/{rate_sym} "
+                        f"ratio mom={ratio_mom:.4f} > 0, vs_sma={ratio_vs_sma:.4f} > 0"
+                    ),
+                )
+            )
+        elif ratio_mom < 0 and ratio_vs_sma < 0:
+            # Risk-off: credit deteriorating — buy safe asset
+            safe_df = prices_df.filter(
+                (pl.col("symbol") == safe_sym) & (pl.col("date") <= date)
+            ).sort("date")
+            safe_close = safe_df["close"][-1] if len(safe_df) > 0 else 80.0
+            signals.append(
+                TradeSignal(
+                    symbol=safe_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.HIGH,
+                    target_weight=defensive_weight,
+                    stop_loss=safe_close * 0.98,
+                    reasoning=(
+                        f"Credit spread regime RISK-OFF: {credit_sym}/{rate_sym} "
+                        f"ratio mom={ratio_mom:.4f} < 0, vs_sma={ratio_vs_sma:.4f} < 0"
+                    ),
+                )
+            )
+        else:
+            # Neutral: mixed signals — reduced equity
+            signals.append(
+                TradeSignal(
+                    symbol=equity_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.LOW,
+                    target_weight=neutral_weight,
+                    stop_loss=stop_loss,
+                    reasoning=(
+                        f"Credit spread regime NEUTRAL: {credit_sym}/{rate_sym} "
+                        f"ratio mom={ratio_mom:.4f}, vs_sma={ratio_vs_sma:.4f}"
+                    ),
+                )
+            )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
 # Volume-Liquidity Breakout Strategy (H10.2, Family 10 — Liquidity)
 # ---------------------------------------------------------------------------
 
@@ -5055,6 +5231,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "volume_breakout": VolumeBreakoutStrategy,
     "amihud_regime": AmihudRegimeStrategy,
     "skew_divergence": SkewDivergenceStrategy,
+    "credit_spread_regime": CreditSpreadRegimeStrategy,
 }
 
 
