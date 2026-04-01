@@ -59,6 +59,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "credit-spread-regime-v1": "DIRECT",  # Direct computation (engine incompatible)
     "dba-commodity-cycle-v1": "DIRECT",  # Direct computation (regime strategy)
     "xlk-xle-sector-rotation-v1": "DIRECT",  # Direct computation (regime strategy)
+    "vol-regime-v2": "DIRECT",  # Direct computation (vol regime strategy)
 }
 
 # Mechanism family labels for context
@@ -83,6 +84,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "credit-spread-regime-v1": "F9: Spread Regime",
     "dba-commodity-cycle-v1": "F11: Commodity Cycle",
     "xlk-xle-sector-rotation-v1": "F12: Sector Rotation",
+    "vol-regime-v2": "F13: Volatility Regime",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -108,6 +110,7 @@ TRACK_A_SLUGS: list[str] = [
     "credit-spread-regime-v1",
     "dba-commodity-cycle-v1",
     "xlk-xle-sector-rotation-v1",
+    "vol-regime-v2",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -250,6 +253,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_dba_commodity_cycle_returns(data_dir)
     if slug == "xlk-xle-sector-rotation-v1":
         return _compute_xlk_xle_sector_rotation_returns(data_dir)
+    if slug == "vol-regime-v2":
+        return _compute_vol_regime_v2_returns(data_dir)
     return None
 
 
@@ -586,6 +591,123 @@ def _compute_xlk_xle_sector_rotation_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute xlk-xle-sector-rotation returns: %s", e)
+        return None
+
+
+def _compute_vol_regime_v2_returns(data_dir: Path) -> dict | None:
+    """Vol regime v2: SPY vol vs GLD vol → equity/gold tilt allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "GLD", "SHY"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        gld_df = prices.filter(pl.col("symbol") == "GLD").sort("date")
+        gld_data = dict(
+            zip(gld_df["date"].to_list(), gld_df["close"].to_list(), strict=False)
+        )
+        shy_df = prices.filter(pl.col("symbol") == "SHY").sort("date")
+        shy_data = dict(
+            zip(shy_df["date"].to_list(), shy_df["close"].to_list(), strict=False)
+        )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+        gld_closes = [gld_data.get(dates[i], 0.0) for i in range(n)]
+        gld_rets = [0.0] + [
+            (gld_closes[i] / gld_closes[i - 1] - 1) if gld_closes[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+        shy_closes = [shy_data.get(dates[i], 0.0) for i in range(n)]
+        shy_rets = [0.0] + [
+            (shy_closes[i] / shy_closes[i - 1] - 1) if shy_closes[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        warmup = 60
+        vol_window = 30
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        for i in range(warmup, n):
+            if i < vol_window + 1:
+                daily_returns.append(0.0)
+                continue
+
+            spy_window = spy_rets[i - vol_window : i]
+            gld_window = gld_rets[i - vol_window : i]
+
+            if len(spy_window) < vol_window or len(gld_window) < vol_window:
+                daily_returns.append(0.0)
+                continue
+
+            spy_mean = sum(spy_window) / vol_window
+            spy_std = (sum((r - spy_mean) ** 2 for r in spy_window) / vol_window) ** 0.5
+            spy_vol = spy_std * math.sqrt(252)
+
+            gld_mean = sum(gld_window) / vol_window
+            gld_std = (sum((r - gld_mean) ** 2 for r in gld_window) / vol_window) ** 0.5
+            gld_vol = gld_std * math.sqrt(252)
+
+            if gld_vol <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            vol_ratio = spy_vol / gld_vol
+
+            if vol_ratio > 1.0:
+                # Equity stressed: gold tilt (v2: 50% GLD + 20% SPY)
+                regime = "equity_stress"
+                day_ret = gld_rets[i] * 0.50 + spy_rets[i] * 0.20 + shy_rets[i] * 0.30
+            else:
+                # Commodity stressed: equity tilt (80% SPY + 10% GLD)
+                regime = "commodity_stress"
+                day_ret = spy_rets[i] * 0.80 + gld_rets[i] * 0.10 + shy_rets[i] * 0.10
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.980,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute vol-regime-v2 returns: %s", e)
         return None
 
 

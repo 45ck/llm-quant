@@ -1,24 +1,13 @@
 #!/usr/bin/env python3
-"""Robustness analysis for tlt-tqqq-leveraged-lead-lag (Track D).
+"""Robustness analysis for tip-tlt-real-yield-v1 (H16.5, Real Yield Proxy).
 
-Mechanism: TLT 10-day return as lead signal -> TQQQ (3x leveraged QQQ) follower.
-This is a leveraged re-expression of the proven TLT-SPY rate momentum signal.
+Mechanism: TIP/TLT price ratio 20-day momentum.
+  - Ratio momentum < 0 (real yields falling = loosening): 75% SPY
+  - Ratio momentum > 0 (real yields rising = tightening): 50% GLD + 20% SHY
+Base parameters: lookback=20, loosening_spy_weight=0.75,
+                 tightening_gld_weight=0.50, tightening_shy_weight=0.20.
 
-Signal logic:
-  - TLT 10-day return >= entry_threshold (1%) -> entry (buy TQQQ at target_weight)
-  - TLT 10-day return <= exit_threshold (-1%) -> exit to SHY (cash proxy)
-  - Use signal from lag_days (5) ago -- no look-ahead
-  - Cost per switch: 5 bps (higher for leveraged ETFs)
-
-Track D gates (leveraged):
-  - Gate 1: Sharpe > 0.80
-  - Gate 2: MaxDD < 40%
-  - Gate 3: DSR >= 0.90
-  - Gate 4: CPCV OOS > 0
-  - Gate 5: Perturbation >= 40% stable (2/5 minimum)
-  - Gate 6: Shuffled signal p < 0.05
-
-Run: cd E:/llm-quant && PYTHONPATH=src python scripts/run_tlt_tqqq_sprint_robustness.py
+Run: cd E:/llm-quant && PYTHONPATH=src python scripts/run_tip_tlt_real_yield_robustness.py
 """
 
 from __future__ import annotations
@@ -37,18 +26,17 @@ import polars as pl
 from llm_quant.backtest.robustness import shuffled_signal_test
 from llm_quant.data.fetcher import fetch_ohlcv
 
-SLUG = "tlt-tqqq-leveraged-lead-lag"
-SYMBOLS = ["TLT", "TQQQ", "SHY"]
-DD_THRESHOLD = 0.40  # Track D: 40% max drawdown
+SLUG = "tip-tlt-real-yield-v1"
+SYMBOLS = ["SPY", "GLD", "SHY", "TIP", "TLT"]
+DD_THRESHOLD = 0.15
 LOOKBACK_DAYS = 5 * 365
 WARMUP = 60
 
 BASE_PARAMS = {
-    "entry_threshold": 0.01,  # TLT 10-day return >= 1% -> buy TQQQ
-    "exit_threshold": -0.01,  # TLT 10-day return <= -1% -> exit
-    "lag_days": 5,  # Use signal from 5 days ago
-    "signal_window": 10,  # 10-day return lookback for TLT
-    "target_weight": 0.30,  # Conservative for leveraged ETF
+    "lookback": 20,
+    "loosening_spy_weight": 0.75,
+    "tightening_gld_weight": 0.50,
+    "tightening_shy_weight": 0.20,
 }
 
 print("Fetching data...")
@@ -58,10 +46,10 @@ print(
     f"date range: {prices['date'].min()} to {prices['date'].max()}"
 )
 
-# Build price series -- use TQQQ as the date backbone
-tqqq_df = prices.filter(pl.col("symbol") == "TQQQ").sort("date")
-dates = tqqq_df["date"].to_list()
-tqqq_close = tqqq_df["close"].to_list()
+# Build price series
+spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+dates = spy_df["date"].to_list()
+spy_close = spy_df["close"].to_list()
 n = len(dates)
 print(f"Trading days: {n}")
 
@@ -72,9 +60,8 @@ for sym in SYMBOLS:
         zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
     )
 
-# Precompute TQQQ daily returns
-tqqq_rets = [0.0] + [
-    (tqqq_close[i] / tqqq_close[i - 1] - 1) if tqqq_close[i - 1] > 0 else 0
+spy_rets = [0.0] + [
+    (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
     for i in range(1, n)
 ]
 
@@ -89,15 +76,9 @@ def asset_ret(sym, i):
 
 
 def _compute_metrics(daily_returns):
-    """Compute Sharpe, MaxDD, total return, CAGR from daily returns."""
+    """Compute Sharpe, MaxDD, total return from daily returns."""
     if not daily_returns or len(daily_returns) < 60:
-        return {
-            "sharpe": 0.0,
-            "max_dd": 0.0,
-            "total_return": 0.0,
-            "cagr": 0.0,
-            "daily_returns": [],
-        }
+        return {"sharpe": 0.0, "max_dd": 0.0, "total_return": 0.0, "daily_returns": []}
 
     nav = [1.0]
     for r in daily_returns:
@@ -114,81 +95,65 @@ def _compute_metrics(daily_returns):
     std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
     sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
     total_ret = nav[-1] / nav[0] - 1.0
-    years = len(daily_returns) / 252
-    cagr = ((nav[-1] / nav[0]) ** (1.0 / years) - 1.0) if years > 0 else 0.0
 
     return {
         "sharpe": sharpe,
         "max_dd": max_dd,
         "total_return": total_ret,
-        "cagr": cagr,
         "daily_returns": daily_returns,
     }
 
 
 def run_single(params):
-    """Run a single backtest with the given parameters.
-
-    Signal logic (with lag):
-    - Compute TLT return over signal_window days
-    - Use the signal from lag_days ago (causal)
-    - If TLT return >= entry_threshold -> hold TQQQ at target_weight, rest in SHY
-    - If TLT return <= exit_threshold -> exit to SHY (100%)
-    - Otherwise hold current position
-    """
-    entry_thresh = float(params.get("entry_threshold", 0.01))
-    exit_thresh = float(params.get("exit_threshold", -0.01))
-    lag = int(params.get("lag_days", 5))
-    window = int(params.get("signal_window", 10))
-    tw = float(params.get("target_weight", 0.30))
-    cost_per_switch = 0.0005  # 5 bps for leveraged ETFs
+    """Run a single backtest with the given parameters."""
+    lookback = int(params.get("lookback", 20))
+    loosening_spy_w = float(params.get("loosening_spy_weight", 0.75))
+    tightening_gld_w = float(params.get("tightening_gld_weight", 0.50))
+    tightening_shy_w = float(params.get("tightening_shy_weight", 0.20))
 
     daily_returns = []
-    in_position = False
-    min_lookback = WARMUP + window + lag
+    cost_per_switch = 0.0003  # 3 bps
 
+    prev_regime = None
     for i in range(WARMUP, n):
-        if i < min_lookback:
-            # Not enough history yet -- stay in cash proxy
-            daily_returns.append(asset_ret("SHY", i))
+        if i < lookback + 1:
+            daily_returns.append(0.0)
             continue
 
-        # Signal date: lag_days ago
-        signal_idx = i - lag
-        if signal_idx < window:
-            daily_returns.append(asset_ret("SHY", i))
+        # TIP/TLT ratio momentum at close i-1 (lag-1, no look-ahead)
+        d_now = dates[i - 1]
+        d_lb = dates[i - 1 - lookback]
+
+        tip_now = sym_data["TIP"].get(d_now, 0.0)
+        tlt_now = sym_data["TLT"].get(d_now, 0.0)
+        tip_lb = sym_data["TIP"].get(d_lb, 0.0)
+        tlt_lb = sym_data["TLT"].get(d_lb, 0.0)
+
+        if tip_now <= 0 or tlt_now <= 0 or tip_lb <= 0 or tlt_lb <= 0:
+            daily_returns.append(0.0)
             continue
 
-        # TLT return over signal_window ending at signal_idx
-        d_signal = dates[signal_idx]
-        d_signal_lb = dates[signal_idx - window]
+        ratio_now = tip_now / tlt_now
+        ratio_lb = tip_lb / tlt_lb
+        ratio_mom = ratio_now / ratio_lb - 1
 
-        tlt_now = sym_data["TLT"].get(d_signal, 0.0)
-        tlt_lb = sym_data["TLT"].get(d_signal_lb, 0.0)
-
-        if tlt_now <= 0 or tlt_lb <= 0:
-            daily_returns.append(asset_ret("SHY", i))
-            continue
-
-        tlt_ret = tlt_now / tlt_lb - 1.0
-
-        # Position logic
-        prev_position = in_position
-
-        if tlt_ret >= entry_thresh:
-            in_position = True
-        elif tlt_ret <= exit_thresh:
-            in_position = False
-        # else: hold current state
-
-        if in_position:
-            day_ret = tqqq_rets[i] * tw + asset_ret("SHY", i) * (1.0 - tw)
+        # Determine regime based on TIP/TLT ratio momentum
+        if ratio_mom < 0:
+            # Real yields falling = loosening: risk-on
+            regime = "loosening"
+            day_ret = spy_rets[i] * loosening_spy_w
         else:
-            day_ret = asset_ret("SHY", i)
+            # Real yields rising = tightening: defensive
+            regime = "tightening"
+            day_ret = (
+                asset_ret("GLD", i) * tightening_gld_w
+                + asset_ret("SHY", i) * tightening_shy_w
+            )
 
-        # Apply switching cost on state change
-        if prev_position != in_position:
+        # Apply switching cost
+        if prev_regime is not None and regime != prev_regime:
             day_ret -= cost_per_switch
+        prev_regime = regime
 
         daily_returns.append(day_ret)
 
@@ -236,10 +201,9 @@ for k, v in BASE_PARAMS.items():
 
 print("\n--- RUNNING BASE BACKTEST ---")
 base = run_single(BASE_PARAMS)
-print(f"Base Sharpe:  {base['sharpe']:.4f}")
-print(f"Base MaxDD:   {base['max_dd']:.4f}")
-print(f"Base Return:  {base['total_return']:.4f}")
-print(f"Base CAGR:    {base['cagr']:.4f}")
+print(f"Base Sharpe: {base['sharpe']:.4f}")
+print(f"Base MaxDD:  {base['max_dd']:.4f}")
+print(f"Base Return: {base['total_return']:.4f}")
 
 # ==============================================================================
 # CPCV
@@ -255,11 +219,11 @@ print(f"CPCV % Positive Folds: {cpcv_pct_pos:.1%}")
 # PERTURBATION TESTS
 # ==============================================================================
 perturbations = [
-    ("entry_threshold=0.005 (half)", {**BASE_PARAMS, "entry_threshold": 0.005}),
-    ("entry_threshold=0.02 (double)", {**BASE_PARAMS, "entry_threshold": 0.02}),
-    ("lag_days=3", {**BASE_PARAMS, "lag_days": 3}),
-    ("lag_days=7", {**BASE_PARAMS, "lag_days": 7}),
-    ("target_weight=0.20", {**BASE_PARAMS, "target_weight": 0.20}),
+    ("lookback=15", {**BASE_PARAMS, "lookback": 15}),
+    ("lookback=30", {**BASE_PARAMS, "lookback": 30}),
+    ("loosening_spy_weight=0.65", {**BASE_PARAMS, "loosening_spy_weight": 0.65}),
+    ("tightening_gld_weight=0.40", {**BASE_PARAMS, "tightening_gld_weight": 0.40}),
+    ("tightening_shy_weight=0.30", {**BASE_PARAMS, "tightening_shy_weight": 0.30}),
 ]
 
 print("\n--- PERTURBATION RESULTS ---")
@@ -290,19 +254,18 @@ print(f"\n  Stable: {stable_count}/{len(perturbations)} ({pct_stable:.0f}%)")
 # SHUFFLED SIGNAL TEST
 # ==============================================================================
 print("\n--- SHUFFLED SIGNAL TEST ---")
-# Use TQQQ returns as the asset baseline for shuffled test
-tqqq_daily_rets = tqqq_rets[WARMUP:]
+spy_daily_rets = spy_rets[WARMUP:]
 strat_returns = base["daily_returns"]
-n_min = min(len(strat_returns), len(tqqq_daily_rets))
+n_min = min(len(strat_returns), len(spy_daily_rets))
 aligned_strat = strat_returns[-n_min:]
-aligned_tqqq = tqqq_daily_rets[-n_min:]
+aligned_spy = spy_daily_rets[-n_min:]
 
 print(f"  Strategy returns: {len(aligned_strat)} days")
-print(f"  TQQQ returns:     {len(aligned_tqqq)} days")
+print(f"  SPY returns: {len(aligned_spy)} days")
 
 shuffled_result = shuffled_signal_test(
     daily_returns=aligned_strat,
-    asset_returns=aligned_tqqq,
+    asset_returns=aligned_spy,
     n_shuffles=1000,
     seed=42,
 )
@@ -326,25 +289,25 @@ dsr_value = float(stats.norm.cdf(sr / se_sr)) if se_sr > 0 else 0.0
 print(f"  DSR (computed inline): {dsr_value:.4f}")
 
 # ==============================================================================
-# GATE ASSESSMENT -- Track D gates
+# GATE ASSESSMENT
 # ==============================================================================
 print(f"\n{'=' * 70}")
-print("GATE ASSESSMENT (Track D -- Leveraged)")
+print("GATE ASSESSMENT")
 print(f"{'=' * 70}")
 
 gate1 = base["sharpe"] > 0.80
-gate2 = base["max_dd"] < DD_THRESHOLD  # 40% for Track D
-gate3 = dsr_value >= 0.90  # Relaxed for Track D
+gate2 = base["max_dd"] < DD_THRESHOLD
+gate3 = dsr_value >= 0.95
 gate4 = cpcv_mean > 0
-gate5 = pct_stable >= 40  # 2/5 minimum for Track D
+gate5 = pct_stable >= 60
 gate6 = shuffled_result.passed
 
 gates = [
     ("Gate 1: Sharpe > 0.80", gate1, f"{base['sharpe']:.4f}"),
-    ("Gate 2: MaxDD < 40%", gate2, f"{base['max_dd']:.4f}"),
-    ("Gate 3: DSR >= 0.90", gate3, f"{dsr_value:.4f}"),
+    ("Gate 2: MaxDD < 15%", gate2, f"{base['max_dd']:.4f}"),
+    ("Gate 3: DSR >= 0.95", gate3, f"{dsr_value:.4f}"),
     ("Gate 4: CPCV OOS Sharpe > 0", gate4, f"{cpcv_mean:.4f}"),
-    ("Gate 5: Perturbation >= 40% stable", gate5, f"{pct_stable:.0f}%"),
+    ("Gate 5: Perturbation >= 60% stable", gate5, f"{pct_stable:.0f}%"),
     (
         "Gate 6: Shuffled Signal p < 0.05",
         gate6,
@@ -365,14 +328,11 @@ print(f"\n  VERDICT: {verdict}")
 # ==============================================================================
 output = {
     "strategy_slug": SLUG,
-    "strategy_type": "leveraged_lead_lag",
-    "track": "D",
-    "mechanism": "TLT 10-day return -> TQQQ (3x leveraged QQQ)",
+    "strategy_type": "tip_tlt_real_yield",
     "base_params": BASE_PARAMS,
     "base_sharpe": round(base["sharpe"], 4),
     "base_max_dd": round(base["max_dd"], 4),
     "base_total_return": round(base["total_return"], 4),
-    "base_cagr": round(base["cagr"], 4),
     "dsr": round(dsr_value, 4),
     "cpcv": {
         "oos_mean_sharpe": round(cpcv_mean, 4),
@@ -395,10 +355,10 @@ output = {
     },
     "gates": {
         "sharpe_gt_0.80": gate1,
-        "maxdd_lt_40pct": gate2,
-        "dsr_gte_0.90": gate3,
+        "maxdd_lt_15pct": gate2,
+        "dsr_gte_0.95": gate3,
         "cpcv_oos_positive": gate4,
-        "perturbation_gte_40pct": gate5,
+        "perturbation_gte_60pct": gate5,
         "shuffled_signal_passed": gate6,
     },
     "verdict": "PASS" if all_pass else "FAIL",
