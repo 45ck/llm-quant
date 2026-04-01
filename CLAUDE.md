@@ -178,22 +178,22 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (7 questions, stop at first "no")
 
-**Current status (2026-04-01):** 13 of 15 mechanism families with passing strategies.
-- 23 strategies passing all gates across 13 families (F1-F3, F5-F9, F11-F15)
-- 15 cluster representatives after hierarchical clustering (threshold=0.70)
+**Current status (2026-04-01):** 14 of 16 mechanism families with passing strategies.
+- 24 strategies passing all gates across 14 families (F1-F3, F5-F9, F11-F16)
+- 16 cluster representatives after hierarchical clustering (threshold=0.70)
 - 2 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity)
 - Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030) — first Track D pass
 - Key families by Sharpe: F12 XLK-XLE (1.525), F3 TSMOM (1.331), F15 TIP/TLT (1.313),
-  F13 vol-regime (1.270), F1 LQD-SPY (1.250), F2 GLD-SLV (1.197)
+  F13 vol-regime (1.270), F1 LQD-SPY (1.250), F2 GLD-SLV (1.197), F16 breakeven (1.068)
 
 **Portfolio SR (measured, not estimated):**
-- Empirical portfolio SR = **2.184** (15 cluster reps, equal-weight, daily returns)
-- MaxDD = 5.1%, avg pairwise ρ = 0.187
-- Formula validation: SR_P = 1.0 × √(15 / (1 + 14×0.187)) ≈ 2.18 (matches empirical)
-- Marginal value of next uncorrelated strategy: +0.124 SR
+- Empirical portfolio SR = **2.196** (16 cluster reps, equal-weight, daily returns)
+- MaxDD = 5.4%, avg pairwise ρ = 0.187
+- Formula validation: SR_P = 1.072 × √(16 / (1 + 15×0.187)) ≈ 2.20 (matches empirical)
+- Marginal value of next uncorrelated strategy: +0.118 SR
 
 **Tier assessment:** Operating at bottom of Tier 2 (SR 1.0-2.0 range for small funds)
-without leverage. Achieved via decorrelation across 13 mechanism families. Next phase:
+without leverage. Achieved via decorrelation across 14 mechanism families. Next phase:
 paper trading validation, HRP optimizer, and production deployment.
 
 See `docs/governance/alpha-hunting-framework.md` for the 4-phase kill chain and
