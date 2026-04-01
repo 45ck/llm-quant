@@ -178,8 +178,8 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (7 questions, stop at first "no")
 
-**Current status (2026-04-01):** 14 of 16 mechanism families with passing strategies.
-- 24 strategies passing all gates across 14 families (F1-F3, F5-F9, F11-F16)
+**Current status (2026-04-01):** 15 of 17 mechanism families with passing strategies.
+- 25 strategies passing all gates across 15 families (F1-F3, F5-F9, F11-F17)
 - 16 cluster representatives after hierarchical clustering (threshold=0.70)
 - 2 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity)
 - Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030) — first Track D pass
@@ -193,7 +193,7 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Marginal value of next uncorrelated strategy: +0.118 SR
 
 **Tier assessment:** Operating at bottom of Tier 2 (SR 1.0-2.0 range for small funds)
-without leverage. Achieved via decorrelation across 14 mechanism families. Next phase:
+without leverage. Achieved via decorrelation across 15 mechanism families. Next phase:
 paper trading validation, HRP optimizer, and production deployment.
 
 See `docs/governance/alpha-hunting-framework.md` for the 4-phase kill chain and
