@@ -4438,6 +4438,189 @@ class GarchRegimeStrategy(Strategy):
 # ---------------------------------------------------------------------------
 
 
+class SkewDivergenceStrategy(Strategy):
+    """SKEW-VIX divergence timing: defensive when tail risk mispriced (H4.7, F4).
+
+    When SKEW > skew_entry (institutions hedging tail risk) while VIX < vix_ceiling
+    (headline complacency), reduce equity and add GLD/SHY defensively.
+
+    Parameters:
+      equity_symbol (str, default SPY): Primary equity.
+      hedge_symbol (str, default GLD): Tail hedge asset.
+      skew_symbol (str, default SKEW): SKEW index ticker.
+      vix_symbol (str, default VIX): VIX ticker.
+      skew_entry (float, default 150): SKEW threshold for divergence.
+      vix_ceiling (float, default 20): VIX must be below this.
+      persistence_days (int, default 3): Days divergence must persist.
+      skew_exit (float, default 140): SKEW below this exits defensive.
+      vix_floor_exit (float, default 25): VIX above this exits defensive.
+      normal_equity_weight (float, default 0.90): Equity in normal mode.
+      defensive_equity_weight (float, default 0.40): Equity in defensive.
+      defensive_hedge_weight (float, default 0.30): GLD in defensive.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        self._divergence_count: int = 0
+        self._in_defensive: bool = False
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+
+        equity: str = str(params.get("equity_symbol", "SPY"))
+        hedge: str = str(params.get("hedge_symbol", "GLD"))
+        skew_sym: str = str(params.get("skew_symbol", "SKEW"))
+        vix_sym: str = str(params.get("vix_symbol", "VIX"))
+        skew_entry: float = float(params.get("skew_entry", 150))
+        vix_ceiling: float = float(params.get("vix_ceiling", 20))
+        persist: int = int(params.get("persistence_days", 3))
+        skew_exit_val: float = float(params.get("skew_exit", 140))
+        vix_floor_exit: float = float(params.get("vix_floor_exit", 25))
+        normal_eq_w: float = float(params.get("normal_equity_weight", 0.90))
+        def_eq_w: float = float(params.get("defensive_equity_weight", 0.40))
+        def_hedge_w: float = float(params.get("defensive_hedge_weight", 0.30))
+
+        skew_data = (
+            indicators_df.filter(
+                (pl.col("symbol") == skew_sym) & (pl.col("date") <= as_of_date)
+            )
+            .sort("date")
+            .tail(5)
+        )
+        vix_data = (
+            indicators_df.filter(
+                (pl.col("symbol") == vix_sym) & (pl.col("date") <= as_of_date)
+            )
+            .sort("date")
+            .tail(5)
+        )
+
+        if len(skew_data) < 1 or len(vix_data) < 1:
+            return []
+
+        skew_val = skew_data["close"].to_list()[-1]
+        vix_val = vix_data["close"].to_list()[-1]
+
+        divergence = skew_val > skew_entry and vix_val < vix_ceiling
+        if divergence:
+            self._divergence_count += 1
+        else:
+            self._divergence_count = 0
+
+        should_exit_defensive = skew_val < skew_exit_val or vix_val > vix_floor_exit
+
+        signals: list[TradeSignal] = []
+
+        if not self._in_defensive and self._divergence_count >= persist:
+            self._in_defensive = True
+            logger.info(
+                "SkewDiv: DEFENSIVE on %s (SKEW=%.0f VIX=%.1f)",
+                as_of_date,
+                skew_val,
+                vix_val,
+            )
+            if equity in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol=equity,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"SkewDiv: REDUCE {equity}",
+                    )
+                )
+            eq_price = prices.get(equity, 0)
+            if eq_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=equity,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=def_eq_w,
+                        stop_loss=eq_price * 0.90,
+                        reasoning=f"SkewDiv: DEFENSIVE {equity} w={def_eq_w}",
+                    )
+                )
+            hedge_price = prices.get(hedge, 0)
+            if hedge_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=hedge,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=def_hedge_w,
+                        stop_loss=0.0,
+                        reasoning=f"SkewDiv: HEDGE {hedge} w={def_hedge_w}",
+                    )
+                )
+
+        elif self._in_defensive and should_exit_defensive:
+            self._in_defensive = False
+            logger.info(
+                "SkewDiv: NORMAL on %s (SKEW=%.0f VIX=%.1f)",
+                as_of_date,
+                skew_val,
+                vix_val,
+            )
+            if hedge in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol=hedge,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning="SkewDiv: EXIT hedge",
+                    )
+                )
+            if equity in portfolio.positions:
+                signals.append(
+                    TradeSignal(
+                        symbol=equity,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning="SkewDiv: CLOSE defensive equity",
+                    )
+                )
+            eq_price = prices.get(equity, 0)
+            if eq_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=equity,
+                        action=Action.BUY,
+                        conviction=Conviction.HIGH,
+                        target_weight=normal_eq_w,
+                        stop_loss=eq_price * 0.92,
+                        reasoning=f"SkewDiv: NORMAL {equity} w={normal_eq_w}",
+                    )
+                )
+
+        elif not self._in_defensive and equity not in portfolio.positions:
+            eq_price = prices.get(equity, 0)
+            if eq_price > 0:
+                signals.append(
+                    TradeSignal(
+                        symbol=equity,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=normal_eq_w,
+                        stop_loss=eq_price * 0.92,
+                        reasoning=f"SkewDiv: INITIAL {equity} w={normal_eq_w}",
+                    )
+                )
+
+        return signals
+
+
 class AmihudRegimeStrategy(Strategy):
     """Liquidity regime rotation: IWM / SPY / SHY (H10.1, Family 10).
 
@@ -4871,6 +5054,7 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "garch_regime": GarchRegimeStrategy,
     "volume_breakout": VolumeBreakoutStrategy,
     "amihud_regime": AmihudRegimeStrategy,
+    "skew_divergence": SkewDivergenceStrategy,
 }
 
 
