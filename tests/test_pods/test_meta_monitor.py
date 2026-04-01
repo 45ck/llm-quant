@@ -1,6 +1,6 @@
 """Tests for MetaRiskMonitor (cross-pod fund-level analytics)."""
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from llm_quant.risk.meta_monitor import MetaRiskMonitor
 
@@ -75,7 +75,7 @@ def test_fund_level_drawdown_alert(two_pod_db):
     """When fund drawdown > 20%, alerts list is non-empty."""
     conn = two_pod_db
     today = datetime.now(tz=UTC).date()
-    yesterday = date(today.year, today.month, max(today.day - 1, 1))
+    yesterday = today - timedelta(days=1)
 
     # Day 1: peak NAV for both pods = 100k + 100k = 200k
     sid1 = conn.execute("SELECT nextval('seq_snapshot_id')").fetchone()[0]
