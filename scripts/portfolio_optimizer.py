@@ -19,9 +19,11 @@ import argparse
 import logging
 import math
 import sys
+from datetime import date
 from pathlib import Path
 
 import numpy as np
+import yaml
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
 
@@ -268,6 +270,254 @@ def validate_weights(weights: dict[str, float], method: str) -> None:
                 w,
                 MAX_STRATEGY_WEIGHT * 100,
             )
+
+
+# ---------------------------------------------------------------------------
+# Walk-forward HRP
+# ---------------------------------------------------------------------------
+
+
+def _enforce_track_split(
+    weights: dict[str, float], slugs: list[str]
+) -> dict[str, float]:
+    """Enforce 70/30 Track A/B split on a weight dictionary."""
+    a_slugs_in = [s for s in slugs if s in TRACK_A_SLUGS]
+    b_slugs_in = [s for s in slugs if s in TRACK_B_SLUGS]
+    a_total = sum(weights.get(s, 0.0) for s in a_slugs_in)
+    b_total = sum(weights.get(s, 0.0) for s in b_slugs_in)
+
+    adjusted: dict[str, float] = {}
+    for slug in a_slugs_in:
+        adjusted[slug] = (
+            weights.get(slug, 0.0) * (0.70 / a_total) if a_total > 0 else 0.0
+        )
+    for slug in b_slugs_in:
+        adjusted[slug] = (
+            weights.get(slug, 0.0) * (0.30 / b_total) if b_total > 0 else 0.0
+        )
+    for slug in slugs:
+        if slug not in adjusted:
+            adjusted[slug] = weights.get(slug, 0.0)
+    return adjusted
+
+
+def _run_hrp_optimization(returns_df: object) -> dict[str, float]:
+    """Run Riskfolio HRP optimization on a pandas DataFrame of returns."""
+    import riskfolio as rp
+
+    port = rp.HCPortfolio(returns=returns_df)
+    weights_df = port.optimization(
+        model="HRP",
+        codependence="pearson",
+        rm="MV",
+        rf=0,
+        linkage="ward",
+        max_k=10,
+        leaf_order=True,
+    )
+    return weights_df["weights"].to_dict()
+
+
+def _compute_weighted_sharpe(
+    rets_arrays: dict[str, np.ndarray],
+    weights: dict[str, float],
+    start: int,
+    end: int,
+) -> tuple[float, float]:
+    """Compute annualized Sharpe and max drawdown for a weighted portfolio slice."""
+    length = end - start
+    port_rets = np.zeros(length)
+    for slug, w in weights.items():
+        port_rets += w * rets_arrays[slug][start:end]
+
+    mean = float(np.mean(port_rets))
+    std = float(np.std(port_rets, ddof=1))
+    sharpe = mean / std * math.sqrt(TRADING_DAYS_PER_YEAR) if std > 0 else 0.0
+
+    nav = np.cumprod(1.0 + port_rets)
+    peak = np.maximum.accumulate(nav)
+    dd = (peak - nav) / peak
+    max_dd = float(np.max(dd)) if len(dd) > 0 else 0.0
+
+    return sharpe, max_dd
+
+
+def walk_forward_hrp(
+    strategies: dict[str, dict],
+    slugs: list[str],
+    min_len: int,
+    n_folds: int = 5,
+    vol_target: float = 0.10,
+) -> dict:
+    """Run walk-forward HRP with anchored expanding windows.
+
+    For each fold k (0..n_folds-1):
+      - IS period: first (min_len * (k+1) / n_folds) days
+      - OOS period: next (min_len / n_folds) days
+
+    In each fold:
+      1. Compute HRP weights on IS returns
+      2. Compute portfolio return on OOS using those weights
+      3. Compute IS and OOS Sharpe
+
+    Returns dict with fold results, aggregate metrics, and final weights.
+    """
+    import pandas as pd
+
+    # Build aligned returns (tail min_len from each series)
+    data: dict[str, list[float]] = {}
+    rets_arrays: dict[str, np.ndarray] = {}
+    for slug in slugs:
+        dr = strategies[slug]["daily_returns"]
+        data[slug] = dr[-min_len:]
+        rets_arrays[slug] = np.array(dr[-min_len:])
+
+    fold_size = min_len // n_folds
+    fold_results: list[dict] = []
+
+    for k in range(n_folds):
+        is_end = fold_size * (k + 1)
+        oos_start = is_end
+        oos_end = min(is_end + fold_size, min_len)
+
+        if oos_start >= min_len or oos_end <= oos_start:
+            logger.warning("Fold %d: no OOS data — skipping", k)
+            continue
+
+        # Compute HRP weights on IS data
+        is_df = pd.DataFrame({slug: data[slug][:is_end] for slug in slugs})
+        try:
+            fold_weights = _enforce_track_split(_run_hrp_optimization(is_df), slugs)
+        except Exception as exc:
+            logger.warning("Fold %d: HRP failed — %s", k, exc)
+            continue
+
+        is_sharpe, _ = _compute_weighted_sharpe(rets_arrays, fold_weights, 0, is_end)
+        oos_sharpe, oos_max_dd = _compute_weighted_sharpe(
+            rets_arrays, fold_weights, oos_start, oos_end
+        )
+
+        fold_results.append(
+            {
+                "fold": k,
+                "is_days": is_end,
+                "oos_days": oos_end - oos_start,
+                "is_sharpe": round(is_sharpe, 4),
+                "oos_sharpe": round(oos_sharpe, 4),
+                "oos_max_dd": round(oos_max_dd, 4),
+                "weights": {s: round(w, 6) for s, w in fold_weights.items()},
+            }
+        )
+        logger.info(
+            "Fold %d: IS SR=%.3f  OOS SR=%.3f  OOS MaxDD=%.1f%%  IS=%dd OOS=%dd",
+            k,
+            is_sharpe,
+            oos_sharpe,
+            oos_max_dd * 100,
+            is_end,
+            oos_end - oos_start,
+        )
+
+    if not fold_results:
+        logger.error("All walk-forward folds failed")
+        return {"error": "All folds failed"}
+
+    # Aggregate metrics
+    avg_is_sharpe = np.mean([f["is_sharpe"] for f in fold_results])
+    avg_oos_sharpe = np.mean([f["oos_sharpe"] for f in fold_results])
+    oos_is_ratio = float(avg_oos_sharpe / avg_is_sharpe) if avg_is_sharpe != 0 else 0.0
+    avg_oos_max_dd = np.mean([f["oos_max_dd"] for f in fold_results])
+    oos_sharpe_std = float(np.std([f["oos_sharpe"] for f in fold_results], ddof=1))
+
+    # Final weights: HRP on full sample
+    full_df = pd.DataFrame(data)
+    pre_vol_weights = _enforce_track_split(_run_hrp_optimization(full_df), slugs)
+
+    # Apply volatility targeting
+    post_vol_weights, vol_scale, realized_vol = vol_target_weights(
+        strategies, slugs, min_len, pre_vol_weights, vol_target
+    )
+
+    # Full-sample portfolio Sharpe for reference
+    full_port_rets = np.zeros(min_len)
+    for slug in slugs:
+        w = pre_vol_weights.get(slug, 0.0)
+        full_port_rets += w * np.array(data[slug])
+    full_mean = float(np.mean(full_port_rets))
+    full_std = float(np.std(full_port_rets, ddof=1))
+    full_sample_sharpe = (
+        full_mean / full_std * math.sqrt(TRADING_DAYS_PER_YEAR) if full_std > 0 else 0.0
+    )
+
+    return {
+        "run_date": str(date.today()),
+        "n_strategies": len(slugs),
+        "n_folds": len(fold_results),
+        "vol_target": vol_target,
+        "folds": fold_results,
+        "aggregate": {
+            "avg_is_sharpe": round(float(avg_is_sharpe), 4),
+            "avg_oos_sharpe": round(float(avg_oos_sharpe), 4),
+            "oos_is_ratio": round(oos_is_ratio, 4),
+            "avg_oos_max_dd": round(float(avg_oos_max_dd), 4),
+            "oos_sharpe_std": round(oos_sharpe_std, 4),
+        },
+        "final_weights": {
+            "pre_vol_target": {s: round(w, 6) for s, w in pre_vol_weights.items()},
+            "post_vol_target": {s: round(w, 6) for s, w in post_vol_weights.items()},
+            "vol_scale_factor": round(vol_scale, 4),
+            "realized_vol": round(realized_vol, 4),
+            "target_vol": vol_target,
+        },
+        "portfolio_metrics": {
+            "full_sample_sharpe": round(full_sample_sharpe, 4),
+            "walk_forward_oos_sharpe": round(float(avg_oos_sharpe), 4),
+            "degradation_ratio": round(
+                float(avg_oos_sharpe / full_sample_sharpe)
+                if full_sample_sharpe != 0
+                else 0.0,
+                4,
+            ),
+        },
+    }
+
+
+def vol_target_weights(
+    strategies: dict[str, dict],
+    slugs: list[str],
+    min_len: int,
+    weights: dict[str, float],
+    vol_target: float = 0.10,
+) -> tuple[dict[str, float], float, float]:
+    """Scale weights so portfolio annualized vol equals vol_target.
+
+    Returns (scaled_weights, vol_scale_factor, realized_vol).
+    """
+    # Compute portfolio daily returns with given weights
+    portfolio_rets = np.zeros(min_len)
+    for slug in slugs:
+        dr = strategies[slug]["daily_returns"]
+        w = weights.get(slug, 0.0)
+        portfolio_rets += w * np.array(dr[-min_len:])
+
+    realized_vol = float(np.std(portfolio_rets, ddof=1)) * math.sqrt(
+        TRADING_DAYS_PER_YEAR
+    )
+
+    if realized_vol <= 0:
+        logger.warning("Realized vol is zero — cannot scale weights")
+        return dict(weights), 1.0, 0.0
+
+    vol_scale = vol_target / realized_vol
+
+    # Scale all weights
+    scaled: dict[str, float] = {}
+    for slug in slugs:
+        raw = weights.get(slug, 0.0) * vol_scale
+        # Cap individual weights at MAX_STRATEGY_WEIGHT
+        scaled[slug] = min(raw, MAX_STRATEGY_WEIGHT)
+
+    return scaled, vol_scale, realized_vol
 
 
 # ---------------------------------------------------------------------------
@@ -2441,6 +2691,23 @@ def main() -> None:
             "split enforcement. Requires: pip install 'Riskfolio-Lib>=6.0'."
         ),
     )
+    parser.add_argument(
+        "--walk-forward",
+        action="store_true",
+        help="Run walk-forward HRP validation",
+    )
+    parser.add_argument(
+        "--vol-target",
+        type=float,
+        default=0.10,
+        help="Portfolio vol target (default 10%%)",
+    )
+    parser.add_argument(
+        "--n-folds",
+        type=int,
+        default=5,
+        help="Number of walk-forward folds",
+    )
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir)
@@ -2479,6 +2746,118 @@ def main() -> None:
             loaded,
         )
         sys.exit(1)
+
+    # Walk-forward HRP branch
+    if args.walk_forward:
+        logger.info(
+            "Running walk-forward HRP with %d folds, vol_target=%.1f%%",
+            args.n_folds,
+            args.vol_target * 100,
+        )
+        slugs_wf = sorted(strategies.keys())
+        min_len_wf = min(len(strategies[s]["daily_returns"]) for s in slugs_wf)
+        logger.info(
+            "Aligned return series: %d strategies, %d common days",
+            len(slugs_wf),
+            min_len_wf,
+        )
+
+        wf_result = walk_forward_hrp(
+            strategies=strategies,
+            slugs=slugs_wf,
+            min_len=min_len_wf,
+            n_folds=args.n_folds,
+            vol_target=args.vol_target,
+        )
+
+        if "error" in wf_result:
+            logger.error("Walk-forward failed: %s", wf_result["error"])
+            sys.exit(1)
+
+        # Print fold-by-fold results
+        print("=" * 80)
+        print("WALK-FORWARD HRP VALIDATION")
+        print("=" * 80)
+        print()
+        agg = wf_result["aggregate"]
+        print(
+            f"{'Fold':>4}  {'IS Days':>8}  {'OOS Days':>9}  "
+            f"{'IS SR':>8}  {'OOS SR':>8}  {'OOS MaxDD':>10}"
+        )
+        print("-" * 55)
+        for fold in wf_result["folds"]:
+            print(
+                f"{fold['fold']:>4}  {fold['is_days']:>8}  {fold['oos_days']:>9}  "
+                f"{fold['is_sharpe']:>8.4f}  {fold['oos_sharpe']:>8.4f}  "
+                f"{fold['oos_max_dd']:>9.1%}"
+            )
+        print("-" * 55)
+        print(
+            f"{'AVG':>4}  {'':>8}  {'':>9}  "
+            f"{agg['avg_is_sharpe']:>8.4f}  {agg['avg_oos_sharpe']:>8.4f}  "
+            f"{agg['avg_oos_max_dd']:>9.1%}"
+        )
+        print()
+
+        # Aggregate summary
+        print("## Aggregate Metrics")
+        print(f"  Avg IS Sharpe:      {agg['avg_is_sharpe']:.4f}")
+        print(f"  Avg OOS Sharpe:     {agg['avg_oos_sharpe']:.4f}")
+        print(f"  OOS/IS Ratio:       {agg['oos_is_ratio']:.4f}")
+        print(f"  Avg OOS MaxDD:      {agg['avg_oos_max_dd']:.1%}")
+        print(f"  OOS Sharpe StdDev:  {agg['oos_sharpe_std']:.4f}")
+        gate_pass = agg["oos_is_ratio"] > 0.60
+        print(f"  Gate (OOS/IS > 0.60): {'PASS' if gate_pass else 'FAIL'}")
+        print()
+
+        # Portfolio metrics
+        pm = wf_result["portfolio_metrics"]
+        print("## Portfolio Metrics")
+        print(f"  Full-sample Sharpe:  {pm['full_sample_sharpe']:.4f}")
+        print(f"  WF OOS Sharpe:       {pm['walk_forward_oos_sharpe']:.4f}")
+        print(f"  Degradation ratio:   {pm['degradation_ratio']:.4f}")
+        print()
+
+        # Vol targeting
+        fw = wf_result["final_weights"]
+        print("## Volatility Targeting")
+        print(f"  Realized vol:        {fw['realized_vol']:.1%}")
+        print(f"  Target vol:          {fw['target_vol']:.1%}")
+        print(f"  Scale factor:        {fw['vol_scale_factor']:.4f}")
+        print()
+
+        # Final weights table
+        print("## Final Weights (post vol-target)")
+        print(f"{'Strategy':<36} {'Pre-VT':>8} {'Post-VT':>8} {'Track':<6}")
+        print("-" * 62)
+        post_vt = fw["post_vol_target"]
+        pre_vt = fw["pre_vol_target"]
+        for slug in sorted(post_vt.keys(), key=lambda s: -post_vt[s]):
+            track = (
+                "A"
+                if slug in TRACK_A_SLUGS
+                else ("B" if slug in TRACK_B_SLUGS else "?")
+            )
+            print(
+                f"{slug:<36} {pre_vt.get(slug, 0):>8.4f} "
+                f"{post_vt[slug]:>8.4f} {track:<6}"
+            )
+        total_post = sum(post_vt.values())
+        total_pre = sum(pre_vt.values())
+        print("-" * 62)
+        print(f"{'TOTAL':<36} {total_pre:>8.4f} {total_post:>8.4f}")
+        print()
+
+        # Save to YAML
+        output_dir = Path(data_dir) / "portfolio"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / "walk_forward_hrp.yaml"
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump(wf_result, f, default_flow_style=False, sort_keys=False)
+        logger.info("Walk-forward results saved to %s", output_path)
+
+        print("=" * 80)
+        return
 
     # 2. Compute correlation matrix
     corr_matrix, slugs = compute_correlation_matrix(strategies)
