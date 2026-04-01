@@ -66,6 +66,8 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "global-yield-flow-v2": "DIRECT",  # Direct computation (capital flow)
     "commodity-carry-v2": "DIRECT",  # Direct computation (commodity carry)
     "tlt-gld-disinflation-v1": "DIRECT",  # Direct computation (disinflation signal)
+    "uso-xle-mean-reversion-v2": "DIRECT",  # Direct computation (energy pair MR, Track B)
+    "gdx-gld-mean-reversion-v1": "DIRECT",  # Direct computation (miners pair MR, Track B)
 }
 
 # Mechanism family labels for context
@@ -97,6 +99,8 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "global-yield-flow-v2": "F17: Capital Flow",
     "commodity-carry-v2": "F18: Commodity Carry",
     "tlt-gld-disinflation-v1": "F19: Disinflation Signal",
+    "uso-xle-mean-reversion-v2": "F2: Mean Reversion (Energy)",
+    "gdx-gld-mean-reversion-v1": "F2: Mean Reversion (Miners)",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -133,6 +137,8 @@ TRACK_A_SLUGS: list[str] = [
 
 TRACK_B_SLUGS: list[str] = [
     "soxx-qqq-lead-lag",
+    "uso-xle-mean-reversion-v2",
+    "gdx-gld-mean-reversion-v1",
 ]
 
 # Max weight per strategy for validation (Track B limit is binding)
@@ -285,6 +291,14 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_commodity_carry_v2_returns(data_dir)
     if slug == "tlt-gld-disinflation-v1":
         return _compute_tlt_gld_disinflation_returns(data_dir)
+    if slug == "uso-xle-mean-reversion-v2":
+        return _compute_pair_mr_returns(
+            data_dir, "USO", "XLE", 0.60, 0.20, 0.35, 60, 1.0
+        )
+    if slug == "gdx-gld-mean-reversion-v1":
+        return _compute_pair_mr_returns(
+            data_dir, "GDX", "GLD", 0.50, 0.20, 0.35, 60, 1.0
+        )
     return None
 
 
@@ -1402,6 +1416,122 @@ def _compute_tlt_gld_disinflation_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute tlt-gld-disinflation returns: %s", e)
+        return None
+
+
+def _compute_pair_mr_returns(
+    data_dir: Path,
+    sym_a: str,
+    sym_b: str,
+    overweight: float,
+    underweight: float,
+    neutral_weight: float,
+    bb_window: int,
+    bb_std: float,
+) -> dict | None:
+    """Generic pair mean-reversion: z-score of sym_a/sym_b ratio."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = [sym_a, sym_b]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        a_df = prices.filter(pl.col("symbol") == sym_a).sort("date")
+        b_df = prices.filter(pl.col("symbol") == sym_b).sort("date")
+        dates_a = a_df["date"].to_list()
+        close_a = a_df["close"].to_list()
+
+        b_data = dict(
+            zip(b_df["date"].to_list(), b_df["close"].to_list(), strict=False)
+        )
+
+        # Build aligned ratio series
+        dates, ratio_series, close_a_aligned, close_b_aligned = [], [], [], []
+        for i, d in enumerate(dates_a):
+            if d in b_data and close_a[i] > 0 and b_data[d] > 0:
+                dates.append(d)
+                ratio_series.append(close_a[i] / b_data[d])
+                close_a_aligned.append(close_a[i])
+                close_b_aligned.append(b_data[d])
+
+        n = len(dates)
+        warmup = max(90, bb_window + 10)
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        for i in range(warmup, n):
+            window = ratio_series[i - bb_window : i]
+            if len(window) < bb_window:
+                daily_returns.append(0.0)
+                continue
+
+            sma = sum(window) / len(window)
+            std = (sum((x - sma) ** 2 for x in window) / len(window)) ** 0.5
+            if std <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            z = (ratio_series[i - 1] - sma) / std
+
+            # Compute daily returns for each asset
+            ret_a = (
+                (close_a_aligned[i] / close_a_aligned[i - 1] - 1)
+                if close_a_aligned[i - 1] > 0
+                else 0
+            )
+            ret_b = (
+                (close_b_aligned[i] / close_b_aligned[i - 1] - 1)
+                if close_b_aligned[i - 1] > 0
+                else 0
+            )
+
+            if z < -bb_std:
+                regime = "long_a"
+                day_ret = ret_a * overweight + ret_b * underweight
+            elif z > bb_std:
+                regime = "long_b"
+                day_ret = ret_b * overweight + ret_a * underweight
+            else:
+                regime = "neutral"
+                day_ret = ret_a * neutral_weight + ret_b * neutral_weight
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.96,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute %s/%s pair MR returns: %s", sym_a, sym_b, e)
         return None
 
 

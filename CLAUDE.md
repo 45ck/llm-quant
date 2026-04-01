@@ -179,22 +179,23 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - One-page decision framework (7 questions, stop at first "no")
 
 **Current status (2026-04-01):** 17 of 19 mechanism families with passing strategies.
-- 27 strategies passing all gates across 17 families (F1-F3, F5-F9, F11-F19)
-- 17 cluster representatives after hierarchical clustering (threshold=0.70)
+- 29 strategies passing all gates across 17 families (F1-F3, F5-F9, F11-F19)
+- 18 cluster representatives after hierarchical clustering (threshold=0.70)
 - 2 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity)
-- Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030) — first Track D pass
+- Track B: 3 strategies (SOXX-QQQ, USO/XLE energy MR, GDX/GLD miners MR)
+- Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030)
 - Key families by Sharpe: F12 XLK-XLE (1.525), F3 TSMOM (1.331), F15 TIP/TLT (1.313),
   F19 TLT/GLD disinflation (1.313), F13 vol-regime (1.270), F1 LQD-SPY (1.250),
   F2 GLD-SLV (1.197), F18 commodity-carry (1.119), F16 breakeven (1.068),
-  F17 global-yield-flow (0.900)
+  F2 USO-XLE energy MR (1.012, Track B), F17 global-yield-flow (0.900)
 
 **Portfolio SR (measured, not estimated):**
-- Empirical portfolio SR = **2.176** (17 cluster reps, equal-weight, daily returns)
-- MaxDD = 5.8%, avg pairwise ρ = 0.190
-- Formula validation: SR_P = 1.064 × √(17 / (1 + 16×0.190)) ≈ 2.21 (matches empirical)
-- Marginal value of next uncorrelated strategy: +0.113 SR
+- Empirical portfolio SR = **2.205** (18 cluster reps, equal-weight, daily returns)
+- MaxDD = 6.3%, avg pairwise ρ = 0.186
+- Formula validation: SR_P = 1.087 × √(18 / (1 + 17×0.186)) ≈ 2.26 (matches empirical)
+- Marginal value of next uncorrelated strategy: +0.107 SR
 
-**Tier assessment:** Operating at bottom of Tier 2 (SR 1.0-2.0 range for small funds)
+**Tier assessment:** Operating solidly in Tier 2 (SR 1.0-2.0 range for small funds)
 without leverage. Achieved via decorrelation across 17 mechanism families. Next phase:
 paper trading validation, HRP optimizer, and production deployment.
 
