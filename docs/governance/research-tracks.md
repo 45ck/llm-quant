@@ -42,21 +42,35 @@ because the two tracks serve different portfolio functions.
 
 **Portfolio allocation:** 70% of total capital
 
-**Current strategies (11 passing as of 2026-03-26):**
+**Current strategies (23 passing as of 2026-04-01, 13 mechanism families):**
 
-| Strategy | Sharpe | MaxDD | Mechanism |
-|---------|--------|-------|-----------|
-| LQD-SPY credit lead | 1.250 | 12.4% | IG bond → US equity |
-| AGG-SPY credit lead | 1.145 | 8.4% | Total bond → US equity |
-| SPY overnight momentum | 1.043 | 8.7% | Overnight gap microstructure |
-| AGG-QQQ credit lead | 1.080 | 11.2% | Total bond → tech equity |
-| VCIT-QQQ credit lead | 1.037 | 14.5% | Corp bond → tech equity |
-| LQD-QQQ credit lead | 1.023 | 13.7% | IG bond → tech equity |
-| EMB-SPY credit lead | 1.005 | 9.1% | EM sovereign → US equity |
-| HYG-SPY credit lead | 0.913 | 14.7% | HY bond → US equity |
-| AGG-EFA credit lead | 0.860 | 10.3% | Total bond → intl equity |
-| HYG-QQQ credit lead | 0.867 | 13.4% | HY bond → tech equity |
-| SOXX-QQQ lead-lag | 0.861 | 14.4% | Semis → tech equity |
+| # | Strategy | Sharpe | MaxDD | Family | Mechanism |
+|---|---------|--------|-------|--------|-----------|
+| 1 | XLK-XLE sector rotation v1 | 1.525 | 11.5% | F12 | Tech/energy ratio momentum |
+| 2 | Skip-month TSMOM v1 | 1.331 | 9.9% | F3 | Novy-Marx skip-month vol-scaled |
+| 3 | TIP/TLT real yield v1 | 1.313 | 13.3% | F15 | Real yield proxy momentum |
+| 4 | Vol-regime v2 | 1.270 | 14.2% | F13 | SPY vs GLD realized vol |
+| 5 | LQD-SPY credit lead | 1.250 | 12.4% | F1 | IG bond → US equity |
+| 6 | GLD-SLV v4 consensus | 1.197 | 9.6% | F2 | Metals ratio mean reversion |
+| 7 | AGG-SPY credit lead | 1.145 | 8.4% | F1 | Total bond → US equity |
+| 8 | AGG-QQQ credit lead | 1.080 | 11.2% | F1 | Total bond → tech equity |
+| 9 | TLT/SHY curve momentum v1 | 1.044 | 14.3% | F14 | Curve shape ratio momentum |
+| 10 | SPY overnight momentum | 1.043 | 8.7% | F5 | Overnight gap microstructure |
+| 11 | VCIT-QQQ credit lead | 1.037 | 14.5% | F1 | Corp bond → tech equity |
+| 12 | LQD-QQQ credit lead | 1.023 | 13.7% | F1 | IG bond → tech equity |
+| 13 | DBA commodity cycle v1 | 1.010 | 13.5% | F11 | Commodity abs. momentum |
+| 14 | EMB-SPY credit lead | 1.005 | 9.1% | F1 | EM sovereign → US equity |
+| 15 | Credit-spread-regime v1 | 0.990 | 10.8% | F9 | HYG/SHY spread regime |
+| 16 | IEF-QQQ rate-tech | 0.979 | 14.5% | F6 | Intermediate rate → tech |
+| 17 | TLT-QQQ rate-tech | 0.935 | 11.8% | F6 | Long rate → tech |
+| 18 | HYG-SPY credit lead | 0.913 | 14.7% | F1 | HY bond → US equity |
+| 19 | HYG-QQQ credit lead | 0.867 | 13.4% | F1 | HY bond → tech equity |
+| 20 | SOXX-QQQ lead-lag | 0.861 | 14.4% | F8 | Semis → tech equity |
+| 21 | AGG-EFA credit lead | 0.860 | 10.3% | F1 | Total bond → intl equity |
+| 22 | TLT-SPY rate momentum | 0.803 | 10.8% | F6 | Long rate → US equity |
+| 23 | Behavioral (VIX spike) | 0.700 | ~5% | F7 | Contrarian crisis alpha |
+
+**Portfolio (optimized 15 reps):** Empirical SR=2.184, MaxDD=5.1%, avg ρ=0.187.
 
 ---
 
@@ -105,12 +119,13 @@ At full deployment, the target combined portfolio:
 
 | Track | Allocation | Expected CAGR | Expected Sharpe |
 |-------|-----------|---------------|-----------------|
-| Track A (11 strategies) | 70% | ~20% | ~2.3 |
-| Track B (target: 3-5 strategies) | 30% | ~50-80% | ~1.5 |
-| **Combined** | **100%** | **~30-40%** | **~2.0** |
+| Track A (23 strategies, 13 families) | 70% | ~25-35% | ~2.18 |
+| Track B (target: 3-5 strategies) | 20% | ~50-80% | ~1.5 |
+| Track D (1 strategy: TLT-TQQQ) | 0-10% | ~60-120% | ~1.0 |
+| **Combined** | **100%** | **~35-50%** | **~2.0-2.5** |
 
-The combined portfolio achieves asymmetric returns: Track A limits downside, Track B
-provides leveraged upside.
+The combined portfolio achieves asymmetric returns: Track A provides diversified base with
+empirical SR=2.184, Track B/D add leveraged upside.
 
 ---
 
@@ -214,7 +229,7 @@ This determines which gate thresholds apply throughout the lifecycle.
 3. Single-session loss > 20%
 4. Beta decay drag > 5% annualized vs. 3x theoretical return (measured monthly)
 
-**Status:** Experimental — 2 strategies in backtest phase (LQD-SPY signal → TQQQ, SOXX-QQQ signal → SOXL). Not yet in paper trading.
+**Status:** 1 strategy passing all 6 Track D gates (TLT-TQQQ: Sharpe=1.030, MaxDD=10.16%, DSR=0.965). Advancing to paper trading. LQD-SPY signal → TQQQ in backtest phase.
 
 ---
 
@@ -222,10 +237,10 @@ This determines which gate thresholds apply throughout the lifecycle.
 
 | Track | Allocation | Expected Sharpe | Beta | Status |
 |-------|-----------|-----------------|------|--------|
-| A (11 strategies) | 60% | ~1.35 | ~0.4 | Deployed |
+| A (23 strategies, 13 families) | 60% | ~2.18 | ~0.4 | Paper trading |
 | B (3-5 target) | 20% | ~1.5 | ~0.8 | Research |
 | C (2-3 target) | 10-20% | ~2.0 | ~0.0 | Planning |
-| D (Sprint Alpha) | 0-15% | ~0.8-1.2 | ~2.0 | Experimental |
+| D (1 strategy: TLT-TQQQ) | 0-15% | ~1.0 | ~2.0 | Paper trading |
 | **Combined** | **100%** | **~2.0-2.5** | ~0.4 | |
 
 Track D allocation is gated: 0% until paper trading gate passes, then grows from 5% → 15% over 6 months contingent on MAR >= 1.0.
@@ -239,3 +254,4 @@ Track D allocation is gated: 0% until paper trading gate passes, then grows from
 | 1.0 | 2026-03-26 | Initial dual-track framework. |
 | 2.0 | 2026-03-27 | Added Track C (Niche Arbitrage). |
 | 3.0 | 2026-03-30 | Added Track D (Sprint Alpha — leveraged re-expression). |
+| 4.0 | 2026-04-01 | Updated Track A to 23 strategies across 13 families (SR=2.184). Track D first pass (TLT-TQQQ). |

@@ -127,18 +127,25 @@ Target 8–15 independently developed strategies across different alpha sources,
 classes, and time horizons. Portfolio-level Sharpe benefits from diversity more than from
 any individual strategy's brilliance.
 
-**Strategy pipeline by category:**
+**Strategy pipeline by category (current state 2026-04-01):**
 
-| Category | Strategies | Cross-category correlation |
-|----------|-----------|---------------------------|
-| Credit-equity lead-lag | LQD/AGG/HYG/VCIT/EMB → SPY/QQQ/EFA (DONE) | ~0.6 within family |
-| Mean reversion (pairs/ratios) | GLD-SLV, commodity pairs | Low to credit |
-| Trend following (multi-market) | Multi-speed EWMA across 50+ markets | Negative in crises |
-| Volatility risk premium | Delta-hedged short straddles, VIX term structure | Low to momentum |
-| Carry | FX carry, commodity roll yield | Moderate in crises |
-| Structural/event alpha | Index rebalancing, fallen angel arb | Idiosyncratic |
-| Alternative data | NLP 10-K filings, satellite, sentiment | Potentially very low |
-| Cross-asset macro | Global rates relative value, FX value+momentum | Low to equity stat arb |
+| Category | Strategies | Status | Cross-category ρ |
+|----------|-----------|--------|-------------------|
+| F1: Credit-equity lead-lag | LQD/AGG/HYG/VCIT/EMB → SPY/QQQ/EFA | 10 passing, SATURATED | ~0.6 within family |
+| F2: Mean reversion (pairs/ratios) | GLD-SLV v4 consensus | 1 passing | ~0.0 to credit |
+| F3: Trend following (TSMOM) | Skip-month vol-scaled SPY/TLT/GLD/EFA | 1 passing | ~0.3 to credit |
+| F5: Calendar/microstructure | SPY overnight momentum | 1 passing | ~0.4 to credit |
+| F6: Rate momentum | TLT-SPY, TLT-QQQ, IEF-QQQ | 3 passing | ~0.1 to credit |
+| F7: Sentiment contrarian | VIX spike behavioral | 1 passing (marginal) | ~-0.1 to credit |
+| F8: Non-credit lead-lag | SOXX-QQQ | 1 passing | ~0.3 to credit |
+| F9: Credit spread regime | HYG/SHY ratio regime | 1 passing | ~0.0 to credit |
+| F11: Commodity cycle | DBA abs. momentum | 1 passing | ~0.0 to credit |
+| F12: Sector rotation | XLK-XLE ratio regime | 1 passing | ~0.0 to credit |
+| F13: Volatility regime | SPY vs GLD realized vol | 1 passing | ~0.1 to credit |
+| F14: Curve shape momentum | TLT/SHY ratio momentum | 1 passing | ~0.0 to credit |
+| F15: Real yield proxy | TIP/TLT ratio momentum | 1 passing | ~0.0 to credit |
+| F4: Volatility risk premium | VIX contango/GARCH | REJECTED | — |
+| F10: Liquidity | Volume breakout/Amihud | FALSIFIED | — |
 
 ### Phase 2: Maximize Decorrelation (Months 6–18)
 
@@ -205,8 +212,9 @@ The assembly line matters more than any individual strategy.
 **The gap between Tier 1 and Tier 4 is not intelligence — it is infrastructure, capital,
 talent density, and decades of compounding advantages in all three.**
 
-This project is currently operating at Tier 1. Target: reach top of Tier 1 range (SR ~1.5)
-by building 10–15 genuinely uncorrelated strategies with average cross-correlation < 0.20.
+This project has exceeded Tier 1 range. Current: 23 strategies, 13 families, empirical
+portfolio SR=2.184, avg ρ=0.187 — operating at bottom of Tier 2 without leverage.
+Achieved via decorrelation (avg ρ from 0.584 → 0.187) rather than leverage.
 
 ---
 
@@ -321,3 +329,4 @@ overfit. Apply the DSR. The math does not lie.
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | 2026-03-26 | Initial playbook. Three paths (breadth, stacking, leverage), correlation math, practical blueprint, tier system, kill list, key formulas, essential reading. |
+| 2.0 | 2026-04-01 | Updated strategy pipeline to 15 families (13 passing). Project now at Tier 2 (SR=2.184 without leverage). |

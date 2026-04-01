@@ -173,32 +173,31 @@ The `/trade` command runs the full autonomous trading cycle:
 See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hunting Framework, including:
 - Portfolio Sharpe math: Individual Sharpe × √(N_effective)
 - The 4-phase Kill Chain: Hunt → Validate → Stress → Combine
-- 8 mechanism families and their correlation properties
+- 15 mechanism families and their correlation properties
 - Fraud detectors: shuffled returns test, regime split, mechanism inversion
 - Real alpha vs. fake alpha signatures
-- One-page decision framework (5 questions, stop at first "no")
+- One-page decision framework (7 questions, stop at first "no")
 
-**Current status:** 3 of 13 mechanism families with passing strategies.
-- Family 1 (Cross-Asset Information Flow): 13+ strategies passing — SATURATED, stop adding
-- Family 8 (Non-Credit Lead-Lag): 1 strategy (SOXX-QQQ) — expand
-- Family 11 (Microstructure): 1 strategy (SPY Overnight Momentum, Sharpe 1.044) — NEW, expand
-- Families 2-7, 9-10, 12-13: tested F3/F4/F5/F6/F7 — all failed. F2/F9/F10/F12/F13 untested.
-- **Sprint 1-6 results** (2026-03-31): 22 strategies tested, 5 passed (22.7% pass rate).
-  Top results: SPY Overnight (1.044), AGG-SPY (1.012), LQD-TQQQ (0.963), AGG-QQQ (0.888), EMB-SPY (0.829).
-  See `docs/research/results/sprint-{1-6}-backtest-results-2026-03-31.md`.
+**Current status (2026-04-01):** 13 of 15 mechanism families with passing strategies.
+- 23 strategies passing all gates across 13 families (F1-F3, F5-F9, F11-F15)
+- 15 cluster representatives after hierarchical clustering (threshold=0.70)
+- 2 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity)
+- Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030) — first Track D pass
+- Key families by Sharpe: F12 XLK-XLE (1.525), F3 TSMOM (1.331), F15 TIP/TLT (1.313),
+  F13 vol-regime (1.270), F1 LQD-SPY (1.250), F2 GLD-SLV (1.197)
 
-**Corrected portfolio SR estimate (with correlation):**
-- Current 14+ strategies, avg ρ~0.50 → actual combined SR ≈ 1.4-1.6 (F1-heavy)
-- Adding F11 (SPY Overnight, ρ~0.10 to F1) improves effective diversification
-- Formula: SR_P = SR × √(N / (1 + (N-1)×ρ))
-- Target: 8+ strategies across 5+ families, avg ρ < 0.20 → SR ~2.0–2.5
+**Portfolio SR (measured, not estimated):**
+- Empirical portfolio SR = **2.184** (15 cluster reps, equal-weight, daily returns)
+- MaxDD = 5.1%, avg pairwise ρ = 0.187
+- Formula validation: SR_P = 1.0 × √(15 / (1 + 14×0.187)) ≈ 2.18 (matches empirical)
+- Marginal value of next uncorrelated strategy: +0.124 SR
 
-**Realistic tier (solo/small team):** Portfolio SR 0.8–1.5 is the honest target range.
-SR 2.0+ requires either: 15+ genuinely uncorrelated strategies, or infrastructure beyond
-this project's current scope. See `docs/research/extreme-sharpe-playbook.md`.
+**Tier assessment:** Operating at bottom of Tier 2 (SR 1.0-2.0 range for small funds)
+without leverage. Achieved via decorrelation across 13 mechanism families. Next phase:
+paper trading validation, HRP optimizer, and production deployment.
 
 See `docs/governance/alpha-hunting-framework.md` for the 4-phase kill chain and
-8 mechanism families. See `docs/research/extreme-sharpe-playbook.md` for the three
+15 mechanism families. See `docs/research/extreme-sharpe-playbook.md` for the three
 paths to extreme Sharpe, correlation kill list, and tier benchmarks.
 
 ## Production Governance

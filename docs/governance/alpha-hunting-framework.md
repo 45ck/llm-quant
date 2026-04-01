@@ -30,12 +30,15 @@ SR=1.86 — not 5.0. The simplified "N_effective" approximation is optimistic.
 | 16 | 4.00 | 2.71 | 2.09 | 1.75 | 1.33 |
 | 25 | 5.00 | 3.09 | 2.28 | 1.86 | 1.39 |
 
-**Current state (2026-03-26):** 11 strategies, avg ρ=0.584 across portfolio. Combined
-SR ≈ 1.0 × √(11 / (1 + 10×0.584)) ≈ 1.0 × √(1.82) ≈ **1.35** (corrected estimate —
-the 2.3 estimate assumed zero correlation, which is wrong for our credit-heavy portfolio).
+**Current state (2026-04-01):** 23 strategies across 13 mechanism families, avg ρ=0.187.
+Empirical portfolio SR = **2.184** (15 cluster representatives, MaxDD=5.1%). This was
+achieved by expanding from a credit-heavy portfolio (11 strategies, ρ=0.584, SR≈1.35)
+to a diversified multi-family portfolio. The key insight: fixed income ratio momentum
+(F14/F15), commodity cycle (F11), sector rotation (F12), and volatility regime (F13)
+signals are near-zero correlated with credit-equity signals.
 
-**Target state:** 8+ strategies across 5+ independent mechanism families with avg ρ < 0.20
-→ Portfolio SR ~2.0–2.5. This requires adding genuinely orthogonal mechanism families.
+**Target state:** ACHIEVED — 13 families with avg ρ < 0.20. Marginal value of next
+uncorrelated strategy: +0.124 SR. Focus shifts to paper trading validation and promotion.
 
 **Crisis warning:** correlations spike during crises. Strategies with ρ=0.1 in normal
 markets become ρ=0.5 in a crisis — cutting portfolio SR from 2.24 to 1.26. Trend
@@ -172,73 +175,102 @@ regime detection (Mandate A) becomes the meta-strategy.
 
 ## Mechanism Diversification Checklist
 
-Need strategies from at LEAST 5 of these 8 mechanism families for meaningful
-diversification:
+Strategies from 13 of 15 mechanism families now passing — well above the minimum 5
+families needed for meaningful diversification.
 
 ### Family 1: Cross-Asset Information Flow
-**Status: COMPLETE — stop adding**
-Credit → equity lead-lag. 10 strategies passing (LQD/AGG/HYG/VCIT/EMB → SPY/QQQ/EFA).
-Pick best 2-3 representatives for the portfolio. Adding more credit-equity variants
-increases concentration, not diversification.
+**Status: SATURATED — stop adding (10 strategies)**
+Credit → equity lead-lag. LQD/AGG/HYG/VCIT/EMB → SPY/QQQ/EFA.
+Best representatives for portfolio: LQD-SPY (1.250), AGG-SPY (1.145), EMB-SPY (1.005).
 
 ### Family 2: Mean Reversion (Pairs/Ratios)
-**Status: NEXT PRIORITY**
-GLD/SLV ratio, sector rotation reversion, Brent/WTI spread.
-GLD-SLV bb=60 std=2.0 scanned (Sharpe ~1.28 in prior session) — needs full lifecycle.
-**Why uncorrelated:** Enters/exits based on ratio deviation, independent of credit conditions.
+**Status: PASSING (1 strategy: GLD-SLV v4 consensus windows)**
+Sharpe=1.197, MaxDD=9.60%. Consensus windows [60,90,120] fixed the bb_window sensitivity
+that caused v2/v3 perturbation failures. Near-zero correlation with credit-equity family.
 
-### Family 3: Momentum / Trend Following
-**Status: FAILED — needs redesign**
-Textbook SMA crossover is dead. Novel approach: risk-adjusted momentum (return/vol) with
-Antonacci dual momentum filter (absolute + relative). Apply to asset classes.
-SPY-TLT-GLD-BIL rotation failed perturbation (lookback sensitivity). Needs dual-momentum
-redesign with absolute momentum gate.
-**Why uncorrelated:** Trend signals fire on different timescales (months) vs. credit signals (days).
+### Family 3: Trend Following / TSMOM
+**Status: PASSING (1 strategy: skip-month-tsmom v1)**
+Sharpe=1.331, MaxDD=9.92%. Novy-Marx skip-month (t-252 to t-21) vol-scaled on SPY/TLT/GLD/EFA.
+Most robust ever: perturbation 5/5 (100%). All TSMOM universe variants (EM, sector, DM) are
+ρ=0.89-0.97 with v1 — vol-scaling normalization causes convergence, so don't add more.
 
-### Family 4: Volatility Regime Harvesting
-**Status: UNTESTED — high priority**
-VIX term structure (contango = sell vol, backwardation = buy vol). Use VIX ETPs or SPY
-position sizing based on vol regime. One of the most well-documented persistent anomalies.
-**Why uncorrelated:** Driven by options market dynamics, not credit or equity direction.
+### Family 4: Volatility Risk Premium
+**Status: TESTED — REJECTED**
+VIX contango timing is a LAGGING signal (exits at bottoms, re-enters after recovery).
+GARCH-regime near-miss (Sharpe=0.863, DSR=0.89). Needs VXX-short redesign, not equity timing.
 
-### Family 5: Calendar / Structural Flow Effects
-**Status: PARTIALLY TESTED — falsified by 2022 rate hike cycle**
-OPEX pinning, turn-of-month effect, CPI release day vol, earnings season vol premium.
-F3 (month-end) and F4 (pre-FOMC TLT drift) falsified in 2022-2023. Re-test F1, F2, F5, F6.
-**Why uncorrelated:** Driven by calendar dates and mechanical fund flows.
+### Family 5: Calendar / Structural Microstructure
+**Status: PASSING (1 strategy: SPY overnight momentum)**
+Sharpe=1.043, MaxDD=8.68%. 10-day rolling avg of overnight returns. Pure equity
+microstructure signal, mechanistically distinct from all cross-asset families.
 
-### Family 6: Macro Regime Rotation
-**Status: UNTESTED — lower frequency**
-Yield curve signals for factor rotation (value/growth), PMI acceleration for small/large
-cap, real rate surprises. Monthly rebalancing, genuinely different mechanism.
-**Why uncorrelated:** Driven by economic fundamentals, not market microstructure.
+### Family 6: Rate Momentum
+**Status: PASSING (3 strategies: TLT-SPY, TLT-QQQ, IEF-QQQ)**
+Rate cuts → equity up via discount rate channel. TLT-SPY (0.803), TLT-QQQ (0.935),
+IEF-QQQ (0.979). Not credit-driven — pure interest rate mechanism. IEF-QQQ has best
+CPCV OOS/IS in project (1.392).
 
 ### Family 7: Sentiment Contrarian
-**Status: UNTESTED — high theoretical appeal**
-Crypto Fear & Greed extremes, put/call ratio extremes, VIX spikes as buy signals, Google
-Trends attention decay. Fire rarely (5-10 times/year) — noisy individual Sharpe but
-valuable in portfolio combination.
-**Why uncorrelated:** Driven by behavioral extremes, orthogonal to trend and credit.
+**Status: PASSING (1 strategy: behavioral/VIX-spike)**
+Sharpe=0.700 — marginal. VIX spike contrarian has sound mechanism but event rarity
+(4 events in 4 years) limits statistical confidence. Valuable in portfolio for crisis alpha.
 
 ### Family 8: Non-Credit Cross-Market Lead-Lag
-**Status: 1 PASSING (SOXX-QQQ) — expand**
-SOXX→QQQ (passing). Nikkei→SPY, copper→industrial stocks, BTC weekend→Monday equity.
-**Why partially correlated:** Some overlap with credit lead-lag (both information flow),
-but different leader instruments create different entry timing.
+**Status: PASSING (1 strategy: SOXX-QQQ)**
+Sharpe=0.861, MaxDD=14.4%. First strategy to pass all gates. Semis → tech equity lead-lag.
+BTC-SPY tested: REJECTED (perturbation 1/5 — BTC extreme vol makes threshold fragile).
+
+### Family 9: Credit Spread Regime
+**Status: PASSING (1 strategy: credit-spread-regime v1)**
+Sharpe=0.990, MaxDD=10.75%. HYG/SHY ratio momentum + ratio vs SMA. Three-regime model
+(risk_on/risk_off/neutral). NEAR-ZERO correlation with all existing strategies — unique mechanism.
+
+### Family 10: Liquidity
+**Status: FALSIFIED**
+VolumeBreakout (3 trades/5yr on ETFs) and AmihudRegime (Sharpe=0.557, MaxDD=22.3%) both dead.
+AP arbitrage prevents dislocations in liquid ETFs. Would need micro-cap universe.
+
+### Family 11: Commodity Cycle
+**Status: PASSING (1 strategy: DBA-commodity-cycle v1)**
+Sharpe=1.010, MaxDD=13.50%. DBA 60-day absolute momentum. Inflation→GLD+SPY, Disinflation→SPY.
+Most robust ever: perturbation 5/5 (100%).
+
+### Family 12: Sector Rotation
+**Status: PASSING (1 strategy: XLK-XLE-sector-rotation v1)**
+Sharpe=1.525, MaxDD=11.48%. XLK/XLE ratio momentum + SMA. Growth→QQQ, Inflation→GLD+DBA.
+HIGHEST individual Sharpe in portfolio. Pushed portfolio SR above 2.0.
+
+### Family 13: Volatility Regime
+**Status: PASSING (1 strategy: vol-regime v2)**
+Sharpe=1.270, MaxDD=14.18%. SPY vs GLD 30-day realized vol comparison.
+equity_stress→50% GLD, commodity_stress→80% SPY. Perturbation 5/5 (100%).
+
+### Family 14: Curve Shape Momentum
+**Status: PASSING (1 strategy: TLT/SHY curve momentum v1)**
+Sharpe=1.044, MaxDD=14.28%. TLT/SHY price ratio 30-day momentum.
+Flattening→80% SPY, Steepening→80% GLD. Near-zero corr with credit-equity. Perturbation 5/5 (100%).
+
+### Family 15: Real Yield Proxy
+**Status: PASSING (1 strategy: TIP/TLT real yield v1)**
+Sharpe=1.313, MaxDD=13.34%. TIP/TLT price ratio 20-day momentum.
+Loosening→75% SPY, Tightening→50% GLD + 20% SHY. Clusters with F14 (ρ=0.79).
 
 ---
 
 ## Prioritized Research Roadmap
 
-| Priority | Family | Candidate | Expected Effort | Why Now |
-|----------|--------|-----------|----------------|---------|
-| 1 | 2 (Mean Reversion) | GLD-SLV full lifecycle | 1 session | Near-pass in prior scan, genuinely orthogonal |
-| 2 | 4 (Vol Regime) | VIX term structure contango strategy | 1 session | Well-documented anomaly, zero data cost |
-| 3 | 5 (Calendar) | F1 OPEX, F5 pre-earnings, F2 turn-of-quarter | 1 session | Quick to screen, calendar-driven = uncorrelated |
-| 4 | 7 (Sentiment) | D8 Fear & Greed, VIX>30 buy signal | 1 session | Alt data, orthogonal mechanism |
-| 5 | 3 (Momentum) | Dual-momentum SPY/TLT/GLD/BIL redesign | 1 session | Absol. momentum filter removes lookback sensitivity |
-| 6 | 6 (Macro Regime) | N4 yield curve un-inversion on FRED 20yr data | 1-2 sessions | Needs FRED integration, strong macro signal |
-| 7 | Portfolio | Combine all passing strategies from Families 2-8 | 1 session | After 3+ new families pass |
+Research phase largely complete — 13 of 15 families tested. Focus shifts to paper trading
+validation and portfolio optimization.
+
+| Priority | Action | Expected Effort | Status |
+|----------|--------|----------------|--------|
+| 1 | Paper trading validation (23 strategies, 30-day minimum) | Ongoing | In progress |
+| 2 | HRP optimizer for production weights | 1 session | Not started |
+| 3 | Walk-forward engine for live monitoring | 1-2 sessions | Not started |
+| 4 | Volatility targeting overlay | 1 session | Not started |
+| 5 | F4 VIX redesign (VXX-short instead of equity timing) | 1 session | Deprioritized |
+| 6 | Track C (Niche Arb) production readiness | 2-3 sessions | 4/17 gates done |
+| 7 | Track D paper trading (TLT-TQQQ) | Ongoing | In progress |
 
 ---
 
@@ -266,9 +298,9 @@ but different leader instruments create different entry timing.
 
 ## The Uncomfortable Truths
 
-1. **The credit-equity signal is probably real.** CPCV OOS/IS > 1.0 across 9 variants
-   is strong evidence. But it is ONE bet. When it stops working (and it will, temporarily),
-   the whole portfolio goes dark.
+1. **The credit-equity signal is real.** CPCV OOS/IS > 1.0 across 10 variants is strong
+   evidence. But the portfolio is no longer dependent on it — with 13 mechanism families,
+   credit-equity (F1) represents only ~30% of portfolio weight via clustering.
 
 2. **Daily frequency with free data has a Sharpe ceiling of ~1.5 per strategy.** Higher
    Sharpe requires higher frequency, better data, or both. This is an empirical ceiling,
@@ -317,3 +349,4 @@ See `docs/research/extreme-sharpe-playbook.md` for the full correlation mathemat
 | Version | Date | Change |
 |---------|------|--------|
 | 1.0 | 2026-03-26 | Initial framework. Covers 4-phase kill chain, 8 mechanism families, fraud detectors, real vs. fake alpha signatures. |
+| 2.0 | 2026-04-01 | Updated to 15 mechanism families (13 passing), 23 strategies, portfolio SR=2.184. Roadmap shifted from research to paper trading validation. |
