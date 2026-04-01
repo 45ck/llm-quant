@@ -4434,6 +4434,405 @@ class GarchRegimeStrategy(Strategy):
 
 
 # ---------------------------------------------------------------------------
+# Volume-Liquidity Breakout Strategy (H10.2, Family 10 — Liquidity)
+# ---------------------------------------------------------------------------
+
+
+class AmihudRegimeStrategy(Strategy):
+    """Liquidity regime rotation: IWM / SPY / SHY (H10.1, Family 10).
+
+    Computes a market-wide Amihud illiquidity measure and volume trend.
+    When liquidity is expanding (Amihud declining, volume rising), favors
+    small-cap (IWM). Neutral -> SPY. Contracting -> SHY (risk-off).
+
+    Parameters:
+      amihud_symbols (str): Comma-sep symbols for aggregate Amihud.
+      amihud_trend_window (int, default 21): Trend window for Amihud slope.
+      volume_sma_short (int, default 21): Short-term volume SMA.
+      volume_sma_long (int, default 63): Long-term volume SMA.
+      confirmation_days (int, default 3): Days signal must persist.
+      risk_on_symbol (str, default IWM): Asset for liquidity expansion.
+      neutral_symbol (str, default SPY): Asset for neutral regime.
+      risk_off_symbol (str, default SHY): Asset for contraction.
+      target_weight (float, default 0.90): Weight for selected asset.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        self._score_history: list[int] = []  # Recent composite scores
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+
+        amihud_syms_str: str = str(params.get("amihud_symbols", "SPY,QQQ,IWM,EFA,EEM"))
+        amihud_syms = [s.strip() for s in amihud_syms_str.split(",")]
+        trend_window: int = int(params.get("amihud_trend_window", 21))
+        vol_short: int = int(params.get("volume_sma_short", 21))
+        vol_long: int = int(params.get("volume_sma_long", 63))
+        confirm_days: int = int(params.get("confirmation_days", 3))
+        risk_on: str = str(params.get("risk_on_symbol", "IWM"))
+        neutral: str = str(params.get("neutral_symbol", "SPY"))
+        risk_off: str = str(params.get("risk_off_symbol", "SHY"))
+        tgt_weight: float = float(params.get("target_weight", 0.90))
+
+        lookback_needed = max(vol_long, trend_window) + 10
+
+        # --- Compute aggregate Amihud across signal symbols ---
+        amihud_series: list[list[float]] = []
+        vol_series: list[list[float]] = []
+
+        for sym in amihud_syms:
+            sym_data = (
+                indicators_df.filter(
+                    (pl.col("symbol") == sym) & (pl.col("date") <= as_of_date)
+                )
+                .sort("date")
+                .tail(lookback_needed)
+            )
+            if len(sym_data) < lookback_needed:
+                continue
+
+            closes = sym_data["close"].to_list()
+            volumes = sym_data["volume"].to_list()
+
+            # Compute daily Amihud and dollar volume
+            sym_amihud = []
+            sym_dolvol = []
+            for i in range(1, len(closes)):
+                ret = abs(closes[i] / closes[i - 1] - 1.0) if closes[i - 1] > 0 else 0
+                dv = closes[i] * volumes[i]
+                amihud_val = ret / dv if dv > 0 else 0
+                sym_amihud.append(amihud_val)
+                sym_dolvol.append(dv)
+
+            amihud_series.append(sym_amihud)
+            vol_series.append(sym_dolvol)
+
+        if len(amihud_series) < 2:
+            return []
+
+        # Average across symbols (align to shortest)
+        min_len = min(len(s) for s in amihud_series)
+        avg_amihud = []
+        total_vol = []
+        for i in range(min_len):
+            vals = [s[len(s) - min_len + i] for s in amihud_series]
+            avg_amihud.append(sum(vals) / len(vals))
+            dvs = [s[len(s) - min_len + i] for s in vol_series]
+            total_vol.append(sum(dvs))
+
+        if len(avg_amihud) < trend_window + 5:
+            return []
+
+        # --- Signal 1: Amihud regime (slope over trend_window) ---
+        # Simple: compare recent amihud to earlier amihud
+        recent_amihud = sum(avg_amihud[-trend_window // 2 :]) / (trend_window // 2)
+        earlier_amihud = sum(avg_amihud[-trend_window : -trend_window // 2]) / (
+            trend_window // 2
+        )
+        amihud_declining = 1 if recent_amihud < earlier_amihud else -1
+
+        # --- Signal 2: Volume trend ---
+        if len(total_vol) < vol_long:
+            return []
+        vol_sma_s = sum(total_vol[-vol_short:]) / vol_short
+        vol_sma_l = sum(total_vol[-vol_long:]) / vol_long
+        vol_trend = 1 if vol_sma_s > vol_sma_l else -1
+
+        # --- Composite score ---
+        # -1 * Amihud_regime + vol_trend: range [-2, +2]
+        # Amihud declining = positive for liquidity = +1
+        score = amihud_declining + vol_trend
+
+        # Track history for confirmation
+        self._score_history.append(score)
+        if len(self._score_history) > confirm_days + 5:
+            self._score_history = self._score_history[-(confirm_days + 5) :]
+
+        # Determine confirmed regime
+        if len(self._score_history) < confirm_days:
+            return []
+
+        recent_scores = self._score_history[-confirm_days:]
+        if all(s >= 1 for s in recent_scores):
+            target_sym = risk_on  # Liquidity expanding -> IWM
+        elif all(s <= -1 for s in recent_scores):
+            target_sym = risk_off  # Liquidity contracting -> SHY
+        else:
+            target_sym = neutral  # Neutral -> SPY
+
+        # --- Generate signals for regime change ---
+        signals: list[TradeSignal] = []
+        current_holdings = set(portfolio.positions.keys())
+        rotation_symbols = {risk_on, neutral, risk_off}
+
+        # If already in target, do nothing
+        if target_sym in current_holdings:
+            return []
+
+        # Close positions not matching target
+        for sym in current_holdings:
+            if sym in rotation_symbols and sym != target_sym:
+                signals.append(
+                    TradeSignal(
+                        symbol=sym,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"AmihudRegime: EXIT {sym} (score={score})",
+                    )
+                )
+
+        # Enter target
+        price = prices.get(target_sym, 0)
+        if price > 0:
+            signals.append(
+                TradeSignal(
+                    symbol=target_sym,
+                    action=Action.BUY,
+                    conviction=Conviction.MEDIUM,
+                    target_weight=tgt_weight,
+                    stop_loss=price * 0.92,
+                    reasoning=(
+                        f"AmihudRegime: ENTER {target_sym} "
+                        f"(score={score}, regime={'expansion' if target_sym == risk_on else 'contraction' if target_sym == risk_off else 'neutral'})"
+                    ),
+                )
+            )
+
+        return signals
+
+
+class VolumeBreakoutStrategy(Strategy):
+    """Mean-reversion after forced-selling dislocation (H10.2, Family 10).
+
+    Triple-trigger identifies forced liquidation events:
+      1. Dollar volume > volume_multiple x SMA_21(dollar_volume)
+      2. Daily return < -price_decline_atr_multiple x ATR(14)
+      3. Amihud ratio > amihud_multiple x SMA_21(amihud)
+
+    When all three fire simultaneously on any instrument in the universe,
+    enter long at next open and hold for hold_days trading days.
+
+    Parameters:
+      universe (str): Comma-separated list of symbols to scan.
+      volume_multiple (float, default 2.0): Volume surge threshold.
+      volume_lookback (int, default 21): SMA period for volume baseline.
+      price_decline_atr_multiple (float, default 1.5): ATR multiple for decline.
+      atr_period (int, default 14): ATR lookback.
+      amihud_multiple (float, default 1.5): Amihud spike threshold.
+      amihud_lookback (int, default 21): SMA period for Amihud baseline.
+      hold_days (int, default 5): Fixed holding period.
+      max_simultaneous (int, default 3): Max concurrent positions.
+      target_weight (float, default 0.10): Weight per position.
+    """
+
+    def __init__(self, config: StrategyConfig) -> None:
+        super().__init__(config)
+        # Track entry dates for fixed-hold exits: symbol -> entry_date
+        self._entry_dates: dict[str, date] = {}
+
+    def generate_signals(
+        self,
+        as_of_date: date,
+        indicators_df: pl.DataFrame,
+        portfolio: Portfolio,
+        prices: dict[str, float],
+    ) -> list[TradeSignal]:
+        params = self.config.parameters or {}
+
+        universe_str: str = str(
+            params.get(
+                "universe",
+                "SPY,QQQ,IWM,DIA,EFA,EEM,TLT,HYG,GLD,XLK,XLF,XLE,XLV,XLI,XLY",
+            )
+        )
+        universe = [s.strip() for s in universe_str.split(",")]
+        vol_mult: float = float(params.get("volume_multiple", 2.0))
+        vol_lookback: int = int(params.get("volume_lookback", 21))
+        atr_mult: float = float(params.get("price_decline_atr_multiple", 1.5))
+        atr_period: int = int(params.get("atr_period", 14))
+        amihud_mult: float = float(params.get("amihud_multiple", 1.5))
+        amihud_lookback: int = int(params.get("amihud_lookback", 21))
+        hold_days: int = int(params.get("hold_days", 5))
+        max_sim: int = int(params.get("max_simultaneous", 3))
+        tgt_weight: float = float(params.get("target_weight", 0.10))
+
+        signals: list[TradeSignal] = []
+        lookback_needed = max(vol_lookback, amihud_lookback, atr_period) + 5
+
+        # --- EXIT FIRST: close positions held for hold_days ---
+        for sym in list(self._entry_dates.keys()):
+            if sym not in portfolio.positions:
+                # Position was stopped out or closed externally
+                del self._entry_dates[sym]
+                continue
+            entry_dt = self._entry_dates[sym]
+            # Count trading days since entry using available dates for this symbol
+            sym_dates = (
+                indicators_df.filter(
+                    (pl.col("symbol") == sym) & (pl.col("date") <= as_of_date)
+                )
+                .select("date")
+                .unique()
+                .sort("date")
+                .to_series()
+                .to_list()
+            )
+            # Find index of entry date (or first date after it)
+            days_held = sum(1 for d in sym_dates if d > entry_dt)
+            if days_held >= hold_days:
+                signals.append(
+                    TradeSignal(
+                        symbol=sym,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
+                        stop_loss=0.0,
+                        reasoning=f"VolumeBreakout: EXIT {sym} after {days_held}d hold",
+                    )
+                )
+                del self._entry_dates[sym]
+
+        # --- ENTRY: scan universe for triple-trigger ---
+        current_positions = len(portfolio.positions) + sum(
+            1 for s in signals if s.action == Action.CLOSE
+        )
+        # Deduct closes from position count
+        current_positions = len(portfolio.positions) - sum(
+            1 for s in signals if s.action == Action.CLOSE
+        )
+
+        trigger_candidates: list[tuple[str, float]] = []  # (symbol, amihud_z)
+
+        for sym in universe:
+            if sym in portfolio.positions or sym in self._entry_dates:
+                continue  # Already holding or just entered
+
+            sym_data = (
+                indicators_df.filter(
+                    (pl.col("symbol") == sym) & (pl.col("date") <= as_of_date)
+                )
+                .sort("date")
+                .tail(lookback_needed)
+            )
+            if len(sym_data) < lookback_needed:
+                continue
+
+            closes = sym_data["close"].to_list()
+            volumes = sym_data["volume"].to_list()
+
+            # Today's values
+            close_today = closes[-1]
+            close_yesterday = closes[-2]
+            vol_today = volumes[-1]
+
+            if close_yesterday <= 0 or vol_today <= 0 or close_today <= 0:
+                continue
+
+            daily_return = close_today / close_yesterday - 1.0
+
+            # Dollar volume
+            dollar_vol_today = close_today * vol_today
+            dollar_vols = [
+                closes[i] * volumes[i]
+                for i in range(len(closes) - vol_lookback - 1, len(closes) - 1)
+            ]
+            if not dollar_vols or sum(dollar_vols) <= 0:
+                continue
+            avg_dollar_vol = sum(dollar_vols) / len(dollar_vols)
+
+            # Trigger 1: Volume surge
+            if dollar_vol_today <= vol_mult * avg_dollar_vol:
+                continue
+
+            # ATR(14) — compute from recent data
+            highs = sym_data["high"].to_list()
+            lows = sym_data["low"].to_list()
+            true_ranges = []
+            for i in range(len(closes) - atr_period, len(closes)):
+                if i < 1:
+                    continue
+                tr = max(
+                    highs[i] - lows[i],
+                    abs(highs[i] - closes[i - 1]),
+                    abs(lows[i] - closes[i - 1]),
+                )
+                true_ranges.append(tr)
+            if not true_ranges:
+                continue
+            atr = sum(true_ranges) / len(true_ranges)
+
+            # Trigger 2: Price decline > atr_mult * ATR
+            if daily_return >= 0 or abs(daily_return * close_today) < atr_mult * atr:
+                continue
+
+            # Amihud ratio: |return| / dollar_volume
+            amihud_today = (
+                abs(daily_return) / dollar_vol_today if dollar_vol_today > 0 else 0
+            )
+            amihud_history = []
+            for i in range(len(closes) - amihud_lookback - 1, len(closes) - 1):
+                if i < 1:
+                    continue
+                ret_i = abs(closes[i] / closes[i - 1] - 1.0)
+                dv_i = closes[i] * volumes[i]
+                if dv_i > 0:
+                    amihud_history.append(ret_i / dv_i)
+            if not amihud_history:
+                continue
+            avg_amihud = sum(amihud_history) / len(amihud_history)
+
+            # Trigger 3: Amihud spike
+            if avg_amihud <= 0 or amihud_today <= amihud_mult * avg_amihud:
+                continue
+
+            # ALL THREE TRIGGERS FIRED
+            amihud_z = amihud_today / avg_amihud if avg_amihud > 0 else 0
+            trigger_candidates.append((sym, amihud_z))
+
+        # Select top candidates by Amihud spike magnitude (largest dislocation first)
+        trigger_candidates.sort(key=lambda x: -x[1])
+        slots_available = max_sim - current_positions
+        if slots_available <= 0:
+            return signals
+
+        for sym, amihud_z in trigger_candidates[:slots_available]:
+            price = prices.get(sym, 0)
+            if price <= 0:
+                continue
+            signals.append(
+                TradeSignal(
+                    symbol=sym,
+                    action=Action.BUY,
+                    conviction=Conviction.HIGH,
+                    target_weight=tgt_weight,
+                    stop_loss=0.0,  # No stop-loss per hypothesis (forced-selling overshoots)
+                    reasoning=(
+                        f"VolumeBreakout: TRIPLE TRIGGER on {sym} "
+                        f"(amihud_z={amihud_z:.1f}x)"
+                    ),
+                )
+            )
+            self._entry_dates[sym] = as_of_date
+            logger.info(
+                "VolumeBreakout: ENTER %s on %s (amihud_z=%.1f)",
+                sym,
+                as_of_date,
+                amihud_z,
+            )
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
 # Strategy factory
 # ---------------------------------------------------------------------------
 
@@ -4470,6 +4869,8 @@ STRATEGY_REGISTRY: dict[str, type[Strategy]] = {
     "skip_month_tsmom": SkipMonthTsmomStrategy,
     "cyclical_defensive_rotation": CyclicalDefensiveRotationStrategy,
     "garch_regime": GarchRegimeStrategy,
+    "volume_breakout": VolumeBreakoutStrategy,
+    "amihud_regime": AmihudRegimeStrategy,
 }
 
 
