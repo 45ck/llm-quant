@@ -46,16 +46,32 @@ BASE_PARAMS = {
     "hold_days": 2,
 }
 
+import polars as pl  # noqa: E402
+
 print("Fetching data...")
-prices_df = fetch_ohlcv(SYMBOLS, lookback_days=LOOKBACK_DAYS)
-indicators_df = compute_indicators(prices_df)
+raw_prices_df = fetch_ohlcv(SYMBOLS, lookback_days=LOOKBACK_DAYS)
+# Compute indicators on FULL data (including BTC-USD weekends) so the strategy
+# can read BTC Fri→Sun returns when generating signals on Monday.
+indicators_df = compute_indicators(raw_prices_df)
+
+# For the engine's date loop, restrict to dates where QQQ has data (equity
+# trading days only).  This prevents weekend dates from diluting the NAV
+# series with zero-return days and avoids stale-price mark-to-market on QQQ.
+qqq_dates = set(
+    raw_prices_df.filter(pl.col("symbol") == "QQQ")
+    .select("date")
+    .unique()
+    .to_series()
+    .to_list()
+)
+prices_df = raw_prices_df.filter(pl.col("date").is_in(list(qqq_dates)))
 print(
-    f"Data: {len(prices_df)} rows, date range: "
-    f"{prices_df['date'].min()} to {prices_df['date'].max()}"
+    f"Data: {len(prices_df)} rows ({len(qqq_dates)} equity trading dates), "
+    f"date range: {prices_df['date'].min()} to {prices_df['date'].max()}"
 )
 
 
-def run_single(params, warmup=300):
+def run_single(params, warmup=140):
     """Run a single backtest with the given parameters."""
     config = StrategyConfig(
         name=STRATEGY,
@@ -179,8 +195,6 @@ print(f"\n  Stable: {stable_count}/{len(perturbations)} ({pct_stable:.0f}%)")
 # ==============================================================================
 print("\n--- SHUFFLED SIGNAL TEST ---")
 # Use QQQ as the primary asset for the shuffled signal test
-import polars as pl  # noqa: E402
-
 qqq_data = prices_df.filter(pl.col("symbol") == "QQQ").sort("date")
 qqq_closes = qqq_data["close"].to_list()
 qqq_daily_returns = [0.0] + [
@@ -258,6 +272,19 @@ verdict = "PASS - ALL GATES CLEARED" if all_pass else "FAIL"
 print(f"\n  VERDICT: {verdict}")
 
 # ==============================================================================
+# DATA QUALITY NOTE
+# ==============================================================================
+print(f"\n{'=' * 70}")
+print("DATA QUALITY NOTE")
+print(f"{'=' * 70}")
+print("  The original trial 1 reported Sharpe=0.839, but this was inflated by")
+print("  including BTC-USD weekend dates in the NAV series. On those dates QQQ")
+print("  has no data, producing zero-return days that deflate portfolio stdev")
+print("  and artificially inflate Sharpe. Corrected Sharpe on equity-only")
+print(f"  trading days = {base['sharpe']:.4f}.")
+print("  Original DSR=0.983 was computed from the inflated Sharpe and is invalid.")
+
+# ==============================================================================
 # SAVE RESULTS
 # ==============================================================================
 output = {
@@ -296,6 +323,13 @@ output = {
         "shuffled_signal_passed": gate6,
     },
     "verdict": "PASS" if all_pass else "FAIL",
+    "data_quality_note": (
+        "Original trial 1 Sharpe=0.839 was inflated by BTC-USD weekend dates "
+        "in the NAV series. Zero-return days (QQQ has no weekend data) deflate "
+        "portfolio stdev, artificially inflating Sharpe. Corrected Sharpe on "
+        f"equity-only trading days = {base['sharpe']:.4f}. Original DSR=0.983 "
+        "was computed from the inflated Sharpe and is invalid."
+    ),
 }
 
 out_path = Path(f"data/strategies/{SLUG}/robustness.yaml")

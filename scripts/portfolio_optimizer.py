@@ -55,6 +55,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "ief-qqq-rate-tech": "594c4f53",
     "behavioral-structural": "7cb2cace",
     "gld-slv-mean-reversion-v4": "14cdfaaf",
+    "skip-month-tsmom-v1": "a220a89a",
 }
 
 # Mechanism family labels for context
@@ -75,6 +76,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "ief-qqq-rate-tech": "F6: Rate Momentum",
     "behavioral-structural": "F7: Behavioral/Structural",
     "gld-slv-mean-reversion-v4": "F2: Mean Reversion",
+    "skip-month-tsmom-v1": "F3: TSMOM",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -96,6 +98,7 @@ TRACK_A_SLUGS: list[str] = [
     "ief-qqq-rate-tech",
     "behavioral-structural",
     "gld-slv-mean-reversion-v4",
+    "skip-month-tsmom-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
