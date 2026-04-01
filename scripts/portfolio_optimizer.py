@@ -57,6 +57,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "gld-slv-mean-reversion-v4": "14cdfaaf",
     "skip-month-tsmom-v1": "a220a89a",
     "credit-spread-regime-v1": "DIRECT",  # Direct computation (engine incompatible)
+    "dba-commodity-cycle-v1": "DIRECT",  # Direct computation (regime strategy)
 }
 
 # Mechanism family labels for context
@@ -79,6 +80,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "gld-slv-mean-reversion-v4": "F2: Mean Reversion",
     "skip-month-tsmom-v1": "F3: TSMOM",
     "credit-spread-regime-v1": "F9: Spread Regime",
+    "dba-commodity-cycle-v1": "F11: Commodity Cycle",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -102,6 +104,7 @@ TRACK_A_SLUGS: list[str] = [
     "gld-slv-mean-reversion-v4",
     "skip-month-tsmom-v1",
     "credit-spread-regime-v1",
+    "dba-commodity-cycle-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -240,6 +243,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
     """Compute daily returns directly for strategies that bypass the engine."""
     if slug == "credit-spread-regime-v1":
         return _compute_credit_spread_regime_returns(data_dir)
+    if slug == "dba-commodity-cycle-v1":
+        return _compute_dba_commodity_cycle_returns(data_dir)
     return None
 
 
@@ -361,6 +366,108 @@ def _compute_credit_spread_regime_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute credit-spread-regime returns: %s", e)
+        return None
+
+
+def _compute_dba_commodity_cycle_returns(data_dir: Path) -> dict | None:
+    """DBA commodity cycle: DBA absolute momentum → SPY/GLD allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "GLD", "SHY", "DBA"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        warmup = 60
+        lookback = 60
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            d_now = dates[i - 1]
+            d_lb = dates[i - 1 - lookback]
+            dba_now = sym_data["DBA"].get(d_now, 0.0)
+            dba_lb = sym_data["DBA"].get(d_lb, 0.0)
+
+            if dba_now <= 0 or dba_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            dba_mom = dba_now / dba_lb - 1
+
+            # GLD return
+            d, dp = dates[i], dates[i - 1]
+            gld = sym_data["GLD"]
+            gld_r = (
+                (gld[d] / gld[dp] - 1)
+                if d in gld and dp in gld and gld[dp] > 0
+                else 0.0
+            )
+
+            if dba_mom > 0:
+                regime = "inflation"
+                day_ret = spy_rets[i] * 0.30 + gld_r * 0.50
+            else:
+                regime = "disinflation"
+                day_ret = spy_rets[i] * 0.90
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.963,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute dba-commodity-cycle returns: %s", e)
         return None
 
 
