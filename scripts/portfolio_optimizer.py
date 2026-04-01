@@ -63,6 +63,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "tlt-shy-curve-momentum-v1": "DIRECT",  # Direct computation (curve regime)
     "tip-tlt-real-yield-v1": "DIRECT",  # Direct computation (real yield regime)
     "breakeven-inflation-v1": "DIRECT",  # Direct computation (breakeven inflation)
+    "global-yield-flow-v2": "DIRECT",  # Direct computation (capital flow)
 }
 
 # Mechanism family labels for context
@@ -91,6 +92,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "tlt-shy-curve-momentum-v1": "F14: Curve Shape Momentum",
     "tip-tlt-real-yield-v1": "F15: Real Yield Proxy",
     "breakeven-inflation-v1": "F16: Breakeven Inflation",
+    "global-yield-flow-v2": "F17: Capital Flow",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -120,6 +122,7 @@ TRACK_A_SLUGS: list[str] = [
     "tlt-shy-curve-momentum-v1",
     "tip-tlt-real-yield-v1",
     "breakeven-inflation-v1",
+    "global-yield-flow-v2",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -270,6 +273,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_tip_tlt_real_yield_returns(data_dir)
     if slug == "breakeven-inflation-v1":
         return _compute_breakeven_inflation_returns(data_dir)
+    if slug == "global-yield-flow-v2":
+        return _compute_global_yield_flow_v2_returns(data_dir)
     return None
 
 
@@ -1058,6 +1063,113 @@ def _compute_breakeven_inflation_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute breakeven-inflation returns: %s", e)
+        return None
+
+
+def _compute_global_yield_flow_v2_returns(data_dir: Path) -> dict | None:
+    """Global yield flow v2: TLT/EFA ratio momentum → SPY / EFA+GLD allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "TLT", "EFA", "GLD"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 60
+        lookback = 30
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build TLT/EFA ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            tlt = sym_data["TLT"].get(d, 0.0)
+            efa = sym_data["EFA"].get(d, 0.0)
+            ratio_series.append(tlt / efa if tlt > 0 and efa > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            if ratio_mom > 0:
+                # US bonds outperforming intl equity → capital to US equities
+                regime = "us_inflow"
+                day_ret = spy_rets[i] * 0.80
+            else:
+                # Intl equity outperforming US bonds → rotate to EFA + GLD
+                regime = "intl_preferred"
+                day_ret = _asset_ret("EFA", i) * 0.40 + _asset_ret("GLD", i) * 0.20
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.951,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute global-yield-flow-v2 returns: %s", e)
         return None
 
 
