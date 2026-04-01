@@ -1293,7 +1293,7 @@ class PairsRatioStrategy(Strategy):
             return None
         return (ratios[-1] - mean_r) / std_r
 
-    def generate_signals(  # noqa: PLR0911
+    def generate_signals(
         self,
         as_of_date: date,
         indicators_df: pl.DataFrame,
@@ -1690,7 +1690,7 @@ class VixRegimeStrategy(Strategy):
       target_weight (float, default 0.90): Position weight in favourable regime.
     """
 
-    def generate_signals(  # noqa: PLR0911
+    def generate_signals(
         self,
         as_of_date: date,
         indicators_df: pl.DataFrame,
@@ -1856,7 +1856,7 @@ class YieldCurveRegimeStrategy(Strategy):
       target_weight (float, default 0.90): Position weight.
     """
 
-    def generate_signals(  # noqa: PLR0911
+    def generate_signals(
         self,
         as_of_date: date,
         indicators_df: pl.DataFrame,
@@ -3816,7 +3816,7 @@ class AdaptiveSectorMomentumStrategy(Strategy):
         vix_now = vix_data["close"].to_list()[-1]
 
         # Determine target allocation based on VIX regime
-        all_symbols = set(sectors) | {spy_sym, gld_sym, shy_sym}
+        set(sectors) | {spy_sym, gld_sym, shy_sym}
         target_holdings: dict[str, float] = {}
 
         if vix_now >= vix_high:
@@ -4135,7 +4135,10 @@ class CyclicalDefensiveRotationStrategy(Strategy):
         long_closes = long_closes[-min_n:]
         short_closes = short_closes[-min_n:]
 
-        ratios = [l / s if s > 0 else 0.0 for l, s in zip(long_closes, short_closes)]
+        ratios = [
+            l / s if s > 0 else 0.0
+            for l, s in zip(long_closes, short_closes, strict=False)
+        ]
         if len(ratios) < sma_period + direction_lag:
             return []
 

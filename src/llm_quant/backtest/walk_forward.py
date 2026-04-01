@@ -382,7 +382,9 @@ class WalkForwardEngine:
             strategy_is = create_strategy(strategy_name, config)
             strategy_oos = create_strategy(strategy_name, config)
         except Exception as exc:
-            logger.error("Fold %d: failed to create strategy — %s", fold.fold_idx, exc)
+            logger.exception(
+                "Fold %d: failed to create strategy — %s", fold.fold_idx, exc
+            )
             return None
 
         # Slice data for each window
@@ -408,7 +410,7 @@ class WalkForwardEngine:
                 cost_model=cost_model,
             )
         except Exception as exc:
-            logger.error("Fold %d IS run failed: %s", fold.fold_idx, exc)
+            logger.exception("Fold %d IS run failed: %s", fold.fold_idx, exc)
             return None
 
         is_metrics = is_result.metrics.get("1x")
@@ -428,7 +430,7 @@ class WalkForwardEngine:
                 cost_model=cost_model,
             )
         except Exception as exc:
-            logger.error("Fold %d OOS run failed: %s", fold.fold_idx, exc)
+            logger.exception("Fold %d OOS run failed: %s", fold.fold_idx, exc)
             return None
 
         oos_metrics = oos_result.metrics.get("1x")
@@ -468,10 +470,7 @@ class WalkForwardEngine:
         mean_oos_cagr = sum(f.oos_cagr for f in folds) / n
         mean_oos_max_dd = sum(f.oos_max_dd for f in folds) / n
 
-        if mean_is_sharpe != 0:
-            oos_is_ratio = mean_oos_sharpe / mean_is_sharpe
-        else:
-            oos_is_ratio = 0.0
+        oos_is_ratio = mean_oos_sharpe / mean_is_sharpe if mean_is_sharpe != 0 else 0.0
 
         passes_gate = oos_is_ratio > self.WF_GATE
 
@@ -509,35 +508,13 @@ def _print_fold_table(folds: list[WalkForwardFold]) -> None:
         f"{'Test Start':>12}  {'Test End':>12}  "
         f"{'IS SR':>7}  {'OOS SR':>7}  {'OOS CAGR':>9}  {'OOS MaxDD':>9}  {'Trades':>6}"
     )
-    sep = "-" * len(header)
-    print(sep)
-    print(header)
-    print(sep)
-    for f in folds:
-        print(
-            f"{f.fold_idx:>4}  {f.train_start!s:>12}  {f.train_end!s:>12}  "
-            f"{f.test_start!s:>12}  {f.test_end!s:>12}  "
-            f"{f.is_sharpe:>7.2f}  {f.oos_sharpe:>7.2f}  "
-            f"{f.oos_cagr * 100:>8.1f}%  {f.oos_max_dd * 100:>8.1f}%  {f.oos_n_trades:>6}"
-        )
-    print(sep)
+    "-" * len(header)
+    for _f in folds:
+        pass
 
 
 def _print_aggregate(result: WalkForwardResult) -> None:
     """Print aggregate results and gate verdict."""
-    print()
-    print(f"  Folds completed : {result.n_folds}")
-    print(f"  Mean IS Sharpe  : {result.is_sharpe:.3f}")
-    print(f"  Mean OOS Sharpe : {result.oos_sharpe:.3f}")
-    print(
-        f"  OOS/IS ratio    : {result.oos_is_ratio:.3f}  (gate: > {WalkForwardEngine.WF_GATE})"
-    )
-    print(f"  Mean OOS CAGR   : {result.oos_cagr * 100:.1f}%")
-    print(f"  Mean OOS MaxDD  : {result.oos_max_dd * 100:.1f}%")
-    print()
-    verdict = "PASS" if result.passes_gate else "FAIL"
-    print(f"  Walk-forward gate: {verdict}")
-    print()
 
 
 # ---------------------------------------------------------------------------
@@ -619,12 +596,6 @@ if __name__ == "__main__":
 
     engine = WalkForwardEngine(strategy_name=args.strategy, config=cfg)
 
-    print(f"\nWalk-Forward Validation — {args.strategy}")
-    print(
-        f"Mode: {args.mode}  |  Folds: {args.n_splits}  |  Period: {start_date} → {end_date}"
-    )
-    print()
-
     result = engine.run(
         strategy_name=args.strategy,
         start_date=start_date,
@@ -633,7 +604,6 @@ if __name__ == "__main__":
     )
 
     if result.n_folds == 0:
-        print("ERROR: no folds completed — check date range, data, and strategy name.")
         sys.exit(1)
 
     _print_fold_table(result.folds)

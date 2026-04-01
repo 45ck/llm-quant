@@ -8,6 +8,10 @@ to log *why* a trade was approved or rejected.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import polars as pl
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -526,7 +530,7 @@ def check_portfolio_correlation_dcc(
     try:
         estimator = DccGarchEstimator()
         result = estimator.estimate(strategy_returns)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning(
             "DCC correlation estimation failed — check skipped.", exc_info=True
         )
@@ -607,7 +611,7 @@ def check_cvar_limit(
         config = CvarConfig()
         estimator = FhsCvarEstimator(config)
         result = estimator.estimate(portfolio_returns)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("CVaR estimation failed — check skipped.", exc_info=True)
         return RiskCheckResult(
             passed=True,

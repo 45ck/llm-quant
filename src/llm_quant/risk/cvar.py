@@ -173,13 +173,13 @@ class FhsCvarEstimator:
         # Step 1: filter returns through GARCH or EWMA
         try:
             filtered, method = self._filter_garch(arr)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("GARCH filtering failed, falling back to EWMA.", exc_info=True)
             filtered = self._ewma_weighted_historical(arr)
             method = "ewma_weighted"
 
         # Step 2: compute VaR and CVaR at confidence level
-        alpha = 1.0 - self.config.confidence_level  # 0.05 for 95%
+        1.0 - self.config.confidence_level  # 0.05 for 95%
         var_95 = float(np.quantile(-filtered, self.config.confidence_level))
         tail_mask = -filtered >= var_95
         if tail_mask.sum() == 0:

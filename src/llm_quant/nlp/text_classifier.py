@@ -140,12 +140,12 @@ class TextClassifier:
                 batch_hashes = [hashes[i] for i in batch_idx]
                 results = self._call_claude(batch_sentences)
                 self._cache_results(doc_id, batch_sentences, batch_hashes, results)
-                for h, r in zip(batch_hashes, results):
+                for h, r in zip(batch_hashes, results, strict=False):
                     cached[h] = r
 
         # --- assemble output in original order ---------------------------
         output: list[dict[str, Any]] = []
-        for sentence, h in zip(sentences, hashes):
+        for sentence, h in zip(sentences, hashes, strict=False):
             entry = cached.get(h, {})
             output.append(
                 {
@@ -241,7 +241,7 @@ class TextClassifier:
                 r.get("causal"),
                 r.get("confidence"),
             )
-            for s, h, r in zip(sentences, hashes, results)
+            for s, h, r in zip(sentences, hashes, results, strict=False)
         ]
         self._db.executemany(
             """

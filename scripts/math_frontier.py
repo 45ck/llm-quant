@@ -1,4 +1,4 @@
-# ruff: noqa: NPY002, B007, N816
+# ruff: noqa: B007, N816
 """
 Quantitative Risk Mathematics: The Frontier of Possibility
 Computes exact portfolio statistics, leverage equations, decorrelation frontiers,

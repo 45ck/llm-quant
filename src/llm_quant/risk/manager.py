@@ -82,7 +82,7 @@ def _check_exchange_outage(db_conn: Any | None, exchange: str) -> RiskCheckResul
             current_value=float(active_outages),
             limit_value=0.0,
         )
-    except Exception:  # noqa: BLE001  # table missing or schema mismatch
+    except Exception:  # table missing or schema mismatch
         return RiskCheckResult(
             passed=True,
             rule="tc_exchange_outage",
@@ -143,7 +143,7 @@ def _check_funding_reversal(
             current_value=abs(rate),
             limit_value=max_funding_rate_pct,
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         return RiskCheckResult(
             passed=True,
             rule="tc_funding_reversal",
@@ -205,7 +205,7 @@ def _check_spread_collapse(
             current_value=spread,
             limit_value=min_spread_bps,
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         return RiskCheckResult(
             passed=True,
             rule="tc_spread_collapse",

@@ -1,6 +1,6 @@
 """Tests for MetaRiskMonitor (cross-pod fund-level analytics)."""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from llm_quant.risk.meta_monitor import MetaRiskMonitor
 

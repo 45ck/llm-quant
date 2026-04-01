@@ -943,9 +943,7 @@ class BacktestEngine:
 
         # Cap scale to prevent excessive leverage
         scale = min(scale, max_scale)
-        scale = max(scale, 0.01)  # floor to avoid zero allocation
-
-        return scale
+        return max(scale, 0.01)  # floor to avoid zero allocation
 
     def _apply_vol_scaling_to_signals(
         self,

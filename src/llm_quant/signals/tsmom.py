@@ -117,7 +117,7 @@ class TsmomCalculator:
         # -- Blend signals (only include lookbacks with sufficient history) -----
         valid_pairs = [
             (w, lookback_signals[lb])
-            for lb, w in zip(cfg.lookbacks, cfg.blend_weights)
+            for lb, w in zip(cfg.lookbacks, cfg.blend_weights, strict=False)
             if n > lb
         ]
 
@@ -278,5 +278,4 @@ def compute_portfolio_tsmom(
 
     df = pl.DataFrame(rows)
     df = df.with_columns(pl.col("scaled_signal").abs().alias("_abs_signal"))
-    df = df.sort("_abs_signal", descending=True).drop("_abs_signal")
-    return df
+    return df.sort("_abs_signal", descending=True).drop("_abs_signal")

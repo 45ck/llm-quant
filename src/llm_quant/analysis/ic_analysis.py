@@ -96,7 +96,7 @@ class IcAnalyzer:
         if _check_alphalens():
             try:
                 return self._compute_ic_alphalens_single(signal, prices, n)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning("alphalens path failed (%s), using manual fallback", exc)
 
         return self._compute_ic_manual_all_periods(signal, prices, n)
@@ -139,7 +139,7 @@ class IcAnalyzer:
                 ic_df = alphalens.performance.factor_information_coefficient(
                     factor_data, group_adjust=False
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 # Fall back to manual if alphalens internal format issues
                 return self._compute_ic_manual_all_periods(signal, prices, n)
 

@@ -49,7 +49,7 @@ def check_exchange_health(
             """
         ).fetchone()
         has_table = table_exists is not None and table_exists[0] > 0
-    except Exception:  # noqa: BLE001
+    except Exception:
         has_table = False
 
     if not has_table:
@@ -185,7 +185,7 @@ def check_spread_compression(
             """
         ).fetchone()
         has_table = table_exists is not None and table_exists[0] > 0
-    except Exception:  # noqa: BLE001
+    except Exception:
         has_table = False
 
     if not has_table:
@@ -317,7 +317,7 @@ def check_funding_rate_reversal(
             """
         ).fetchone()
         has_table = table_exists is not None and table_exists[0] > 0
-    except Exception:  # noqa: BLE001
+    except Exception:
         has_table = False
 
     if not has_table:
@@ -457,7 +457,7 @@ def check_beta_drift(
             """
         ).fetchone()
         has_table = table_exists is not None and table_exists[0] > 0
-    except Exception:  # noqa: BLE001
+    except Exception:
         has_table = False
 
     if not has_table:
@@ -643,7 +643,7 @@ def check_cross_strategy_correlation(
                     )
                 )
                 return checks
-        except Exception:  # noqa: BLE001
+        except Exception:
             checks.append(
                 SurveillanceCheck(
                     detector="track_c_cross_strategy_correlation",

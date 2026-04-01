@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pytest
 
 try:
-    import empyrical as _empyrical  # noqa: F401
+    import empyrical as _empyrical
 except ImportError:
     _empyrical = None
 

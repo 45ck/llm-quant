@@ -496,7 +496,7 @@ def compute_hrp_weights_simple(
     # then scale by cluster structure
     variances = np.var(returns_matrix, axis=1, ddof=1)
     inv_var = 1.0 / (variances + 1e-12)
-    raw_weights = inv_var / inv_var.sum()
+    inv_var / inv_var.sum()
 
     # Apply hierarchical rescaling via cluster labels at a moderate cut
     n_clusters = max(2, n // 2)
@@ -541,7 +541,7 @@ def apply_track_split(weights: dict[str, float]) -> dict[str, float]:
 
     a_total = sum(weights[s] for s in a_slugs)
     b_total = sum(weights[s] for s in b_slugs)
-    other_total = sum(weights[s] for s in other_slugs)
+    sum(weights[s] for s in other_slugs)
 
     adjusted: dict[str, float] = {}
 
@@ -700,18 +700,8 @@ def build_report(
         lines.append("")
 
     # Metric table
-    targets = {
-        "Annual Sharpe": (1.50, True),
-        "Sortino": (1.00, True),
-        "Max Drawdown": (0.15, False),
-        "CAGR": (0.15, True),
-        "Calmar": (0.50, True),
-        "Best 30d": (None, None),
-        "Worst 30d": (None, None),
-    }
 
     col_w = 9
-    h_metric = "Metric"
     h_hrp = "HRP" if method == "hrp" else "InvVar"
     h_eq = "Equal"
     h_bench = "60/40"

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from datetime import UTC
 from typing import Any
@@ -283,10 +284,7 @@ def _get_credit_spread(
     mean = statistics.mean(values)
     stdev = statistics.stdev(values)
 
-    if stdev == 0.0:
-        zscore = 0.0
-    else:
-        zscore = (oas - mean) / stdev
+    zscore = 0.0 if stdev == 0.0 else (oas - mean) / stdev
 
     zscore = round(zscore, 4)
     silent_stress = (zscore > silent_stress_zscore_threshold) and (
@@ -353,8 +351,8 @@ def _get_vix_regime(
         sorted_vix = sorted(vix_values)
         n = len(sorted_vix)
         # Percentile index (nearest-rank method)
-        idx_33 = max(0, int(round(0.33 * n)) - 1)
-        idx_67 = max(0, int(round(0.67 * n)) - 1)
+        idx_33 = max(0, round(0.33 * n) - 1)
+        idx_67 = max(0, round(0.67 * n) - 1)
         lower = round(sorted_vix[idx_33], 2)
         upper = round(sorted_vix[idx_67], 2)
         logger.debug(
@@ -931,10 +929,8 @@ def build_market_context(
         pass
 
     hmm_confidence_threshold: float = 0.65
-    try:
+    with contextlib.suppress(Exception):
         hmm_confidence_threshold = getattr(config, "hmm_confidence_threshold", 0.65)
-    except Exception:
-        pass
 
     regime_confidence: float = 0.5
     hmm_regime_fallback: bool = True

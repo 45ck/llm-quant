@@ -345,10 +345,7 @@ def generate_tearsheet(
     strategy_returns.name = slug
 
     # Determine benchmark
-    if track == "b" or slug in TRACK_B_SLUGS:
-        effective_track = "b"
-    else:
-        effective_track = "a"
+    effective_track = "b" if track == "b" or slug in TRACK_B_SLUGS else "a"
 
     benchmark_returns = build_benchmark_returns(
         effective_track,
@@ -381,7 +378,7 @@ def generate_tearsheet(
             )
             logger.info("Tearsheet saved: %s", tearsheet_path)
         except Exception as exc:
-            logger.error("Failed to generate HTML tearsheet: %s", exc)
+            logger.exception("Failed to generate HTML tearsheet: %s", exc)
             return None
 
     return tearsheet_path

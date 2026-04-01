@@ -261,7 +261,7 @@ class EdgarFetcher:
         dates = filings.get("filingDate", [])
         accessions = filings.get("accessionNumber", [])
 
-        for form, date, accession in zip(forms, dates, accessions):
+        for form, date, accession in zip(forms, dates, accessions, strict=False):
             if form not in ("10-K", "10-K/A"):
                 continue
             try:

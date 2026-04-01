@@ -770,7 +770,7 @@ def check_operational_health(
                         current_value=1.0,
                     )
                 )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             checks.append(
                 SurveillanceCheck(
                     detector="operational_health",

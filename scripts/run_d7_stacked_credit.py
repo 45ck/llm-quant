@@ -119,7 +119,7 @@ def corr(x: list[float], y: list[float]) -> float:
     x, y = x[:n], y[:n]
     mx = sum(x) / n
     my = sum(y) / n
-    num = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y))
+    num = sum((xi - mx) * (yi - my) for xi, yi in zip(x, y, strict=False))
     dx = (sum((xi - mx) ** 2 for xi in x)) ** 0.5
     dy = (sum((yi - my) ** 2 for yi in y)) ** 0.5
     if dx == 0 or dy == 0:

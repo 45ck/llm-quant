@@ -113,7 +113,7 @@ class DccGarchEstimator:
                 logger.debug(
                     "DCC-GARCH estimated on %d obs × %d assets.", n_obs, n_assets
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.warning(
                     "DCC-GARCH failed — falling back to EWMA.", exc_info=True
                 )
@@ -197,7 +197,7 @@ class DccGarchEstimator:
                 # Avoid division by near-zero volatility
                 cond_vol = np.maximum(cond_vol, 1e-8)
                 std_residuals[:, i] = scaled / cond_vol
-            except Exception:  # noqa: BLE001
+            except Exception:
                 # If GARCH fails for this series, standardize by sample std
                 std_dev = np.std(series)
                 std_residuals[:, i] = series / (std_dev if std_dev > 1e-10 else 1.0)
@@ -219,9 +219,7 @@ class DccGarchEstimator:
 
         # Step 3: Extract correlation matrix R_T
         d_inv = np.diag(1.0 / np.sqrt(np.maximum(np.diag(q_t), 1e-12)))
-        r_t = d_inv @ q_t @ d_inv
-
-        return r_t
+        return d_inv @ q_t @ d_inv
 
     def _estimate_ewma(self, returns: np.ndarray) -> np.ndarray:
         """Estimate current correlation via EWMA (RiskMetrics approach).
@@ -239,7 +237,7 @@ class DccGarchEstimator:
         np.ndarray
             N×N current correlation matrix.
         """
-        n_obs, n_assets = returns.shape
+        n_obs, _n_assets = returns.shape
         lam = self.lambda_ewma
 
         # Initialize with sample covariance
@@ -255,9 +253,7 @@ class DccGarchEstimator:
         # Convert covariance to correlation
         std = np.sqrt(np.maximum(np.diag(cov), 1e-12))
         d_inv = np.diag(1.0 / std)
-        corr = d_inv @ cov @ d_inv
-
-        return corr
+        return d_inv @ cov @ d_inv
 
     def _forbes_rigobon_adjust(self, corr: float, vol_ratio: float) -> float:
         """Apply Forbes-Rigobon heteroskedasticity adjustment.

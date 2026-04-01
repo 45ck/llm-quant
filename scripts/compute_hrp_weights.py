@@ -452,7 +452,7 @@ def compute_hrp_weights(
     dict[str, float]
         HRP weight per slug, summing to 1.0.
     """
-    n = len(slugs)
+    len(slugs)
 
     # Extract T x N returns array
     returns_array = np.array([returns_df[s].to_list() for s in slugs]).T  # (T, N)

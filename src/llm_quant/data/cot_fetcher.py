@@ -122,7 +122,7 @@ class CotFetcher:
             url = f"{self.CFTC_API}?{params}"
             logger.debug("COT fetch: GET %s", url)
 
-            with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310
+            with urllib.request.urlopen(url, timeout=30) as resp:
                 raw: list[dict[str, Any]] = json.loads(resp.read())
 
         except Exception:
@@ -212,7 +212,7 @@ class CotFetcher:
         roll_min = pl.col("commercial_net").rolling_min(window_size=window)
         roll_max = pl.col("commercial_net").rolling_max(window_size=window)
 
-        df = df.with_columns(
+        return df.with_columns(
             pl.when(roll_max - roll_min == 0.0)
             .then(pl.lit(50.0))
             .otherwise(
@@ -220,7 +220,6 @@ class CotFetcher:
             )
             .alias("cot_index")
         )
-        return df
 
     def get_regime_signal(self, symbol: str) -> dict[str, Any]:
         """Return the current COT index and crowding signal for a universe symbol.

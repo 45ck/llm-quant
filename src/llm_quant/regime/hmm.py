@@ -146,8 +146,7 @@ class HmmRegimeDetector:
         obs = np.column_stack(cols)
         # Replace any remaining NaN with 0 (forward-fill would be better but
         # this is safe for HMM warm-up periods)
-        obs = np.nan_to_num(obs, nan=0.0)
-        return obs
+        return np.nan_to_num(obs, nan=0.0)
 
     def _decode_state(self, model: object, observations: np.ndarray) -> HmmRegimeResult:
         """Predict regime from the final observation using a fitted HMM.

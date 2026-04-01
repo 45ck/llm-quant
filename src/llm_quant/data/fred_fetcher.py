@@ -302,7 +302,7 @@ class FredFetcher:
         try:
             from fredapi import Fred  # type: ignore[import]
         except ImportError:
-            logger.error("fredapi not installed — run: pip install fredapi")
+            logger.exception("fredapi not installed — run: pip install fredapi")
             return None
 
         try:

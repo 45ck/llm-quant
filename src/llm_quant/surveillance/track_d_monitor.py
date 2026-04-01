@@ -228,7 +228,7 @@ def check_track_d_hold_periods(
 
     try:
         held_symbols = _get_leveraged_positions(conn)
-    except Exception:  # noqa: BLE001
+    except Exception:
         checks.append(
             SurveillanceCheck(
                 detector="track_d_hold_periods",
@@ -252,14 +252,11 @@ def check_track_d_hold_periods(
         )
         return checks
 
-    worst_symbol: str | None = None
     worst_days = 0
 
     for symbol in held_symbols:
         days = _hold_days_from_trades(conn, symbol)
-        if days > worst_days:
-            worst_days = days
-            worst_symbol = symbol
+        worst_days = max(worst_days, days)
 
         if days >= MAX_HOLD_DAYS:
             checks.append(

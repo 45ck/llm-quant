@@ -136,10 +136,11 @@ def compute_hrp_weights(
     try:
         import Riskfolio as rp
     except ImportError as exc:
-        raise ImportError(
+        msg = (
             "Riskfolio-Lib is required for --method hrp. "
             "Install with: pip install 'Riskfolio-Lib>=6.0'"
-        ) from exc
+        )
+        raise ImportError(msg) from exc
 
     # Build returns DataFrame (columns = slugs, rows = trading days)
     data: dict[str, list[float]] = {}
