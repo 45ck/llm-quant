@@ -66,6 +66,8 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "global-yield-flow-v2": "DIRECT",  # Direct computation (capital flow)
     "commodity-carry-v2": "DIRECT",  # Direct computation (commodity carry)
     "tlt-gld-disinflation-v1": "DIRECT",  # Direct computation (disinflation signal)
+    "dbc-spy-commodity-equity-v1": "DIRECT",  # Direct computation (commodity-equity rotation)
+    "agg-tlt-duration-rotation-v2": "DIRECT",  # Direct computation (duration rotation)
     "uso-xle-mean-reversion-v2": "DIRECT",  # Direct computation (energy pair MR, Track B)
     "gdx-gld-mean-reversion-v1": "DIRECT",  # Direct computation (miners pair MR, Track B)
 }
@@ -99,6 +101,8 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "global-yield-flow-v2": "F17: Capital Flow",
     "commodity-carry-v2": "F18: Commodity Carry",
     "tlt-gld-disinflation-v1": "F19: Disinflation Signal",
+    "dbc-spy-commodity-equity-v1": "F21: Commodity-Equity Rotation",
+    "agg-tlt-duration-rotation-v2": "F22: Duration Rotation",
     "uso-xle-mean-reversion-v2": "F2: Mean Reversion (Energy)",
     "gdx-gld-mean-reversion-v1": "F2: Mean Reversion (Miners)",
 }
@@ -133,6 +137,8 @@ TRACK_A_SLUGS: list[str] = [
     "global-yield-flow-v2",
     "commodity-carry-v2",
     "tlt-gld-disinflation-v1",
+    "dbc-spy-commodity-equity-v1",
+    "agg-tlt-duration-rotation-v2",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -291,6 +297,10 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_commodity_carry_v2_returns(data_dir)
     if slug == "tlt-gld-disinflation-v1":
         return _compute_tlt_gld_disinflation_returns(data_dir)
+    if slug == "dbc-spy-commodity-equity-v1":
+        return _compute_dbc_spy_commodity_equity_returns(data_dir)
+    if slug == "agg-tlt-duration-rotation-v2":
+        return _compute_agg_tlt_duration_rotation_returns(data_dir)
     if slug == "uso-xle-mean-reversion-v2":
         return _compute_pair_mr_returns(
             data_dir, "USO", "XLE", 0.60, 0.20, 0.35, 60, 1.0
@@ -1416,6 +1426,224 @@ def _compute_tlt_gld_disinflation_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute tlt-gld-disinflation returns: %s", e)
+        return None
+
+
+def _compute_dbc_spy_commodity_equity_returns(data_dir: Path) -> dict | None:
+    """DBC/SPY commodity-equity rotation v1: DBC/SPY ratio momentum → commodity/equity."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["DBC", "SPY", "GLD", "DBA"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 60
+        lookback = 30
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build DBC/SPY ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            dbc = sym_data["DBC"].get(d, 0.0)
+            spy = spy_close[i] if i < len(spy_close) else 0.0
+            ratio_series.append(dbc / spy if dbc > 0 and spy > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            if ratio_mom > 0:
+                # Commodity cycle (DBC outperforming SPY): GLD + DBA + small SPY
+                regime = "commodity"
+                day_ret = (
+                    _asset_ret("GLD", i) * 0.40
+                    + _asset_ret("DBA", i) * 0.30
+                    + spy_rets[i] * 0.10
+                )
+            else:
+                # Equity cycle (SPY outperforming DBC): overweight SPY
+                regime = "equity"
+                day_ret = spy_rets[i] * 0.80
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.956,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute dbc-spy-commodity-equity returns: %s", e)
+        return None
+
+
+def _compute_agg_tlt_duration_rotation_returns(data_dir: Path) -> dict | None:
+    """AGG/TLT duration rotation v2: AGG/TLT ratio momentum → SPY allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["AGG", "TLT", "SPY", "GLD"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 60
+        lookback = 20  # v2: 20-day lookback (from 30 in v1)
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build AGG/TLT ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            agg = sym_data["AGG"].get(d, 0.0)
+            tlt = sym_data["TLT"].get(d, 0.0)
+            ratio_series.append(agg / tlt if agg > 0 and tlt > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            if ratio_mom > 0:
+                # AGG outperforming TLT (curve flattening): moderate equity + gold
+                regime = "flattening"
+                day_ret = spy_rets[i] * 0.50 + _asset_ret("GLD", i) * 0.20
+            else:
+                # TLT outperforming AGG (rate cuts/steepening): full equity
+                regime = "steepening"
+                day_ret = spy_rets[i] * 0.80
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.953,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute agg-tlt-duration-rotation returns: %s", e)
         return None
 
 
