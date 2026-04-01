@@ -48,7 +48,7 @@ REPORTS_DIR = DATA_DIR / "reports"
 # Matches STRATEGY_EXPERIMENTS in portfolio_optimizer.py
 STRATEGY_EXPERIMENTS: dict[str, str] = {
     "soxx-qqq-lead-lag": "57fba00d",
-    "lqd-spy-credit-lead": "b0588e6d",       # best experiment (b0588e6d has more history)
+    "lqd-spy-credit-lead": "b0588e6d",  # best experiment (b0588e6d has more history)
     "agg-spy-credit-lead": "66bec9a0",
     "hyg-spy-5d-credit-lead": "1736ac56",
     "agg-qqq-credit-lead": "eaf37299",
@@ -68,51 +68,61 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
 # Fallback: known strategy parameters for synthetic return generation
 # (Sharpe, annualised vol, annualised mean return) from backtest results / mandate docs
 SYNTHETIC_PARAMS: dict[str, dict[str, float]] = {
-    "soxx-qqq-lead-lag":        {"sharpe": 0.86, "vol": 0.12, "mean": 0.11},
-    "lqd-spy-credit-lead":      {"sharpe": 1.25, "vol": 0.08, "mean": 0.10},
-    "agg-spy-credit-lead":      {"sharpe": 1.10, "vol": 0.07, "mean": 0.08},
-    "hyg-spy-5d-credit-lead":   {"sharpe": 1.20, "vol": 0.09, "mean": 0.11},
-    "agg-qqq-credit-lead":      {"sharpe": 1.15, "vol": 0.10, "mean": 0.12},
-    "lqd-qqq-credit-lead":      {"sharpe": 1.18, "vol": 0.09, "mean": 0.11},
-    "vcit-qqq-credit-lead":     {"sharpe": 1.05, "vol": 0.09, "mean": 0.09},
-    "hyg-qqq-credit-lead":      {"sharpe": 1.10, "vol": 0.10, "mean": 0.11},
-    "emb-spy-credit-lead":      {"sharpe": 0.95, "vol": 0.10, "mean": 0.10},
-    "agg-efa-credit-lead":      {"sharpe": 1.00, "vol": 0.09, "mean": 0.09},
-    "spy-overnight-momentum":   {"sharpe": 1.30, "vol": 0.07, "mean": 0.09},
-    "tlt-spy-rate-momentum":    {"sharpe": 0.90, "vol": 0.11, "mean": 0.10},
-    "tlt-qqq-rate-tech":        {"sharpe": 0.85, "vol": 0.12, "mean": 0.10},
-    "ief-qqq-rate-tech":        {"sharpe": 0.88, "vol": 0.11, "mean": 0.10},
-    "behavioral-structural":    {"sharpe": 1.05, "vol": 0.08, "mean": 0.08},
-    "gld-slv-mean-reversion-v4":{"sharpe": 1.40, "vol": 0.07, "mean": 0.10},
+    "soxx-qqq-lead-lag": {"sharpe": 0.86, "vol": 0.12, "mean": 0.11},
+    "lqd-spy-credit-lead": {"sharpe": 1.25, "vol": 0.08, "mean": 0.10},
+    "agg-spy-credit-lead": {"sharpe": 1.10, "vol": 0.07, "mean": 0.08},
+    "hyg-spy-5d-credit-lead": {"sharpe": 1.20, "vol": 0.09, "mean": 0.11},
+    "agg-qqq-credit-lead": {"sharpe": 1.15, "vol": 0.10, "mean": 0.12},
+    "lqd-qqq-credit-lead": {"sharpe": 1.18, "vol": 0.09, "mean": 0.11},
+    "vcit-qqq-credit-lead": {"sharpe": 1.05, "vol": 0.09, "mean": 0.09},
+    "hyg-qqq-credit-lead": {"sharpe": 1.10, "vol": 0.10, "mean": 0.11},
+    "emb-spy-credit-lead": {"sharpe": 0.95, "vol": 0.10, "mean": 0.10},
+    "agg-efa-credit-lead": {"sharpe": 1.00, "vol": 0.09, "mean": 0.09},
+    "spy-overnight-momentum": {"sharpe": 1.30, "vol": 0.07, "mean": 0.09},
+    "tlt-spy-rate-momentum": {"sharpe": 0.90, "vol": 0.11, "mean": 0.10},
+    "tlt-qqq-rate-tech": {"sharpe": 0.85, "vol": 0.12, "mean": 0.10},
+    "ief-qqq-rate-tech": {"sharpe": 0.88, "vol": 0.11, "mean": 0.10},
+    "behavioral-structural": {"sharpe": 1.05, "vol": 0.08, "mean": 0.08},
+    "gld-slv-mean-reversion-v4": {"sharpe": 1.40, "vol": 0.07, "mean": 0.10},
 }
 
 # Mechanism family for display
 MECHANISM_FAMILIES: dict[str, str] = {
-    "soxx-qqq-lead-lag":        "F8: Non-Credit Lead-Lag",
-    "lqd-spy-credit-lead":      "F1: Credit Lead-Lag",
-    "agg-spy-credit-lead":      "F1: Credit Lead-Lag",
-    "hyg-spy-5d-credit-lead":   "F1: Credit Lead-Lag",
-    "agg-qqq-credit-lead":      "F1: Credit Lead-Lag",
-    "lqd-qqq-credit-lead":      "F1: Credit Lead-Lag",
-    "vcit-qqq-credit-lead":     "F1: Credit Lead-Lag",
-    "hyg-qqq-credit-lead":      "F1: Credit Lead-Lag",
-    "emb-spy-credit-lead":      "F1: Credit Lead-Lag",
-    "agg-efa-credit-lead":      "F1: Credit Lead-Lag",
-    "spy-overnight-momentum":   "F5: Overnight Momentum",
-    "tlt-spy-rate-momentum":    "F6: Rate Momentum",
-    "tlt-qqq-rate-tech":        "F6: Rate Momentum",
-    "ief-qqq-rate-tech":        "F6: Rate Momentum",
-    "behavioral-structural":    "F7: Behavioral/Structural",
-    "gld-slv-mean-reversion-v4":"F2: Mean Reversion",
+    "soxx-qqq-lead-lag": "F8: Non-Credit Lead-Lag",
+    "lqd-spy-credit-lead": "F1: Credit Lead-Lag",
+    "agg-spy-credit-lead": "F1: Credit Lead-Lag",
+    "hyg-spy-5d-credit-lead": "F1: Credit Lead-Lag",
+    "agg-qqq-credit-lead": "F1: Credit Lead-Lag",
+    "lqd-qqq-credit-lead": "F1: Credit Lead-Lag",
+    "vcit-qqq-credit-lead": "F1: Credit Lead-Lag",
+    "hyg-qqq-credit-lead": "F1: Credit Lead-Lag",
+    "emb-spy-credit-lead": "F1: Credit Lead-Lag",
+    "agg-efa-credit-lead": "F1: Credit Lead-Lag",
+    "spy-overnight-momentum": "F5: Overnight Momentum",
+    "tlt-spy-rate-momentum": "F6: Rate Momentum",
+    "tlt-qqq-rate-tech": "F6: Rate Momentum",
+    "ief-qqq-rate-tech": "F6: Rate Momentum",
+    "behavioral-structural": "F7: Behavioral/Structural",
+    "gld-slv-mean-reversion-v4": "F2: Mean Reversion",
 }
 
 # Track membership for 70/30 target
 TRACK_A_SLUGS: set[str] = {
-    "lqd-spy-credit-lead", "agg-spy-credit-lead", "hyg-spy-5d-credit-lead",
-    "agg-qqq-credit-lead", "lqd-qqq-credit-lead", "vcit-qqq-credit-lead",
-    "hyg-qqq-credit-lead", "emb-spy-credit-lead", "agg-efa-credit-lead",
-    "spy-overnight-momentum", "tlt-spy-rate-momentum", "tlt-qqq-rate-tech",
-    "ief-qqq-rate-tech", "behavioral-structural", "gld-slv-mean-reversion-v4",
+    "lqd-spy-credit-lead",
+    "agg-spy-credit-lead",
+    "hyg-spy-5d-credit-lead",
+    "agg-qqq-credit-lead",
+    "lqd-qqq-credit-lead",
+    "vcit-qqq-credit-lead",
+    "hyg-qqq-credit-lead",
+    "emb-spy-credit-lead",
+    "agg-efa-credit-lead",
+    "spy-overnight-momentum",
+    "tlt-spy-rate-momentum",
+    "tlt-qqq-rate-tech",
+    "ief-qqq-rate-tech",
+    "behavioral-structural",
+    "gld-slv-mean-reversion-v4",
 }
 TRACK_B_SLUGS: set[str] = {"soxx-qqq-lead-lag"}
 
@@ -205,7 +215,9 @@ def load_real_strategy(slug: str) -> StrategyData | None:
 
     returns = data.get("daily_returns", [])
     if not returns or len(returns) < 30:
-        logger.debug("Insufficient returns in %s (%d days)", artifact_path, len(returns))
+        logger.debug(
+            "Insufficient returns in %s (%d days)", artifact_path, len(returns)
+        )
         return None
 
     metrics = data.get("metrics_1x", {})
@@ -236,7 +248,9 @@ def _generate_synthetic_returns(
     return rng.normal(loc=daily_mean, scale=daily_vol, size=n_days)
 
 
-def load_synthetic_strategy(slug: str, n_days: int, rng: np.random.Generator) -> StrategyData:
+def load_synthetic_strategy(
+    slug: str, n_days: int, rng: np.random.Generator
+) -> StrategyData:
     """Generate a synthetic strategy with known parameters."""
     params = SYNTHETIC_PARAMS.get(slug, {"sharpe": 1.0, "vol": 0.10, "mean": 0.10})
     returns = _generate_synthetic_returns(params["sharpe"], params["vol"], n_days, rng)
@@ -246,7 +260,9 @@ def load_synthetic_strategy(slug: str, n_days: int, rng: np.random.Generator) ->
     excess = returns - daily_rf
     sr = (np.mean(excess) / (np.std(excess) + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR)
     sortino_denom = np.std(excess[excess < 0]) if np.any(excess < 0) else 1e-12
-    sortino = (np.mean(excess) / (sortino_denom + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR)
+    sortino = (np.mean(excess) / (sortino_denom + 1e-12)) * math.sqrt(
+        TRADING_DAYS_PER_YEAR
+    )
     cum = np.cumprod(1 + returns)
     rolling_max = np.maximum.accumulate(cum)
     drawdown = (cum - rolling_max) / (rolling_max + 1e-12)
@@ -322,19 +338,33 @@ def compute_metrics(returns: np.ndarray) -> dict[str, float]:
     """Compute annualised portfolio metrics from a daily return series."""
     n = len(returns)
     if n < 2:
-        return {k: 0.0 for k in ("sharpe", "sortino", "max_drawdown", "cagr", "calmar",
-                                  "best_30d", "worst_30d")}
+        return dict.fromkeys(
+            (
+                "sharpe",
+                "sortino",
+                "max_drawdown",
+                "cagr",
+                "calmar",
+                "best_30d",
+                "worst_30d",
+            ),
+            0.0,
+        )
 
     daily_rf = RISK_FREE_RATE / TRADING_DAYS_PER_YEAR
     excess = returns - daily_rf
 
     mean_excess = np.mean(excess)
     std_excess = np.std(excess, ddof=1)
-    sharpe = float((mean_excess / (std_excess + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR))
+    sharpe = float(
+        (mean_excess / (std_excess + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR)
+    )
 
     neg_excess = excess[excess < 0]
     downside_std = np.std(neg_excess, ddof=1) if len(neg_excess) > 1 else 1e-12
-    sortino = float((mean_excess / (downside_std + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR))
+    sortino = float(
+        (mean_excess / (downside_std + 1e-12)) * math.sqrt(TRADING_DAYS_PER_YEAR)
+    )
 
     cum = np.cumprod(1 + returns)
     rolling_max = np.maximum.accumulate(cum)
@@ -346,7 +376,7 @@ def compute_metrics(returns: np.ndarray) -> dict[str, float]:
 
     # Best and worst 30-day rolling sum of returns
     window = min(30, n - 1)
-    rolling_30 = np.array([np.sum(returns[i:i+window]) for i in range(n - window)])
+    rolling_30 = np.array([np.sum(returns[i : i + window]) for i in range(n - window)])
     best_30 = float(np.max(rolling_30)) if len(rolling_30) > 0 else 0.0
     worst_30 = float(np.min(rolling_30)) if len(rolling_30) > 0 else 0.0
 
@@ -373,6 +403,7 @@ def load_benchmark_returns(n_days: int) -> np.ndarray:
     """
     try:
         import duckdb
+
         db_path = DATA_DIR / "portfolio.duckdb"
         if db_path.exists():
             con = duckdb.connect(str(db_path), read_only=True)
@@ -425,7 +456,7 @@ def compute_equal_weights(slugs: list[str]) -> dict[str, float]:
     if n == 0:
         return {}
     w = 1.0 / n
-    return {s: w for s in slugs}
+    return dict.fromkeys(slugs, w)
 
 
 def compute_hrp_weights_simple(
@@ -504,7 +535,9 @@ def apply_track_split(weights: dict[str, float]) -> dict[str, float]:
     """
     a_slugs = [s for s in weights if s in TRACK_A_SLUGS]
     b_slugs = [s for s in weights if s in TRACK_B_SLUGS]
-    other_slugs = [s for s in weights if s not in TRACK_A_SLUGS and s not in TRACK_B_SLUGS]
+    other_slugs = [
+        s for s in weights if s not in TRACK_A_SLUGS and s not in TRACK_B_SLUGS
+    ]
 
     a_total = sum(weights[s] for s in a_slugs)
     b_total = sum(weights[s] for s in b_slugs)
@@ -534,7 +567,9 @@ def apply_track_split(weights: dict[str, float]) -> dict[str, float]:
     return adjusted
 
 
-def portfolio_returns(returns_matrix: np.ndarray, slugs: list[str], weights: dict[str, float]) -> np.ndarray:
+def portfolio_returns(
+    returns_matrix: np.ndarray, slugs: list[str], weights: dict[str, float]
+) -> np.ndarray:
     """Compute weighted portfolio daily returns."""
     w = np.array([weights.get(s, 0.0) for s in slugs])
     w = w / (w.sum() + 1e-12)  # normalise defensively
@@ -568,14 +603,16 @@ def compute_contribution(
 
         strat = strategies[slug]
         marginal_sr = strat.sharpe * corr_to_port
-        contributions.append({
-            "slug": slug,
-            "family": strat.family,
-            "sharpe": strat.sharpe,
-            "corr_to_portfolio": corr_to_port,
-            "marginal_sr": marginal_sr,
-            "source": strat.source,
-        })
+        contributions.append(
+            {
+                "slug": slug,
+                "family": strat.family,
+                "sharpe": strat.sharpe,
+                "corr_to_portfolio": corr_to_port,
+                "marginal_sr": marginal_sr,
+                "source": strat.source,
+            }
+        )
 
     return sorted(contributions, key=lambda x: x["marginal_sr"], reverse=True)
 
@@ -640,29 +677,37 @@ def build_report(
     lines.append("")
 
     # Data provenance
-    lines.append(f" Strategies loaded : {len(strategies)} total "
-                 f"({n_real} real backtest, {n_synthetic} synthetic*)")
+    lines.append(
+        f" Strategies loaded : {len(strategies)} total "
+        f"({n_real} real backtest, {n_synthetic} synthetic*)"
+    )
     lines.append(f" Date range        : {date_range[0]} to {date_range[1]}")
     avg_corr = avg_pairwise_correlation(returns_matrix)
     lines.append(f" Avg pairwise corr : {avg_corr:.3f}  (target < 0.20 for SR 2.0+)")
-    lines.append(f" Weighting method  : {method.upper()} (HRP) + Equal-weight comparison")
+    lines.append(
+        f" Weighting method  : {method.upper()} (HRP) + Equal-weight comparison"
+    )
     lines.append("")
 
     if n_synthetic > 0:
-        lines.append(f" * {n_synthetic} strategies use SYNTHETIC returns generated from known")
+        lines.append(
+            f" * {n_synthetic} strategies use SYNTHETIC returns generated from known"
+        )
         lines.append("   strategy parameters (Sharpe, vol) — NOT real OOS data.")
-        lines.append("   Run /lifecycle to advance these through the backtest pipeline.")
+        lines.append(
+            "   Run /lifecycle to advance these through the backtest pipeline."
+        )
         lines.append("")
 
     # Metric table
     targets = {
-        "Annual Sharpe":  (1.50, True),
-        "Sortino":        (1.00, True),
-        "Max Drawdown":   (0.15, False),
-        "CAGR":           (0.15, True),
-        "Calmar":         (0.50, True),
-        "Best 30d":       (None, None),
-        "Worst 30d":      (None, None),
+        "Annual Sharpe": (1.50, True),
+        "Sortino": (1.00, True),
+        "Max Drawdown": (0.15, False),
+        "CAGR": (0.15, True),
+        "Calmar": (0.50, True),
+        "Best 30d": (None, None),
+        "Worst 30d": (None, None),
     }
 
     col_w = 9
@@ -672,7 +717,7 @@ def build_report(
     h_bench = "60/40"
     h_target = "Target"
 
-    sep = f"+-{'-'*22}-+-{'-'*col_w}-+-{'-'*col_w}-+-{'-'*col_w}-+-{'-'*col_w}-+"
+    sep = f"+-{'-' * 22}-+-{'-' * col_w}-+-{'-' * col_w}-+-{'-' * col_w}-+-{'-' * col_w}-+"
     lines.append(sep)
     lines.append(
         f"| {'Metric':<22} | {h_hrp:^{col_w}} | {h_eq:^{col_w}} | {h_bench:^{col_w}} | {h_target:^{col_w}} |"
@@ -680,13 +725,55 @@ def build_report(
     lines.append(sep)
 
     rows = [
-        ("Annual Sharpe",  _sr(metrics_hrp["sharpe"]),      _sr(metrics_equal["sharpe"]),      _sr(metrics_bench["sharpe"]),      ">1.50"),
-        ("Sortino",        _sr(metrics_hrp["sortino"]),      _sr(metrics_equal["sortino"]),      _sr(metrics_bench["sortino"]),      ">1.00"),
-        ("Max Drawdown",   _pct(-metrics_hrp["max_drawdown"]),_pct(-metrics_equal["max_drawdown"]),_pct(-metrics_bench["max_drawdown"]),"<15%"),
-        ("CAGR",           _pct(metrics_hrp["cagr"]),        _pct(metrics_equal["cagr"]),        _pct(metrics_bench["cagr"]),        ">15%"),
-        ("Calmar",         _sr(metrics_hrp["calmar"]),       _sr(metrics_equal["calmar"]),       _sr(metrics_bench["calmar"]),       ">0.50"),
-        ("Best 30d",       _pct(metrics_hrp["best_30d"]),    _pct(metrics_equal["best_30d"]),    _pct(metrics_bench["best_30d"]),    "—"),
-        ("Worst 30d",      _pct(metrics_hrp["worst_30d"]),   _pct(metrics_equal["worst_30d"]),   _pct(metrics_bench["worst_30d"]),   "—"),
+        (
+            "Annual Sharpe",
+            _sr(metrics_hrp["sharpe"]),
+            _sr(metrics_equal["sharpe"]),
+            _sr(metrics_bench["sharpe"]),
+            ">1.50",
+        ),
+        (
+            "Sortino",
+            _sr(metrics_hrp["sortino"]),
+            _sr(metrics_equal["sortino"]),
+            _sr(metrics_bench["sortino"]),
+            ">1.00",
+        ),
+        (
+            "Max Drawdown",
+            _pct(-metrics_hrp["max_drawdown"]),
+            _pct(-metrics_equal["max_drawdown"]),
+            _pct(-metrics_bench["max_drawdown"]),
+            "<15%",
+        ),
+        (
+            "CAGR",
+            _pct(metrics_hrp["cagr"]),
+            _pct(metrics_equal["cagr"]),
+            _pct(metrics_bench["cagr"]),
+            ">15%",
+        ),
+        (
+            "Calmar",
+            _sr(metrics_hrp["calmar"]),
+            _sr(metrics_equal["calmar"]),
+            _sr(metrics_bench["calmar"]),
+            ">0.50",
+        ),
+        (
+            "Best 30d",
+            _pct(metrics_hrp["best_30d"]),
+            _pct(metrics_equal["best_30d"]),
+            _pct(metrics_bench["best_30d"]),
+            "—",
+        ),
+        (
+            "Worst 30d",
+            _pct(metrics_hrp["worst_30d"]),
+            _pct(metrics_equal["worst_30d"]),
+            _pct(metrics_bench["worst_30d"]),
+            "—",
+        ),
     ]
 
     for label, v_hrp, v_eq, v_bench, target_str in rows:
@@ -700,11 +787,11 @@ def build_report(
     # Gate verdicts
     lines.append(" Track A gate verdicts (HRP portfolio):")
     gates = [
-        ("Annual Sharpe > 0.80",  metrics_hrp["sharpe"],       0.80, True),
-        ("Sortino > 1.00",        metrics_hrp["sortino"],      1.00, True),
-        ("Max Drawdown < 15%",    metrics_hrp["max_drawdown"], 0.15, False),
-        ("CAGR > 15%",            metrics_hrp["cagr"],         0.15, True),
-        ("Calmar > 0.50",         metrics_hrp["calmar"],       0.50, True),
+        ("Annual Sharpe > 0.80", metrics_hrp["sharpe"], 0.80, True),
+        ("Sortino > 1.00", metrics_hrp["sortino"], 1.00, True),
+        ("Max Drawdown < 15%", metrics_hrp["max_drawdown"], 0.15, False),
+        ("CAGR > 15%", metrics_hrp["cagr"], 0.15, True),
+        ("Calmar > 0.50", metrics_hrp["calmar"], 0.50, True),
     ]
     for label, val, threshold, hib in gates:
         verdict = _pass_fail(val, threshold, hib)
@@ -716,16 +803,24 @@ def build_report(
     # Corrected portfolio SR using formula
     n = len(slugs)
     avg_individual_sr = np.mean([strategies[s].sharpe for s in slugs])
-    sr_formula = float(avg_individual_sr) * math.sqrt(n / (1 + (n - 1) * avg_corr)) if n > 0 else 0.0
-    lines.append(f" Corrected formula SR (Lopez de Prado):")
-    lines.append(f"   SR_P = {avg_individual_sr:.2f} x sqrt({n} / (1 + {n-1} x {avg_corr:.3f}))")
+    sr_formula = (
+        float(avg_individual_sr) * math.sqrt(n / (1 + (n - 1) * avg_corr))
+        if n > 0
+        else 0.0
+    )
+    lines.append(" Corrected formula SR (Lopez de Prado):")
+    lines.append(
+        f"   SR_P = {avg_individual_sr:.2f} x sqrt({n} / (1 + {n - 1} x {avg_corr:.3f}))"
+    )
     lines.append(f"        = {sr_formula:.2f}")
-    lines.append(f"   (target: >1.50 for 15 strategies with avg corr <0.20)")
+    lines.append("   (target: >1.50 for 15 strategies with avg corr <0.20)")
     lines.append("")
 
     # Per-strategy contribution table
     lines.append(" Per-strategy marginal SR contribution:")
-    lines.append(f" {'Slug':<30} {'Family':<25} {'Indiv SR':>8} {'Corr to P':>10} {'Marginal SR':>12} {'Source':>8}")
+    lines.append(
+        f" {'Slug':<30} {'Family':<25} {'Indiv SR':>8} {'Corr to P':>10} {'Marginal SR':>12} {'Source':>8}"
+    )
     lines.append(" " + "-" * 95)
     for c in contributions:
         src_marker = "" if c["source"] == "real" else " *"
@@ -738,10 +833,14 @@ def build_report(
     # Weight table
     lines.append(" Portfolio weights:")
     w_col = 10
-    lines.append(f" {'Slug':<30} {'HRP wt':>{w_col}} {'Equal wt':>{w_col}} {'Track':>7}")
+    lines.append(
+        f" {'Slug':<30} {'HRP wt':>{w_col}} {'Equal wt':>{w_col}} {'Track':>7}"
+    )
     lines.append(" " + "-" * 60)
     for slug in slugs:
-        track = "A" if slug in TRACK_A_SLUGS else ("B" if slug in TRACK_B_SLUGS else "?")
+        track = (
+            "A" if slug in TRACK_A_SLUGS else ("B" if slug in TRACK_B_SLUGS else "?")
+        )
         lines.append(
             f" {slug:<30} {weights_hrp.get(slug, 0):{w_col}.3f} "
             f"{weights_equal.get(slug, 0):{w_col}.3f} {track:>7}"
@@ -761,17 +860,11 @@ def build_report(
         lines.append(
             f"   - Avg pairwise correlation {avg_corr:.2f} is HIGH (target <0.20)."
         )
-        lines.append(
-            "   - Family diversification needed: Families 2-7 are UNTESTED."
-        )
+        lines.append("   - Family diversification needed: Families 2-7 are UNTESTED.")
     if sr_formula >= 1.50:
-        lines.append(
-            f"   - Formula SR {sr_formula:.2f} meets the 1.50 target."
-        )
+        lines.append(f"   - Formula SR {sr_formula:.2f} meets the 1.50 target.")
     else:
-        lines.append(
-            f"   - Formula SR {sr_formula:.2f} is below 1.50 target."
-        )
+        lines.append(f"   - Formula SR {sr_formula:.2f} is below 1.50 target.")
         lines.append(
             "   - Priority: add strategies from Families 2-7 to reduce correlation."
         )
@@ -788,9 +881,11 @@ def build_report(
 # ---------------------------------------------------------------------------
 
 
-def main(method: str = "hrp", output_path: Path | None = None, use_synthetic: bool = True) -> None:
+def main(
+    method: str = "hrp", output_path: Path | None = None, use_synthetic: bool = True
+) -> None:
     """Run portfolio SR measurement and print/save report."""
-    print(f"\nLoading strategy data...", flush=True)
+    print("\nLoading strategy data...", flush=True)
     strategies = load_all_strategies(use_synthetic=use_synthetic)
 
     if not strategies:
@@ -799,7 +894,9 @@ def main(method: str = "hrp", output_path: Path | None = None, use_synthetic: bo
 
     n_real = sum(1 for s in strategies.values() if s.source == "real")
     n_synthetic = sum(1 for s in strategies.values() if s.source == "synthetic")
-    print(f"  Loaded {len(strategies)} strategies ({n_real} real, {n_synthetic} synthetic)")
+    print(
+        f"  Loaded {len(strategies)} strategies ({n_real} real, {n_synthetic} synthetic)"
+    )
 
     # Align returns to common date range
     returns_matrix, slugs = align_returns(strategies)

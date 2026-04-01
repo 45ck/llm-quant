@@ -1,0 +1,304 @@
+# Track C Mandate Audit — 2026-04-01
+# Compares mandate.yaml gates vs actual implementation
+# Auditor: researcher agent
+# Verdict: 12 of 17 gates implemented, 5 gaps identified
+
+audit_date: "2026-04-01"
+mandate_version: "1.0"
+mandate_path: "data/strategies/niche-arbitrage/mandate.yaml"
+
+# ============================================================================
+# CONSTRAINTS (from mandate.constraints)
+# ============================================================================
+
+constraints:
+  # 1. max_drawdown: 0.10 (10%)
+  - gate: max_drawdown_10pct
+    mandate_value: 0.10
+    implemented: true
+    location: "src/llm_quant/config.py:128 (TrackCLimits.max_drawdown_pct = 0.10)"
+    enforcement: "risk/manager.py check_drawdown_limit() called for track=C"
+    notes: "Wired correctly. Also in robustness gate (robustness.py:777 max_dd_threshold=0.10)."
+
+  # 2. max_position_weight: 0.20 (20%)
+  - gate: max_position_weight_20pct
+    mandate_value: 0.20
+    implemented: true
+    location: "src/llm_quant/config.py:113 (TrackCLimits.max_position_weight = 0.20)"
+    enforcement: "risk/manager.py check_position_weight() uses limits.max_position_weight"
+
+  # 3. max_trade_size: 0.05 (5%)
+  - gate: max_trade_size_5pct
+    mandate_value: 0.05
+    implemented: true
+    location: "src/llm_quant/config.py:114 (TrackCLimits.max_trade_size = 0.05)"
+    enforcement: "risk/manager.py check_position_size() uses limits.max_trade_size"
+
+  # 4. max_gross_exposure: 3.0 (300%)
+  - gate: max_gross_exposure_300pct
+    mandate_value: 3.0
+    implemented: true
+    location: "src/llm_quant/config.py:115 (TrackCLimits.max_gross_exposure = 2.0)"
+    enforcement: "risk/manager.py check_gross_exposure()"
+    gap: >
+      MISMATCH: Mandate says 300% but config has 200%. Config is MORE conservative
+      than mandate. Not a safety issue but limits hedged position capacity.
+      Decision: keep at 200% (safer) or align to mandate (300% for hedged arbs).
+
+  # 5. max_net_exposure: 0.30 (30%)
+  - gate: max_net_exposure_30pct
+    mandate_value: 0.30
+    implemented: true
+    location: "src/llm_quant/config.py:116 (TrackCLimits.max_net_exposure = 0.30)"
+    enforcement: "risk/manager.py check_net_exposure()"
+
+  # 6. max_exchange_concentration: 0.25 (25%)
+  - gate: max_exchange_concentration_25pct
+    mandate_value: 0.25
+    implemented: false
+    location: "src/llm_quant/config.py:118 (TrackCLimits.max_exchange_concentration = 0.25)"
+    enforcement: "CONFIG EXISTS but NO RISK CHECK wired in risk/manager.py"
+    gap: >
+      GAP: The config stores max_exchange_concentration=0.25 but risk/manager.py
+      never reads or checks it. No check_exchange_concentration() function exists
+      in risk/limits.py. For crypto arb across Binance/OKX/Bybit, this gate is
+      critical to prevent single-exchange counterparty risk.
+
+  # 7. min_cash_reserve: 0.10 (10%)
+  - gate: min_cash_reserve_10pct
+    mandate_value: 0.10
+    implemented: true
+    location: "src/llm_quant/config.py:120 (TrackCLimits.min_cash_reserve = 0.10)"
+    enforcement: "risk/manager.py check_cash_reserve()"
+
+  # 8. max_trades_per_session: 10
+  - gate: max_trades_per_session_10
+    mandate_value: 10
+    implemented: true
+    location: "src/llm_quant/config.py:119"
+    enforcement: "risk/manager.py filter_signals() caps at max_trades_per_session"
+    gap: >
+      MISMATCH: Mandate says 10 but config has 5. Config is MORE conservative.
+      For arb strategies that need frequent rebalancing, 5 may be too tight.
+      Decision: align to 10 as mandate specifies.
+
+  # 9. stop_loss_required: true
+  - gate: stop_loss_required
+    mandate_value: true
+    implemented: true
+    location: "src/llm_quant/config.py:121 (TrackCLimits.require_stop_loss = True)"
+    enforcement: "risk/manager.py check_stop_loss()"
+
+  # 10. default_stop_loss_pct: 0.03 (3%)
+  - gate: default_stop_loss_3pct
+    mandate_value: 0.03
+    implemented: true
+    location: "src/llm_quant/config.py:122"
+    gap: >
+      MISMATCH: Mandate says 3% but config has 5%. Config is LESS conservative.
+      For hedged arb positions, 5% stop-loss is too wide — arb positions shouldn't
+      move 5%. Align to mandate's 3%.
+
+# ============================================================================
+# TARGET METRICS (from mandate.target_metrics)
+# ============================================================================
+
+target_metrics:
+  # 11. Sharpe > 1.5
+  - gate: sharpe_gte_1.5
+    mandate_value: 1.5
+    implemented: true
+    location: "src/llm_quant/backtest/robustness.py:725-777"
+    enforcement: "run_track_c_robustness_gate() sharpe_threshold=1.5"
+
+  # 12. max_drawdown < 10%
+  - gate: maxdd_lt_10pct
+    mandate_value: 0.10
+    implemented: true
+    location: "src/llm_quant/backtest/robustness.py:777 max_dd_threshold=0.10"
+    enforcement: "Track C robustness gate"
+
+  # 13. return_above_rfr > 5%
+  - gate: return_above_rfr_5pct
+    mandate_value: 0.05
+    implemented: false
+    gap: >
+      GAP: No code computes return above risk-free rate. Robustness gate uses
+      absolute Sharpe and maxDD but does not compare strategy return to T-bill
+      proxy (^IRX). Need: (1) fetch T-bill rate, (2) compute excess return,
+      (3) add gate check in robustness.
+
+  # 14. beta_to_spy < 0.15
+  - gate: beta_to_spy_lt_0.15
+    mandate_value: 0.15
+    implemented: true
+    location: >
+      Surveillance: track_c_detectors.py check_beta_drift() (kill switch at 0.25).
+      Risk manager: _check_beta_breach() with max_beta_to_spy=0.25.
+    gap: >
+      PARTIAL: Mandate target is beta < 0.15 but kill switch triggers at 0.25.
+      The target metric (0.15) should be a WARNING in robustness gate, while
+      the kill switch (0.25) is a HALT. Currently only the halt exists.
+      The robustness gate (robustness.py:780) does check max_beta but defaults
+      to 0.15, so this is WIRED in robustness but not in surveillance warnings.
+
+  # 15. win_rate > 60%
+  - gate: win_rate_gt_60pct
+    mandate_value: 0.60
+    implemented: false
+    gap: >
+      GAP: No win rate gate in robustness or risk checks. Backtest engine
+      computes total_trades but not win_rate. Need: (1) compute win/loss per
+      trade in backtest results, (2) add win_rate_gate to TrackCRobustnessResult.
+
+  # 16. calmar > 1.5
+  - gate: calmar_gt_1.5
+    mandate_value: 1.5
+    implemented: false
+    gap: >
+      GAP: No Calmar ratio gate anywhere. Calmar = CAGR / MaxDD. Since we
+      already compute both metrics, adding this gate is straightforward.
+      Need: add calmar_gate check in run_track_c_robustness_gate().
+
+  # 17. min_trades >= 50
+  - gate: min_trades_gte_50
+    mandate_value: 50
+    implemented: true
+    location: "src/llm_quant/backtest/robustness.py:728,780"
+    enforcement: "run_track_c_robustness_gate() min_trades=50"
+
+# ============================================================================
+# KILL SWITCHES (from mandate.kill_switches)
+# ============================================================================
+
+kill_switches:
+  # Standard kill switches
+  - gate: nav_drawdown_10pct
+    mandate_value: 0.10
+    implemented: true
+    location: "surveillance/detectors.py check_nav_drawdown()"
+    notes: "Standard surveillance detector, threshold configurable in governance.toml"
+
+  - gate: single_day_loss_3pct
+    mandate_value: 0.03
+    implemented: true
+    location: "surveillance/detectors.py check_single_day_loss()"
+    gap: >
+      PARTIAL: Standard detector uses 5% threshold (Track A default). Mandate
+      specifies 3% for Track C. Need track-specific threshold override.
+
+  - gate: consecutive_losing_days_5
+    mandate_value: 5
+    implemented: true
+    location: "surveillance/detectors.py check_consecutive_losses()"
+
+  # Arb-specific kill switches
+  - gate: exchange_outage
+    implemented: true
+    location: >
+      Risk: risk/manager.py _check_exchange_outage()
+      Surveillance: surveillance/track_c_detectors.py check_exchange_health()
+    enforcement: "Reads track_c_exchange_events table. Halts on active outages."
+
+  - gate: funding_rate_reversal
+    implemented: true
+    location: >
+      Risk: risk/manager.py _check_funding_reversal()
+      Surveillance: surveillance/track_c_detectors.py check_funding_rate_reversal()
+    enforcement: "Reads track_c_funding_rates table. 3 consecutive negative periods = halt."
+
+  - gate: spread_collapse
+    implemented: true
+    location: >
+      Risk: risk/manager.py _check_spread_collapse()
+      Surveillance: surveillance/track_c_detectors.py check_spread_compression()
+    enforcement: "Reads track_c_arb_spreads table. Halts when 7d avg < 25% of 30d baseline."
+
+  - gate: counterparty_alert
+    implemented: false
+    gap: >
+      GAP: No counterparty monitoring exists. Mandate specifies halt on
+      "exchange signs of stress (withdrawal delays)". This would require:
+      (1) API endpoint to check exchange withdrawal status, (2) withdrawal
+      processing time tracker, (3) alert threshold in governance config.
+      This is the most complex missing gate — may need manual monitoring
+      initially and automated check later.
+
+  - gate: beta_breach_0.25
+    mandate_value: 0.25
+    implemented: true
+    location: >
+      Risk: risk/manager.py _check_beta_breach() with max_beta_to_spy=0.25
+      Surveillance: surveillance/track_c_detectors.py check_beta_drift()
+
+# ============================================================================
+# ROBUSTNESS GATES (from mandate.robustness_gates)
+# ============================================================================
+
+robustness_gates:
+  - gate: dsr_gte_0.95
+    implemented: true
+    location: "backtest/robustness.py run_track_c_robustness_gate()"
+
+  - gate: cpcv_oos_is_positive
+    implemented: true
+    location: "backtest/robustness.py run_track_c_robustness_gate()"
+
+  - gate: perturbation_3_of_5
+    implemented: true
+    location: "backtest/robustness.py run_track_c_robustness_gate()"
+
+  - gate: cost_sensitivity_2x
+    implemented: true
+    location: "backtest/engine.py run_with_cost_sensitivity() at multipliers [1.0, 1.5, 2.0, 3.0]"
+    notes: >
+      Engine supports cost stress testing. But robustness gate does not
+      automatically CHECK that 2x costs still produces positive returns.
+      The run exists, but the gate evaluation is manual.
+
+  - gate: leg_risk_test
+    implemented: false
+    gap: >
+      GAP: No partial fill simulation exists. Mandate requires: "Simulate
+      partial fills (one leg executes, other doesn't) at 5% failure rate.
+      Strategy must still be profitable after accounting for leg risk."
+      Need: (1) modify backtest engine to support partial-fill simulation,
+      (2) add 5% failure rate parameter, (3) gate check in robustness.
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+
+summary:
+  total_gates: 17
+  implemented: 12
+  partial: 2
+  missing: 5
+
+  missing_gates:
+    - "exchange_concentration: config exists but no risk check wired"
+    - "return_above_rfr: no T-bill excess return computation"
+    - "win_rate: no win rate tracking in backtest"
+    - "calmar: no Calmar ratio gate"
+    - "counterparty_alert: no exchange stress monitoring"
+    - "leg_risk_test: no partial fill simulation"
+
+  config_mismatches:
+    - "max_gross_exposure: mandate=300%, config=200% (safer, keep or align)"
+    - "max_trades_per_session: mandate=10, config=5 (restrictive for arb)"
+    - "default_stop_loss_pct: mandate=3%, config=5% (too wide for arb)"
+    - "single_day_loss: mandate=3%, surveillance default=5% (needs track override)"
+
+  priority_fixes:
+    high:
+      - "Wire exchange_concentration check in risk/manager.py (counterparty risk)"
+      - "Align default_stop_loss_pct to 3% (mandate value)"
+      - "Align max_trades_per_session to 10 (mandate value)"
+    medium:
+      - "Add win_rate computation to backtest engine"
+      - "Add Calmar ratio gate to robustness"
+      - "Add return_above_rfr gate (excess over T-bill)"
+    low:
+      - "Counterparty alert (manual initially, automate later)"
+      - "Leg risk test / partial fill simulation"
+      - "Decide on max_gross_exposure: 200% vs 300%"

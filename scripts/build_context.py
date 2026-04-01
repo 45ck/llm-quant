@@ -11,11 +11,19 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import logging
+import os
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+# Fix Windows cp1252 encoding crashes when printing Polars DataFrames or
+# yfinance progress bars that contain characters outside cp1252.
+if sys.platform == "win32" and os.environ.get("PYTHONIOENCODING") is None:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # Ensure src is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -94,9 +102,7 @@ def _check_cot_staleness(conn) -> tuple[bool, str | None, int]:
     empty table is handled separately, not treated as stale.
     """
     try:
-        row = conn.execute(
-            "SELECT MAX(report_date) FROM cot_weekly"
-        ).fetchone()
+        row = conn.execute("SELECT MAX(report_date) FROM cot_weekly").fetchone()
     except Exception:
         return False, None, 0
 
@@ -110,9 +116,15 @@ def _check_cot_staleness(conn) -> tuple[bool, str | None, int]:
     # DuckDB may return a date object or a string depending on version
     if hasattr(last_cot_date, "timetuple"):
         import datetime as dt_mod
-        last_date_obj = last_cot_date if isinstance(last_cot_date, dt_mod.date) else dt_mod.date.fromisoformat(last_cot_date_str[:10])
+
+        last_date_obj = (
+            last_cot_date
+            if isinstance(last_cot_date, dt_mod.date)
+            else dt_mod.date.fromisoformat(last_cot_date_str[:10])
+        )
     else:
         from datetime import date as date_cls
+
         last_date_obj = date_cls.fromisoformat(last_cot_date_str[:10])
 
     days_stale = (today - last_date_obj).days
@@ -176,7 +188,9 @@ def main() -> None:
 
         # Build context
         portfolio_state = portfolio.to_snapshot_dict()
-        context = build_market_context(conn, portfolio_state, config, cot_stale=cot_stale)
+        context = build_market_context(
+            conn, portfolio_state, config, cot_stale=cot_stale
+        )
 
         # Load system prompt
         system_prompt = load_system_prompt()

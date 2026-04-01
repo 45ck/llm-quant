@@ -168,7 +168,7 @@ class FredFetcher:
             series_ids = list(FRED_SERIES.keys())
 
         if start_date is None:
-            start_date = (datetime.now(tz=UTC).date() - timedelta(days=10 * 365))
+            start_date = datetime.now(tz=UTC).date() - timedelta(days=10 * 365)
         elif isinstance(start_date, str):
             start_date = date.fromisoformat(start_date)
 
@@ -292,12 +292,12 @@ class FredFetcher:
 
         # Upsert into DuckDB
         self._upsert(df)
-        logger.info(
-            "Fetched and stored %d rows for FRED series %s", len(df), series_id
-        )
+        logger.info("Fetched and stored %d rows for FRED series %s", len(df), series_id)
         return df
 
-    def _fetch_via_fredapi(self, series_id: str, start_date: date) -> pl.DataFrame | None:
+    def _fetch_via_fredapi(
+        self, series_id: str, start_date: date
+    ) -> pl.DataFrame | None:
         """Fetch via fredapi library (requires FRED_API_KEY)."""
         try:
             from fredapi import Fred  # type: ignore[import]
@@ -318,8 +318,6 @@ class FredFetcher:
         if series is None or len(series) == 0:
             return None
 
-        import pandas as pd  # noqa: PLC0415
-
         # Convert pandas Series to Polars DataFrame
         pdf = series.reset_index()
         pdf.columns = ["date", "value"]
@@ -339,8 +337,8 @@ class FredFetcher:
         Downloads the full series CSV and filters to start_date.
         This endpoint is rate-limited — use fredapi for production.
         """
-        import urllib.request  # noqa: PLC0415
-        from io import StringIO  # noqa: PLC0415
+        import urllib.request
+        from io import StringIO
 
         url = f"{FRED_CSV_BASE_URL}{series_id}"
         logger.info("Downloading FRED CSV for %s from %s", series_id, url)
@@ -353,7 +351,9 @@ class FredFetcher:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 content = resp.read().decode("utf-8")
         except Exception:
-            logger.exception("HTTP download failed for FRED series %s (url=%s)", series_id, url)
+            logger.exception(
+                "HTTP download failed for FRED series %s (url=%s)", series_id, url
+            )
             return None
 
         try:

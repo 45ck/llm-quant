@@ -90,15 +90,16 @@ def upsert_market_data(
 
     row_count = len(df)
 
-    # Use row-by-row parameterized INSERT to avoid pyarrow dependency
+    # Bulk upsert via DuckDB's native DataFrame scanning (orders of magnitude
+    # faster than row-by-row executemany for 10k+ rows).
     try:
         cols = ", ".join(_ALL_COLUMNS)
-        placeholders = ", ".join(["?"] * len(_ALL_COLUMNS))
-        stmt = (
-            f"INSERT OR REPLACE INTO market_data_daily ({cols}) VALUES ({placeholders})"
+        conn.register("_upsert_df", df.to_arrow())
+        conn.execute(
+            f"INSERT OR REPLACE INTO market_data_daily ({cols}) "
+            f"SELECT {cols} FROM _upsert_df"
         )
-        rows = df.rows()
-        conn.executemany(stmt, rows)
+        conn.unregister("_upsert_df")
         conn.commit()
     except duckdb.Error:
         logger.exception("Failed to upsert %d rows into market_data_daily", row_count)

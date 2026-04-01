@@ -2,36 +2,36 @@
   "strategy_slug": "tlt-tqqq-sprint",
   "strategy_type": "lead_lag",
   "track": "D",
-  "base_sharpe": 1.4345,
+  "base_sharpe": 1.5276,
   "base_max_dd": 0.1266,
-  "base_total_return": 1.3179,
-  "dsr": 0.9941,
+  "base_total_return": 1.4245,
+  "dsr": 0.9966,
   "cpcv": {
-    "oos_mean_sharpe": 1.6277,
-    "oos_std": 0.2562,
-    "oos_is_ratio": 1.1347,
+    "oos_mean_sharpe": 1.7917,
+    "oos_std": 0.233,
+    "oos_is_ratio": 1.1729,
     "pct_positive_folds": 1.0
   },
   "weight_variants": [
     {
       "variant": "target_weight=0.30 (base)",
-      "sharpe": 1.4345,
+      "sharpe": 1.5276,
       "max_dd": 0.1266,
-      "total_return": 1.3179,
+      "total_return": 1.4245,
       "passes_track_d": true
     },
     {
       "variant": "target_weight=0.50",
-      "sharpe": 1.4381,
+      "sharpe": 1.5323,
       "max_dd": 0.2035,
-      "total_return": 2.8508,
+      "total_return": 3.1516,
       "passes_track_d": true
     },
     {
       "variant": "target_weight=0.70",
-      "sharpe": 1.4407,
+      "sharpe": 1.536,
       "max_dd": 0.2747,
-      "total_return": 5.1526,
+      "total_return": 5.8393,
       "passes_track_d": true
     }
   ],
@@ -39,69 +39,69 @@
     "variants": [
       {
         "variant": "lag_days=2",
-        "sharpe": 1.0509,
+        "sharpe": 1.0673,
         "max_dd": 0.1712,
-        "change_pct": -26.7,
-        "status": "STABLE"
+        "change_pct": -30.1,
+        "status": "UNSTABLE"
       },
       {
         "variant": "lag_days=4",
-        "sharpe": 1.4775,
+        "sharpe": 1.5501,
         "max_dd": 0.1129,
-        "change_pct": 3.0,
+        "change_pct": 1.5,
         "status": "STABLE"
       },
       {
         "variant": "lag_days=5",
-        "sharpe": 0.8524,
+        "sharpe": 0.9311,
         "max_dd": 0.1145,
-        "change_pct": -40.6,
+        "change_pct": -39.0,
         "status": "UNSTABLE"
       },
       {
         "variant": "signal_window=8",
-        "sharpe": 0.7044,
+        "sharpe": 0.789,
         "max_dd": 0.1628,
-        "change_pct": -50.9,
+        "change_pct": -48.3,
         "status": "UNSTABLE"
       },
       {
         "variant": "signal_window=12",
-        "sharpe": 0.851,
+        "sharpe": 0.9154,
         "max_dd": 0.1593,
-        "change_pct": -40.7,
+        "change_pct": -40.1,
         "status": "UNSTABLE"
       },
       {
         "variant": "entry_threshold=0.008",
-        "sharpe": 1.2962,
+        "sharpe": 1.3845,
         "max_dd": 0.1219,
-        "change_pct": -9.6,
+        "change_pct": -9.4,
         "status": "STABLE"
       },
       {
         "variant": "entry_threshold=0.012",
-        "sharpe": 1.4528,
+        "sharpe": 1.5467,
         "max_dd": 0.1266,
         "change_pct": 1.3,
         "status": "STABLE"
       },
       {
         "variant": "entry_threshold=0.015",
-        "sharpe": 1.4016,
+        "sharpe": 1.4744,
         "max_dd": 0.1081,
-        "change_pct": -2.3,
+        "change_pct": -3.5,
         "status": "STABLE"
       }
     ],
-    "pct_stable": 62.5
+    "pct_stable": 50.0
   },
   "gates": {
     "sharpe_gte_0.8": true,
     "maxdd_lt_40pct": true,
     "dsr_gte_0.9": true,
     "cpcv_oos_positive": true,
-    "perturbation_gte_60pct": true
+    "perturbation_gte_60pct": false
   },
-  "verdict": "PASS"
+  "verdict": "FAIL"
 }
