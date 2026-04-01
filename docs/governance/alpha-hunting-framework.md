@@ -30,15 +30,21 @@ SR=1.86 — not 5.0. The simplified "N_effective" approximation is optimistic.
 | 16 | 4.00 | 2.71 | 2.09 | 1.75 | 1.33 |
 | 25 | 5.00 | 3.09 | 2.28 | 1.86 | 1.39 |
 
-**Current state (2026-04-01):** 23 strategies across 13 mechanism families, avg ρ=0.187.
-Empirical portfolio SR = **2.184** (15 cluster representatives, MaxDD=5.1%). This was
+**Current state (2026-04-01):** 32 strategies across 20 mechanism families, avg ρ=0.186.
+Empirical portfolio SR = **2.205** (18 cluster representatives, MaxDD=6.3%). This was
 achieved by expanding from a credit-heavy portfolio (11 strategies, ρ=0.584, SR≈1.35)
 to a diversified multi-family portfolio. The key insight: fixed income ratio momentum
-(F14/F15), commodity cycle (F11), sector rotation (F12), and volatility regime (F13)
-signals are near-zero correlated with credit-equity signals.
+(F14/F15), commodity cycle (F11), sector rotation (F12), volatility regime (F13),
+disinflation (F19), commodity carry (F18), and dollar-gold regime (F26) signals are
+near-zero correlated with credit-equity signals.
 
-**Target state:** ACHIEVED — 13 families with avg ρ < 0.20. Marginal value of next
-uncorrelated strategy: +0.124 SR. Focus shifts to paper trading validation and promotion.
+Walk-forward HRP validation: 5-fold OOS/IS = **1.597** (no overfitting). Realized
+portfolio vol = 3.8% (2.64x scale needed for 10% target).
+
+**Target state:** ACHIEVED — 20 families with avg ρ < 0.20. Marginal value of next
+uncorrelated strategy: +0.110 SR. Focus shifts to paper trading validation and promotion.
+Commodity/macro/inflation mechanism space is SATURATED (F11-F22 cluster at rho=0.75).
+New cluster reps require genuinely different mechanisms (dollar-gold F26 was the latest).
 
 **Crisis warning:** correlations spike during crises. Strategies with ρ=0.1 in normal
 markets become ρ=0.5 in a crisis — cutting portfolio SR from 2.24 to 1.26. Trend

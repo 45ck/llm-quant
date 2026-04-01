@@ -11,7 +11,7 @@ Target: 15-25% CAGR            Target: 40-80% CAGR
 MaxDD gate: < 15%              MaxDD gate: < 30%
 Sharpe gate: > 0.80            Sharpe gate: > 1.0
 Portfolio weight: 70%          Portfolio weight: 30%
-Status: 23 strategies paper    Status: research phase
+Status: 29 strategies paper    Status: 3 strategies paper
 
 Track C — Structural Arb       Track D — Sprint Alpha
 ─────────────────────────      ────────────────────────────
@@ -19,7 +19,7 @@ Target: risk-free + alpha      Target: 60-120% CAGR
 MaxDD gate: < 10%              MaxDD gate: < 40%
 Sharpe gate: > 1.50            Sharpe gate: > 0.80
 Benchmark: T-bills             Benchmark: 100% TQQQ
-Status: research (4/17 gates)  Status: 1 strategy passing
+Status: research (4/17 gates)  Status: 1/6 tested passing
 ```
 
 **Integrity gates are the same on all tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
@@ -42,12 +42,12 @@ See [research-tracks.md](docs/governance/research-tracks.md),
 
 This system runs a **200+ hypothesis quantitative research lab** across 15 mechanism families — every strategy passes through a 6-gate robustness filter before any capital is committed.
 
-### The Funnel (Track A)
+### The Funnel (All Tracks)
 
 ```
-200+ hypotheses tested (across 15 mechanism families)
- 90+ strategy variants with full robustness analysis (5-year window, 2021-2026)
- 23  passed robustness gates — now in paper trading        (~25% pass rate)
+220+ hypotheses tested (across 26 mechanism families)
+100+ strategy variants with full robustness analysis (5-year window, 2021-2026)
+ 32  passed robustness gates — now in paper trading        (~30% pass rate)
   0  promoted to live capital (requires 30+ day track record)
 ```
 
@@ -61,9 +61,10 @@ This system runs a **200+ hypothesis quantitative research lab** across 15 mecha
 | CPCV OOS/IS | > 0 | > 0 | > 0 | > 0 | OOS generalization |
 | Perturbation | >= 3/5 | >= 3/5 | >= 3/5 | >= 3/5 | Parameter robustness |
 
-### Passing Strategies (23 in paper trading)
+### Passing Strategies (32 in paper trading)
 
-All 23 are in paper trading as of 2026-04-01. Promotion requires 30+ days of paper track record.
+All 32 are in paper trading as of 2026-04-01. Promotion requires 30+ days of paper track record.
+Daily signals generated via `scripts/run_paper_batch.py` (batch runner for all strategies).
 
 **Family 1 — Credit-Equity Lead-Lag** (9 strategies)
 
@@ -171,6 +172,62 @@ TIP/TLT price ratio 20-day momentum proxies real yield changes. Loosening → SP
 |----------|--------|-------|-----|-------------|--------|
 | TIP/TLT real yield v1 | 1.313 | 13.3% | 0.982 | 0.861 | TIP/TLT ratio momentum |
 
+**Family 16 — Breakeven Inflation** (1 strategy)
+
+TIP/IEF ratio 30-day momentum proxies breakeven inflation rate. Rising inflation tilts to commodities+gold, falling to equities.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| Breakeven inflation v1 | 1.068 | 13.0% | 0.968 | 1.053 | TIP/IEF ratio momentum |
+
+**Family 17 — Capital Flow** (1 strategy)
+
+TLT/EFA ratio momentum distinguishes US-preferred vs international-preferred capital flows.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| Global yield flow v2 | 0.900 | 10.9% | 0.951 | 1.113 | TLT/EFA ratio momentum |
+
+**Family 18 — Commodity Carry** (1 strategy)
+
+USO/DBC ratio momentum as crude oil backwardation proxy. Carry regime tilts to energy+gold.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| Commodity carry v2 | 1.119 | 14.4% | 0.972 | 1.026 | USO/DBC ratio momentum |
+
+**Family 19 — Disinflation Signal** (1 strategy)
+
+TLT/GLD ratio momentum as pure disinflation proxy. Disinflation → equities, inflation → gold+commodities.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| TLT/GLD disinflation v1 | 1.313 | 8.5% | 0.982 | 1.021 | TLT/GLD ratio momentum |
+
+**Family 21 — Commodity-Equity Rotation** (1 strategy)
+
+DBC/SPY ratio momentum rotates between commodity and equity regimes.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| DBC/SPY commodity-equity v1 | 0.942 | 10.7% | 0.956 | 0.928 | DBC/SPY ratio momentum |
+
+**Family 22 — Duration Rotation** (1 strategy)
+
+AGG/TLT ratio momentum rotates between short-duration and long-duration bond exposure.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| AGG/TLT duration rotation v2 | 0.915 | 13.4% | 0.953 | 0.933 | AGG/TLT ratio momentum |
+
+**Family 26 — Dollar-Gold Regime** (1 strategy, NEW 2026-04-01)
+
+UUP/GLD ratio 30-day momentum as purchasing power proxy. Dollar strength → equities, gold strength → commodities. Different from F19 (which uses TLT/GLD as a yield signal).
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| Dollar-gold regime v1 | 0.987 | 13.9% | 0.961 | 1.144 | UUP/GLD ratio momentum |
+
 **Conditional Pass — Behavioral/Structural** (1 strategy)
 
 Low-volatility sector rotation with correlation-based regime detection. Sharpe (0.70) below 0.80 threshold. Included with documented exception due to exceptional parameter stability and unique mechanism.
@@ -179,30 +236,52 @@ Low-volatility sector rotation with correlation-based regime detection. Sharpe (
 |----------|--------|-------|-----|----------|---------|------|
 | Behavioral-structural | 0.699 | 3.6% | 0.9632 | 0.047 | 18/18 | Sharpe below gate |
 
+**Track B — Aggressive Alpha** (3 strategies)
+
+Higher drawdown tolerance (30%) for stronger signals. Zero equity exposure in pair trades.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| SOXX-QQQ lead-lag | 0.861 | 14.4% | 0.960 | 0.819 | Semis → Nasdaq lead-lag |
+| USO/XLE energy MR v2 | 1.012 | 22.5% | 0.962 | 1.038 | Energy pair z-score |
+| GDX/GLD miners MR v1 | 1.025 | 26.4% | 0.963 | 0.918 | Gold miners pair z-score |
+
+**Track D — Sprint Alpha** (1 strategy)
+
+Leveraged re-expression of rate momentum via 3x ETFs. 4 additional hypotheses tested (D3-D6), all rejected — credit lead signals don't survive 3x leverage.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| TLT-TQQQ leveraged lead-lag | 1.030 | 10.2% | 0.965 | 0.913 | TLT rate → 3x QQQ |
+
 ### Portfolio Construction
 
-23 strategies cluster into 15 groups (complete linkage, threshold=0.70). The optimized 15-representative portfolio:
+32 strategies cluster into 18 groups (complete linkage, threshold=0.70). The optimized 18-representative portfolio:
 
-| Metric | All 23 equal-weight | Optimized 15-rep |
+| Metric | All 32 equal-weight | Optimized 18-rep |
 |--------|---------------------|-----------------|
-| Empirical portfolio Sharpe | ~2.0 | **2.184** |
-| Max drawdown | ~6% | **5.1%** |
-| Average pairwise correlation | ~0.25 | **0.187** |
-| Mechanism families represented | 13 | 13 |
+| Empirical portfolio Sharpe | ~2.1 | **2.205** |
+| Max drawdown | ~6% | **6.3%** |
+| Average pairwise correlation | ~0.25 | **0.186** |
+| Mechanism families represented | 20 | 18 |
+
+Walk-forward HRP validation (5-fold anchored expanding window): OOS/IS ratio = **1.60** (no overfitting detected — OOS Sharpe exceeds IS Sharpe). Volatility targeting: realized vol 3.8%, scale factor 2.64x to reach 10% target.
 
 The portfolio Sharpe formula with correlation: **SR_P = SR_i x sqrt(N / (1 + (N-1) x rho))**
 
-At avg rho=0.187 with 15 representatives at avg SR=1.0, the formula yields SR≈2.18 — matching the empirical measurement. The key to reaching SR 2.0+ was reducing avg rho from 0.584 (credit-heavy) to 0.187 by adding genuinely orthogonal mechanism families (F9, F11-F15).
+At avg rho=0.186 with 18 representatives at avg SR=1.087, the formula yields SR≈2.26 — matching the empirical 2.205. The key to reaching SR 2.0+ was reducing avg rho from 0.584 (credit-heavy) to 0.186 by adding genuinely orthogonal mechanism families (F9, F11-F22, F26).
 
 ### What Gets Rejected and Why
 
 | Failure mode | Count | Examples |
 |-------------|-------|---------|
-| DSR < 0.95 (insufficient alpha after trial penalty) | ~18 | Correlation regime, VoV, XLU inverse |
-| MaxDD > 15% (2022 bear market too harsh) | ~12 | Factor rotation, asset rotation, pairs |
-| Sharpe < 0.80 (weak signal) | ~8 | Calendar effects, size rotation, FX-equity |
+| DSR < 0.95 (insufficient alpha after trial penalty) | ~20 | Correlation regime, VoV, XLU inverse |
+| MaxDD > 15% (2022 bear market too harsh) | ~14 | Factor rotation, asset rotation, pairs, DXY-commodity |
+| Sharpe < 0.80 (weak signal) | ~12 | Calendar effects, size rotation, FX-equity, VIX fear gauge |
+| Shuffled signal p > 0.05 (no real edge) | ~10 | LQD-TQQQ, treasury auction cycle, sector dispersion |
 | Perturbation unstable (over-fit parameters) | ~8 | SPY-TLT-GLD-BIL, BTC-SPY, EURUSD-VGK |
-| Falsified (signal in wrong direction) | ~5 | Pre-FOMC TLT drift, turn-of-month, USDJPY-SPY |
+| Falsified (signal in wrong direction) | ~8 | Pre-FOMC TLT drift, turn-of-month, USDJPY-SPY, VIX-MR-TQQQ |
+| Leverage transfer failure (3x noise > signal) | 4 | LQD-TQQQ, LQD-UPRO, AGG-SOXL (Track D) |
 
 ## Live Portfolio Performance
 
@@ -356,8 +435,9 @@ Statistical rigor follows institutional standards documented in
 
 Previously tracked implementation gaps are now mostly resolved:
 shuffled signal fraud detector (**implemented**), HRP portfolio weights (**implemented** via Riskfolio-Lib),
-volatility targeting (**implemented** via 126d realized variance), portfolio correlation gate (**implemented**
-via DCC-GARCH), marginal SR contribution gate (**implemented**), walk-forward validation (**implemented**),
+volatility targeting (**implemented** via 126d realized variance + walk-forward vol targeting to 10%),
+portfolio correlation gate (**implemented** via DCC-GARCH), marginal SR contribution gate (**implemented**),
+walk-forward validation (**implemented** — 5-fold HRP OOS/IS=1.60, no overfitting detected),
 CVaR constraints (**implemented** via Filtered Historical Simulation).
 
 Portfolio construction mathematics and the path to extreme Sharpe documented in

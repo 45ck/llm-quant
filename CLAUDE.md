@@ -41,7 +41,7 @@ The objective function: **maximize CAGR via leveraged re-expression of proven Fa
 - **Position sizing**: max 30-50% per position — leveraged ETFs require concentration to overcome drag
 - **Holding period**: max 5 calendar days per position — beta decay and volatility drag accelerate beyond this
 - **Key risks**: beta decay (3x ETF returns diverge from 3x index over multi-day holds), volatility drag (variance kills compounding), path dependency (sequential drawdowns are asymmetrically destructive), liquidity risk on TLTW/SOXL
-- **Status**: experimental — 2 strategies in backtest phase, not yet in paper trading
+- **Status**: experimental — 1 strategy passing (TLT-TQQQ), 5 tested and rejected (D2-D6). Credit lead signals don't survive 3x leverage.
 
 ### Track C — Structural Arbitrage (research track)
 The objective function: **capture market-neutral returns from structural pricing inefficiencies — PM arb, CEF discount capture, and funding rate strategies.**
@@ -178,16 +178,17 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (7 questions, stop at first "no")
 
-**Current status (2026-04-01):** 19 of 22 mechanism families with passing strategies.
-- 31 strategies passing all gates across 19 families (F1-F3, F5-F9, F11-F22)
+**Current status (2026-04-01):** 20 of 26 mechanism families with passing strategies.
+- 32 strategies passing all gates across 20 families (F1-F3, F5-F9, F11-F22, F26)
 - 18 cluster representatives after hierarchical clustering (threshold=0.70)
-- 3 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity), F20 (Equity Sector Ratio)
+- 6 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity), F20 (Equity Sector Ratio),
+  F23 (VIX Fear Gauge), F24 (Treasury Auction Cycle), F25 (Sector Dispersion MR)
 - Track B: 3 strategies (SOXX-QQQ, USO/XLE energy MR, GDX/GLD miners MR)
-- Track D: 1 strategy (TLT-TQQQ, Sharpe=1.030)
+- Track D: 1 strategy passing (TLT-TQQQ, Sharpe=1.030); 4 rejected (D3-D6, credit signals don't survive 3x leverage)
 - Key families by Sharpe: F12 XLK-XLE (1.525), F3 TSMOM (1.331), F15 TIP/TLT (1.313),
   F19 TLT/GLD disinflation (1.313), F13 vol-regime (1.270), F1 LQD-SPY (1.250),
   F2 GLD-SLV (1.197), F18 commodity-carry (1.119), F16 breakeven (1.068),
-  F11 DBA commodity (1.010), F21 DBC/SPY commodity-equity (0.942),
+  F11 DBA commodity (1.010), F26 dollar-gold (0.987), F21 DBC/SPY (0.942),
   F22 AGG/TLT duration (0.915), F17 global-yield-flow (0.900)
 
 **Portfolio SR (measured, not estimated):**
@@ -198,12 +199,18 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Commodity/macro/inflation mechanism space is SATURATED — all F11-F22 strategies
   cluster together (avg rho=0.75). New cluster reps require genuinely different mechanisms.
 
+**Walk-forward HRP validation (2026-04-01):**
+- 5-fold anchored expanding window: avg OOS SR=1.810, avg IS SR=1.134
+- OOS/IS ratio = 1.597 (no overfitting — OOS exceeds IS)
+- Realized vol = 3.8%, vol target scale = 2.64x to reach 10%
+- Paper trading batch runner: `scripts/run_paper_batch.py` generates daily signals for all 32 strategies
+
 **Tier assessment:** Operating solidly in Tier 2 (SR 1.0-2.0 range for small funds)
-without leverage. Achieved via decorrelation across 19 mechanism families. Next phase:
-paper trading validation, HRP optimizer, and production deployment.
+without leverage. Achieved via decorrelation across 20 mechanism families. Next phase:
+paper trading validation (30+ days per strategy) and production deployment.
 
 See `docs/governance/alpha-hunting-framework.md` for the 4-phase kill chain and
-15 mechanism families. See `docs/research/extreme-sharpe-playbook.md` for the three
+20 mechanism families. See `docs/research/extreme-sharpe-playbook.md` for the three
 paths to extreme Sharpe, correlation kill list, and tier benchmarks.
 
 ## Production Governance

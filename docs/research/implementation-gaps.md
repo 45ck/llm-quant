@@ -17,12 +17,13 @@
 | MinTRL computation | MISSING | P2 |
 | Shuffled signal fraud detector | IMPLEMENTED | — |
 | Regime split validation (2 of 3) | INFORMAL | P2 |
-| HRP portfolio construction | MISSING | P2 |
-| Volatility targeting | MISSING | P2 |
+| HRP portfolio construction | IMPLEMENTED | — |
+| HRP walk-forward validation (5-fold OOS/IS) | IMPLEMENTED | — |
+| Volatility targeting (10% ann. vol) | IMPLEMENTED | — |
 | Alpha decay monitoring (generalization ratio) | MISSING | P2 |
-| Marginal portfolio SR contribution gate | MISSING | P2 |
-| Portfolio correlation < 0.30 gate (new strategy) | MISSING | P2 |
-| Corrected combined SR computation (with ρ) | MISSING | P2 |
+| Marginal portfolio SR contribution gate | IMPLEMENTED | — |
+| Portfolio correlation < 0.30 gate (new strategy) | IMPLEMENTED | — |
+| Corrected combined SR computation (with ρ) | IMPLEMENTED | — |
 | Capacity estimation | MISSING | P3 |
 | Drawdown CUSUM regime-change detection | MISSING | P3 |
 | Kelly / fractional Kelly position sizing | MISSING | P3 |
