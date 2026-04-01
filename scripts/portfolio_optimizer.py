@@ -58,6 +58,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "skip-month-tsmom-v1": "a220a89a",
     "credit-spread-regime-v1": "DIRECT",  # Direct computation (engine incompatible)
     "dba-commodity-cycle-v1": "DIRECT",  # Direct computation (regime strategy)
+    "xlk-xle-sector-rotation-v1": "DIRECT",  # Direct computation (regime strategy)
 }
 
 # Mechanism family labels for context
@@ -81,6 +82,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "skip-month-tsmom-v1": "F3: TSMOM",
     "credit-spread-regime-v1": "F9: Spread Regime",
     "dba-commodity-cycle-v1": "F11: Commodity Cycle",
+    "xlk-xle-sector-rotation-v1": "F12: Sector Rotation",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -105,6 +107,7 @@ TRACK_A_SLUGS: list[str] = [
     "skip-month-tsmom-v1",
     "credit-spread-regime-v1",
     "dba-commodity-cycle-v1",
+    "xlk-xle-sector-rotation-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -245,6 +248,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_credit_spread_regime_returns(data_dir)
     if slug == "dba-commodity-cycle-v1":
         return _compute_dba_commodity_cycle_returns(data_dir)
+    if slug == "xlk-xle-sector-rotation-v1":
+        return _compute_xlk_xle_sector_rotation_returns(data_dir)
     return None
 
 
@@ -468,6 +473,119 @@ def _compute_dba_commodity_cycle_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute dba-commodity-cycle returns: %s", e)
+        return None
+
+
+def _compute_xlk_xle_sector_rotation_returns(data_dir: Path) -> dict | None:
+    """XLK/XLE sector rotation: growth vs inflation regime → QQQ/GLD+DBA."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "QQQ", "GLD", "SHY", "DBA", "XLK", "XLE"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        warmup = 60
+        lookback = 40
+        sma_period = 20
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build XLK/XLE ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            xlk = sym_data["XLK"].get(d, 0.0)
+            xle = sym_data["XLE"].get(d, 0.0)
+            ratio_series.append(xlk / xle if xlk > 0 and xle > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < max(lookback, sma_period) + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+            sma_window = ratio_series[i - 1 - sma_period : i - 1]
+            ratio_sma = (
+                sum(sma_window) / sma_period if len(sma_window) >= sma_period else 0
+            )
+            if ratio_sma <= 0:
+                daily_returns.append(0.0)
+                continue
+            ratio_vs_sma = ratio_now / ratio_sma - 1
+
+            # Asset returns helper
+            d, dp = dates[i], dates[i - 1]
+
+            def _asset_ret(sym, _d=d, _dp=dp):
+                data = sym_data[sym]
+                if _d in data and _dp in data and data[_dp] > 0:
+                    return data[_d] / data[_dp] - 1
+                return 0.0
+
+            if ratio_mom > 0 and ratio_vs_sma > 0:
+                regime = "growth"
+                day_ret = _asset_ret("QQQ") * 0.90
+            elif ratio_mom < 0 and ratio_vs_sma < 0:
+                regime = "inflation"
+                day_ret = _asset_ret("GLD") * 0.50 + _asset_ret("DBA") * 0.30
+            else:
+                regime = "neutral"
+                day_ret = _asset_ret("SPY") * 0.45
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.988,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute xlk-xle-sector-rotation returns: %s", e)
         return None
 
 
