@@ -186,7 +186,9 @@ def compute_hrp_weights(
         )
 
     # Any slugs not assigned to a track get raw HRP weights (edge case)
-    untracked = [s for s in slugs if s not in a_slugs_loaded and s not in b_slugs_loaded]
+    untracked = [
+        s for s in slugs if s not in a_slugs_loaded and s not in b_slugs_loaded
+    ]
     for slug in untracked:
         adjusted[slug] = raw_weights.get(slug, 0.0)
         logger.warning(
@@ -716,20 +718,18 @@ def _format_hrp_weights_section(
         "-" * 68,
     ]
     for slug in sorted(selected, key=lambda s: -hrp_weights.get(s, 0.0)):
-        track = "A" if slug in TRACK_A_SLUGS else ("B" if slug in TRACK_B_SLUGS else "?")
+        track = (
+            "A" if slug in TRACK_A_SLUGS else ("B" if slug in TRACK_B_SLUGS else "?")
+        )
         hrp_w = hrp_weights.get(slug, 0.0)
         ew_w = equal_weights.get(slug, 0.0)
         delta = hrp_w - ew_w
         delta_str = f"+{delta:.4f}" if delta >= 0 else f"{delta:.4f}"
-        lines.append(
-            f"{slug:<32} {track:<8} {hrp_w:>8.4f} {ew_w:>8.4f} {delta_str:>8}"
-        )
+        lines.append(f"{slug:<32} {track:<8} {hrp_w:>8.4f} {ew_w:>8.4f} {delta_str:>8}")
     total_hrp = sum(hrp_weights.values())
     total_ew = sum(equal_weights.values())
     lines.append("-" * 68)
-    lines.append(
-        f"{'TOTAL':<32} {'':8} {total_hrp:>8.4f} {total_ew:>8.4f} {'':>8}"
-    )
+    lines.append(f"{'TOTAL':<32} {'':8} {total_hrp:>8.4f} {total_ew:>8.4f} {'':>8}")
     lines.append("")
     lines.append(
         f"  Track A ({len([s for s in selected if s in TRACK_A_SLUGS])} strategies): "
@@ -982,7 +982,10 @@ def main() -> None:
             validate_weights(hrp_weights, "hrp")
             logger.info(
                 "HRP weights: %s",
-                {s: f"{w:.4f}" for s, w in sorted(hrp_weights.items(), key=lambda x: -x[1])},
+                {
+                    s: f"{w:.4f}"
+                    for s, w in sorted(hrp_weights.items(), key=lambda x: -x[1])
+                },
             )
         except Exception:
             logger.exception("HRP optimization failed — falling back to equal weight")

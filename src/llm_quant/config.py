@@ -63,14 +63,14 @@ class RiskLimits(BaseModel):
     default_stop_loss_pct: float = 0.05
     max_drawdown_pct: float = 0.15  # Portfolio drawdown circuit breaker
     # ATR-calibrated stop-loss multipliers
-    atr_stop_multiplier: float = 2.0          # 2x ATR for equities (Turtle Traders)
-    atr_stop_multiplier_crypto: float = 2.5   # wider for crypto overnight gaps
+    atr_stop_multiplier: float = 2.0  # 2x ATR for equities (Turtle Traders)
+    atr_stop_multiplier_crypto: float = 2.5  # wider for crypto overnight gaps
     atr_stop_multiplier_commodity: float = 2.5  # wider for volatile commodities
     # ATR-based position sizing
-    target_risk_pct: float = 0.01    # fraction of NAV to risk per trade
-    deviation_buffer: float = 0.20   # buffer before triggering rebalance alert
-    atr_period: int = 14             # ATR lookback for equities / fixed income
-    atr_period_crypto: int = 7       # shorter ATR lookback for crypto
+    target_risk_pct: float = 0.01  # fraction of NAV to risk per trade
+    deviation_buffer: float = 0.20  # buffer before triggering rebalance alert
+    atr_period: int = 14  # ATR lookback for equities / fixed income
+    atr_period_crypto: int = 7  # shorter ATR lookback for crypto
     # Per-asset-class overrides (crypto is more volatile, forex less so)
     crypto_max_position_weight: float = 0.05
     crypto_default_stop_loss_pct: float = 0.15
@@ -110,14 +110,14 @@ class TrackCLimits(BaseModel):
     market-neutrality.  A higher cash reserve supports event-driven staging.
     """
 
-    max_position_weight: float = 0.20           # 20% per strategy
-    max_trade_size: float = 0.05                # 5% per trade
-    max_gross_exposure: float = 2.0             # 200% (both legs summed)
-    max_net_exposure: float = 0.30              # 30% — enforces near-zero beta
+    max_position_weight: float = 0.20  # 20% per strategy
+    max_trade_size: float = 0.05  # 5% per trade
+    max_gross_exposure: float = 2.0  # 200% (both legs summed)
+    max_net_exposure: float = 0.30  # 30% — enforces near-zero beta
     max_sector_concentration: float = 0.30
-    max_exchange_concentration: float = 0.25    # 25% on any single exchange
+    max_exchange_concentration: float = 0.25  # 25% on any single exchange
     max_trades_per_session: int = 5
-    min_cash_reserve: float = 0.10              # 10% — hold dry powder for events
+    min_cash_reserve: float = 0.10  # 10% — hold dry powder for events
     require_stop_loss: bool = True
     default_stop_loss_pct: float = 0.05
     atr_stop_multiplier: float = 2.0
@@ -125,12 +125,12 @@ class TrackCLimits(BaseModel):
     atr_stop_multiplier_commodity: float = 2.5
     target_risk_pct: float = 0.01
     deviation_buffer: float = 0.20
-    max_drawdown_pct: float = 0.10              # 10% — tighter; drawdown signals leg break
+    max_drawdown_pct: float = 0.10  # 10% — tighter; drawdown signals leg break
 
     # Kill-switch thresholds (Track C-specific)
-    max_beta_to_spy: float = 0.25               # rolling-30d SPY beta limit
-    min_spread_bps: float = 5.0                 # spread collapse threshold (bps)
-    max_funding_rate_pct: float = 0.50          # funding reversal threshold (bps/day)
+    max_beta_to_spy: float = 0.25  # rolling-30d SPY beta limit
+    min_spread_bps: float = 5.0  # spread collapse threshold (bps)
+    max_funding_rate_pct: float = 0.50  # funding reversal threshold (bps/day)
 
 
 class RegimeDriftConfig(BaseModel):
@@ -222,7 +222,9 @@ class AssetEntry(BaseModel):
     asset_class: str = "equity"  # equity, crypto, forex
     tradeable: bool = True
     cftc_code: str | None = None  # 6-digit CFTC code for COT overlay (GLD, SLV, USO)
-    cot_eligible: bool = True  # False for USO: post-Apr 2020 restructuring broke WTI COT mapping
+    cot_eligible: bool = (
+        True  # False for USO: post-Apr 2020 restructuring broke WTI COT mapping
+    )
 
 
 # Backward-compatible alias

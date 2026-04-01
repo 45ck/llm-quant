@@ -632,7 +632,7 @@ def run_robustness_gate(
         if annualized_sharpe is not None:
             sr_ann = annualized_sharpe
         else:
-            from llm_quant.backtest.metrics import TRADING_DAYS_PER_YEAR, compute_sharpe
+            from llm_quant.backtest.metrics import compute_sharpe
 
             sr_ann = compute_sharpe(best_returns, annualize=True)
 
@@ -695,9 +695,7 @@ def run_robustness_gate(
         else:
             # portfolio_sr not provided — skip marginal SR gate
             result.marginal_sr_passed = True
-            logger.info(
-                "Marginal SR gate skipped (no portfolio_sr provided)"
-            )
+            logger.info("Marginal SR gate skipped (no portfolio_sr provided)")
     else:
         # No portfolio context — both admission gates default to pass
         result.marginal_sr_passed = True
@@ -733,17 +731,17 @@ class TrackCRobustnessResult:
 
     # Raw inputs (stored for audit trail)
     sharpe: float = 0.0
-    max_drawdown: float = 0.0       # positive fraction, e.g. 0.08 for 8%
-    beta_to_spy: float = 0.0        # absolute value
+    max_drawdown: float = 0.0  # positive fraction, e.g. 0.08 for 8%
+    beta_to_spy: float = 0.0  # absolute value
     n_trades: int = 0
     cost_stress_sharpe: float = 0.0
 
     # Individual gate results
-    sharpe_gate: bool = False           # sharpe >= 1.5
-    maxdd_gate: bool = False            # max_drawdown < 0.10
-    beta_gate: bool = False             # beta_to_spy < 0.15
-    min_trades_gate: bool = False       # n_trades >= 50
-    cost_stress_gate: bool = False      # cost_stress_sharpe >= 1.0
+    sharpe_gate: bool = False  # sharpe >= 1.5
+    maxdd_gate: bool = False  # max_drawdown < 0.10
+    beta_gate: bool = False  # beta_to_spy < 0.15
+    min_trades_gate: bool = False  # n_trades >= 50
+    cost_stress_gate: bool = False  # cost_stress_sharpe >= 1.0
 
     # Gate thresholds (informational)
     sharpe_threshold: float = 1.5

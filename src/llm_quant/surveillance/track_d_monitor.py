@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 
 import duckdb
 
@@ -33,9 +33,11 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-LEVERAGED_ETFS: frozenset[str] = frozenset({"TQQQ", "UPRO", "SOXL", "TMF", "TLTW", "UVXY"})
-MAX_HOLD_DAYS = 5          # Track D hard rule — force exit on day 5+
-WARN_HOLD_DAYS = 4         # Warn when approaching limit
+LEVERAGED_ETFS: frozenset[str] = frozenset(
+    {"TQQQ", "UPRO", "SOXL", "TMF", "TLTW", "UVXY"}
+)
+MAX_HOLD_DAYS = 5  # Track D hard rule — force exit on day 5+
+WARN_HOLD_DAYS = 4  # Warn when approaching limit
 VIX_HIGH_THRESHOLD = 30.0  # VIX level that dramatically amplifies decay
 VIX_ELEVATED_THRESHOLD = 25.0  # Elevated but not extreme
 # Approximate annualised drag coefficient for a 3x daily-reset ETF.
@@ -53,8 +55,8 @@ class TrackDRiskReport:
     """Full daily risk snapshot for Track D leveraged ETF positions."""
 
     date: date
-    positions_at_risk: list[str] = field(default_factory=list)   # day 4 — WARNING
-    forced_exits: list[str] = field(default_factory=list)        # day 5+ — HALT
+    positions_at_risk: list[str] = field(default_factory=list)  # day 4 — WARNING
+    forced_exits: list[str] = field(default_factory=list)  # day 5+ — HALT
     beta_decay_estimate: dict[str, float] = field(default_factory=dict)
     volatility_drag: dict[str, float] = field(default_factory=dict)
     daily_rebalance_needed: bool = False
@@ -190,10 +192,10 @@ def _estimate_beta_decay(days_held: int, vix: float, leverage: float = 3.0) -> f
     Returns a positive float representing fractional loss (e.g. 0.005 = 0.5%).
     """
     daily_vol = (vix / 100.0) / math.sqrt(252)
-    daily_variance = daily_vol ** 2
+    daily_variance = daily_vol**2
     # For a leverage-times daily-reset ETF:
     #   rebalancing drag per day = (L^2 - L) / 2 × σ²  (exact for continuous time)
-    daily_drag = (leverage ** 2 - leverage) / 2.0 * daily_variance
+    daily_drag = (leverage**2 - leverage) / 2.0 * daily_variance
     return daily_drag * days_held
 
 
@@ -203,8 +205,8 @@ def _estimate_volatility_drag(vix: float, leverage: float = 3.0) -> float:
     Returns annualised drag (e.g. 0.208 = 20.8% per year).
     """
     daily_vol = (vix / 100.0) / math.sqrt(252)
-    daily_variance = daily_vol ** 2
-    daily_drag = (leverage ** 2 - leverage) / 2.0 * daily_variance
+    daily_variance = daily_vol**2
+    daily_drag = (leverage**2 - leverage) / 2.0 * daily_variance
     return daily_drag * 252.0
 
 
@@ -512,7 +514,9 @@ class TrackDMonitor:
         to determine hold duration.
         """
         held_symbols = _get_leveraged_positions(self.conn)
-        return {symbol: _hold_days_from_trades(self.conn, symbol) for symbol in held_symbols}
+        return {
+            symbol: _hold_days_from_trades(self.conn, symbol) for symbol in held_symbols
+        }
 
     def estimate_beta_decay(
         self,

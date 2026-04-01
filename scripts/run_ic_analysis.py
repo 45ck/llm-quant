@@ -144,7 +144,9 @@ def main() -> None:
         data = _load_signal_from_db(args.strategy, args.signal, args.lookback)
         if data is not None:
             signal, prices, dates = data
-            print(f"Loaded {len(signal)} observations for strategy '{args.strategy}', signal '{args.signal}'")
+            print(
+                f"Loaded {len(signal)} observations for strategy '{args.strategy}', signal '{args.signal}'"
+            )
         else:
             print(
                 f"Warning: could not load strategy '{args.strategy}' signal '{args.signal}' from DB. "

@@ -80,7 +80,9 @@ def _get(url: str, **kwargs: Any) -> requests.Response | None:
         return None
 
 
-def _extract_section(soup: BeautifulSoup, header_pattern: re.Pattern[str]) -> str | None:
+def _extract_section(
+    soup: BeautifulSoup, header_pattern: re.Pattern[str]
+) -> str | None:
     """Extract a named section from a parsed 10-K HTML document.
 
     Finds the first tag whose text matches ``header_pattern``, then
@@ -111,7 +113,7 @@ def _extract_section(soup: BeautifulSoup, header_pattern: re.Pattern[str]) -> st
             break
 
     text = " ".join(chunks).strip()
-    return text if text else None
+    return text or None
 
 
 class EdgarFetcher:
@@ -219,7 +221,14 @@ class EdgarFetcher:
                 (ticker, year, filing_date, accession_number, mda_text, risk_factors_text)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            [ticker.upper(), year, filing_date, accession_number, mda_text, risk_factors_text],
+            [
+                ticker.upper(),
+                year,
+                filing_date,
+                accession_number,
+                mda_text,
+                risk_factors_text,
+            ],
         )
 
     def _get_cik(self, ticker: str) -> str | None:
@@ -288,7 +297,9 @@ class EdgarFetcher:
         # Look for a link to the primary document (10-K htm/html)
         for link in soup.find_all("a", href=True):
             href: str = link["href"]
-            if href.endswith((".htm", ".html")) and "10k" in href.lower().replace("-", ""):
+            if href.endswith((".htm", ".html")) and "10k" in href.lower().replace(
+                "-", ""
+            ):
                 return f"https://www.sec.gov{href}" if href.startswith("/") else href
         # Fallback: return the index itself for section extraction
         return index_url

@@ -238,7 +238,7 @@ class FhsCvarEstimator:
             (filtered_returns, method_name) where method_name is either
             "fhs_garch" or "ewma_weighted".
         """
-        from arch import arch_model  # noqa: PLC0415 — optional heavy dependency
+        from arch import arch_model
 
         # Rescale to percentage returns for numerical stability in arch
         r_pct = returns * 100.0

@@ -21,14 +21,15 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import polars as pl
 import pytest
 
 # ---------------------------------------------------------------------------
 # Import the optimizer module directly without going through package machinery
 # ---------------------------------------------------------------------------
 
-_OPTIMIZER_PATH = Path(__file__).resolve().parent.parent / "scripts" / "portfolio_optimizer.py"
+_OPTIMIZER_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "portfolio_optimizer.py"
+)
 
 spec = importlib.util.spec_from_file_location("portfolio_optimizer", _OPTIMIZER_PATH)
 _optimizer = importlib.util.module_from_spec(spec)
@@ -149,8 +150,8 @@ def test_hrp_differs_from_equal_weight():
     n_b = len(_B_SLUGS_SAMPLE)
     eq_a = 0.70 / n_a
     eq_b = 0.30 / n_b
-    equal_weights = {s: eq_a for s in _A_SLUGS_SAMPLE}
-    equal_weights.update({s: eq_b for s in _B_SLUGS_SAMPLE})
+    equal_weights = dict.fromkeys(_A_SLUGS_SAMPLE, eq_a)
+    equal_weights.update(dict.fromkeys(_B_SLUGS_SAMPLE, eq_b))
 
     # At least one weight should differ by more than 0.001 from equal-weight
     diffs = [abs(weights.get(s, 0.0) - equal_weights[s]) for s in slugs]
@@ -218,7 +219,9 @@ def test_validate_weights_warns_sum_gt_one(caplog):
     with caplog.at_level(logging.WARNING, logger="portfolio_optimizer"):
         validate_weights(weights, method="test")
     warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
-    assert len(warnings) >= 1, "Expected at least one warning for weights summing to 1.2"
+    assert len(warnings) >= 1, (
+        "Expected at least one warning for weights summing to 1.2"
+    )
     assert any("1.2" in w.message or "sum" in w.message.lower() for w in warnings), (
         f"Warning did not mention the sum violation: {[w.message for w in warnings]}"
     )

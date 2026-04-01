@@ -44,7 +44,9 @@ BASE_PARAMS = {
 }
 
 # Higher cost model for leveraged ETF (wider spreads)
-cost_model = CostModel(spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2)
+cost_model = CostModel(
+    spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2
+)
 
 print("Fetching data...")
 prices_df = fetch_ohlcv(SYMBOLS, lookback_days=5 * 365 + 30)
@@ -124,8 +126,8 @@ oos_is_ratio = cpcv_mean / base["sharpe"] if base["sharpe"] != 0 else 0.0
 
 print("\n--- BASE RESULTS ---")
 print(f"Base Sharpe:    {base['sharpe']:.4f}")
-print(f"Max DD:         {base['max_dd']:.4f} ({base['max_dd']*100:.1f}%)")
-print(f"Total Return:   {base['total_return']:.4f} ({base['total_return']*100:.1f}%)")
+print(f"Max DD:         {base['max_dd']:.4f} ({base['max_dd'] * 100:.1f}%)")
+print(f"Total Return:   {base['total_return']:.4f} ({base['total_return'] * 100:.1f}%)")
 print(f"DSR:            {base['dsr']:.4f}")
 print(f"Total Trades:   {base['total_trades']}")
 
@@ -144,14 +146,20 @@ weight_variants = [
 weight_results = []
 for name, params in weight_variants:
     r = run_single(params)
-    print(f"  {name}: sharpe={r['sharpe']:.4f} max_dd={r['max_dd']:.4f} ({r['max_dd']*100:.1f}%) return={r['total_return']*100:.1f}%")
-    weight_results.append({
-        "variant": name,
-        "sharpe": round(r["sharpe"], 4),
-        "max_dd": round(r["max_dd"], 4),
-        "total_return": round(r["total_return"], 4),
-        "passes_track_d": bool(r["sharpe"] >= SHARPE_THRESHOLD and r["max_dd"] < DD_THRESHOLD),
-    })
+    print(
+        f"  {name}: sharpe={r['sharpe']:.4f} max_dd={r['max_dd']:.4f} ({r['max_dd'] * 100:.1f}%) return={r['total_return'] * 100:.1f}%"
+    )
+    weight_results.append(
+        {
+            "variant": name,
+            "sharpe": round(r["sharpe"], 4),
+            "max_dd": round(r["max_dd"], 4),
+            "total_return": round(r["total_return"], 4),
+            "passes_track_d": bool(
+                r["sharpe"] >= SHARPE_THRESHOLD and r["max_dd"] < DD_THRESHOLD
+            ),
+        }
+    )
 
 # --- Perturbation analysis ---
 perturbations = [
@@ -174,14 +182,18 @@ for name, params in perturbations:
     stable = abs(pct) <= 30
     if stable:
         stable_count += 1
-    perturbation_results.append({
-        "variant": name,
-        "sharpe": round(r["sharpe"], 4),
-        "max_dd": round(r["max_dd"], 4),
-        "change_pct": round(pct, 1),
-        "status": "STABLE" if stable else "UNSTABLE",
-    })
-    print(f"  {name}: sharpe={r['sharpe']:.4f} max_dd={r['max_dd']:.4f} ({pct:+.1f}%) {'STABLE' if stable else 'UNSTABLE'}")
+    perturbation_results.append(
+        {
+            "variant": name,
+            "sharpe": round(r["sharpe"], 4),
+            "max_dd": round(r["max_dd"], 4),
+            "change_pct": round(pct, 1),
+            "status": "STABLE" if stable else "UNSTABLE",
+        }
+    )
+    print(
+        f"  {name}: sharpe={r['sharpe']:.4f} max_dd={r['max_dd']:.4f} ({pct:+.1f}%) {'STABLE' if stable else 'UNSTABLE'}"
+    )
 
 pct_stable = stable_count / len(perturbations) * 100
 print(f"\n  Stable: {stable_count}/{len(perturbations)} ({pct_stable:.0f}%)")
@@ -212,7 +224,11 @@ gate5 = pct_stable >= 60
 
 gates = [
     (f"Gate 1: Sharpe >= {SHARPE_THRESHOLD}", gate1, f"{base['sharpe']:.4f}"),
-    (f"Gate 2: MaxDD < {DD_THRESHOLD*100:.0f}%", gate2, f"{base['max_dd']*100:.1f}%"),
+    (
+        f"Gate 2: MaxDD < {DD_THRESHOLD * 100:.0f}%",
+        gate2,
+        f"{base['max_dd'] * 100:.1f}%",
+    ),
     (f"Gate 3: DSR >= {DSR_THRESHOLD}", gate3, f"{base['dsr']:.4f}"),
     ("Gate 4: CPCV OOS Sharpe > 0", gate4, f"{cpcv_mean:.4f}"),
     ("Gate 5: Perturbation >= 60% stable", gate5, f"{pct_stable:.0f}%"),
@@ -248,7 +264,7 @@ output = {
     },
     "gates": {
         f"sharpe_gte_{SHARPE_THRESHOLD}": gate1,
-        f"maxdd_lt_{DD_THRESHOLD*100:.0f}pct": gate2,
+        f"maxdd_lt_{DD_THRESHOLD * 100:.0f}pct": gate2,
         f"dsr_gte_{DSR_THRESHOLD}": gate3,
         "cpcv_oos_positive": gate4,
         "perturbation_gte_60pct": gate5,

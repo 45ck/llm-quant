@@ -130,9 +130,7 @@ class TextClassifier:
             }
 
         # --- identify uncached sentences ---------------------------------
-        uncached_indices = [
-            i for i, h in enumerate(hashes) if h not in cached
-        ]
+        uncached_indices = [i for i, h in enumerate(hashes) if h not in cached]
 
         # --- call Claude in batches of _BATCH_SIZE -----------------------
         if uncached_indices:
@@ -215,7 +213,9 @@ class TextClassifier:
                 raise ValueError(f"Expected JSON array, got: {type(parsed)}")
             # Pad or truncate to match sentence count
             while len(parsed) < len(sentences):
-                parsed.append({"forward_looking": None, "causal": None, "confidence": None})
+                parsed.append(
+                    {"forward_looking": None, "causal": None, "confidence": None}
+                )
             return parsed[: len(sentences)]
         except Exception as exc:
             logger.warning("Claude classification failed: %s", exc)

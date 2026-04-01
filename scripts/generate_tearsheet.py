@@ -24,8 +24,6 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-import numpy as np
-
 # Ensure src is on path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -72,7 +70,9 @@ TRACK_B_SLUGS: set[str] = {
 # ---------------------------------------------------------------------------
 
 
-def _fetch_yfinance_returns(symbols: list[str], start: date, end: date) -> dict[str, "pd.Series"]:  # type: ignore[name-defined]  # noqa: F821
+def _fetch_yfinance_returns(
+    symbols: list[str], start: date, end: date
+) -> dict[str, pd.Series]:  # type: ignore[name-defined]  # noqa: F821
     """Fetch daily returns via yfinance for benchmark construction.
 
     Returns dict of symbol -> pd.Series of daily returns (pct_change, dropna).
@@ -98,7 +98,7 @@ def _fetch_yfinance_returns(symbols: list[str], start: date, end: date) -> dict[
                 prices.index = prices.index.tz_localize(None)
             rets = prices.pct_change().dropna()
             result[symbol] = rets
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Failed to fetch %s: %s", symbol, exc)
     return result
 
@@ -107,7 +107,7 @@ def build_benchmark_returns(
     track: str,
     start: date,
     end: date,
-) -> "pd.Series | None":  # type: ignore[name-defined]  # noqa: F821
+) -> pd.Series | None:  # type: ignore[name-defined]  # noqa: F821
     """Build benchmark daily returns series.
 
     Track A: 60/40 blended SPY/TLT.
@@ -128,7 +128,9 @@ def build_benchmark_returns(
     price_returns = _fetch_yfinance_returns(symbols, start, end)
 
     if not price_returns:
-        logger.warning("Could not fetch benchmark data — tearsheet will be benchmark-free")
+        logger.warning(
+            "Could not fetch benchmark data — tearsheet will be benchmark-free"
+        )
         return None
 
     # Align all series on common dates
@@ -151,8 +153,8 @@ def build_benchmark_returns(
 
 
 def print_metrics_table(
-    strategy_returns: "pd.Series",  # type: ignore[name-defined]  # noqa: F821
-    benchmark_returns: "pd.Series | None",  # type: ignore[name-defined]  # noqa: F821
+    strategy_returns: pd.Series,  # type: ignore[name-defined]  # noqa: F821
+    benchmark_returns: pd.Series | None,  # type: ignore[name-defined]  # noqa: F821
     slug: str,
     tearsheet_path: Path | None,
 ) -> None:
@@ -163,7 +165,7 @@ def print_metrics_table(
         try:
             val = fn(*args)
             return float(val) if val is not None else default
-        except Exception:  # noqa: BLE001
+        except Exception:
             return default
 
     # Strategy metrics
@@ -179,6 +181,7 @@ def print_metrics_table(
         bench_name = benchmark_returns.name or "Benchmark"
         # Align on common dates
         import pandas as pd
+
         aligned = pd.concat(
             [strategy_returns.rename("strat"), benchmark_returns.rename("bench")],
             axis=1,
@@ -193,23 +196,23 @@ def print_metrics_table(
 
         header_line = f"{'Metric':<20} {'Strategy':>12} {bench_name:>16}"
         data_lines = [
-            f"{'-'*52}",
+            f"{'-' * 52}",
             f"{'Sharpe':<20} {sharpe_s:>12.3f} {sharpe_b:>16.3f}",
             f"{'Sortino':<20} {sortino_s:>12.3f} {sortino_b:>16.3f}",
             f"{'Max Drawdown':<20} {maxdd_s:>11.1%} {maxdd_b:>15.1%}",
             f"{'Calmar':<20} {calmar_s:>12.3f} {calmar_b:>16.3f}",
             f"{'CAGR':<20} {cagr_s:>11.1%} {cagr_b:>15.1%}",
-            f"{'-'*52}",
+            f"{'-' * 52}",
         ]
     else:
         data_lines = [
-            f"{'-'*34}",
+            f"{'-' * 34}",
             f"{'Sharpe':<20} {sharpe_s:>12.3f}",
             f"{'Sortino':<20} {sortino_s:>12.3f}",
             f"{'Max Drawdown':<20} {maxdd_s:>11.1%}",
             f"{'Calmar':<20} {calmar_s:>12.3f}",
             f"{'CAGR':<20} {cagr_s:>11.1%}",
-            f"{'-'*34}",
+            f"{'-' * 34}",
         ]
 
     lines = [
@@ -275,7 +278,9 @@ def generate_tearsheet(
         artifact_path = experiments_dir / f"{exp_id}.yaml"
     else:
         # Try the first available experiment
-        yaml_files = sorted(experiments_dir.glob("*.yaml")) if experiments_dir.exists() else []
+        yaml_files = (
+            sorted(experiments_dir.glob("*.yaml")) if experiments_dir.exists() else []
+        )
         if not yaml_files:
             logger.error(
                 "No experiment artifacts found for %s in %s",
@@ -332,7 +337,9 @@ def generate_tearsheet(
             idx = pd.bdate_range(end=ed, periods=n, freq="B")
     else:
         # No dates — generate backwards from today
-        idx = pd.bdate_range(end=pd.Timestamp.today(), periods=len(daily_returns), freq="B")
+        idx = pd.bdate_range(
+            end=pd.Timestamp.today(), periods=len(daily_returns), freq="B"
+        )
 
     strategy_returns = pd.Series(daily_returns, index=idx, dtype=float)
     strategy_returns.name = slug
@@ -373,7 +380,7 @@ def generate_tearsheet(
                 match_dates=True,
             )
             logger.info("Tearsheet saved: %s", tearsheet_path)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("Failed to generate HTML tearsheet: %s", exc)
             return None
 

@@ -177,7 +177,7 @@ class DccGarchEstimator:
             N×N current correlation matrix.
         """
         try:
-            from arch import arch_model  # noqa: PLC0415
+            from arch import arch_model
         except ImportError as e:
             msg = "arch package required for DCC-GARCH estimation"
             raise ImportError(msg) from e
@@ -201,9 +201,7 @@ class DccGarchEstimator:
                 # If GARCH fails for this series, standardize by sample std
                 std_dev = np.std(series)
                 std_residuals[:, i] = series / (std_dev if std_dev > 1e-10 else 1.0)
-                logger.debug(
-                    "GARCH fit failed for asset %d — using sample std.", i
-                )
+                logger.debug("GARCH fit failed for asset %d — using sample std.", i)
 
         # Step 2: Scalar DCC recursion
         # Q_bar = unconditional covariance of standardized residuals
@@ -292,8 +290,8 @@ class DccGarchEstimator:
         if abs(corr) < 1e-8:
             return corr
 
-        delta_sq = vol_ratio ** 2
-        rho_sq = corr ** 2
+        delta_sq = vol_ratio**2
+        rho_sq = corr**2
         denominator = 1.0 + delta_sq * (1.0 - rho_sq) / rho_sq
         if denominator <= 0.0:
             return corr

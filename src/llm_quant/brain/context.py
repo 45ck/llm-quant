@@ -266,9 +266,7 @@ def _get_credit_spread(
         return None, None, False
 
     if not rows:
-        logger.warning(
-            "No FRED data for %s; credit spread defaults to None", series_id
-        )
+        logger.warning("No FRED data for %s; credit spread defaults to None", series_id)
         return None, None, False
 
     values = [float(r[0]) for r in rows if r[0] is not None]
@@ -280,7 +278,7 @@ def _get_credit_spread(
     if len(values) < 2:
         return oas, None, False
 
-    import statistics  # noqa: PLC0415
+    import statistics
 
     mean = statistics.mean(values)
     stdev = statistics.stdev(values)
@@ -439,8 +437,12 @@ def _get_hmm_regime(
         - fallback_used: True when the HMM could not produce a result
     """
     try:
-        from llm_quant.regime.hmm import HmmRegimeConfig, HmmRegimeDetector  # noqa: PLC0415
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
+
+        from llm_quant.regime.hmm import (
+            HmmRegimeConfig,
+            HmmRegimeDetector,
+        )
 
         # VIX series
         vix_rows = None
@@ -463,7 +465,9 @@ def _get_hmm_regime(
             logger.warning("HMM: no VIX data; skipping HMM regime detection")
             return None, 0.5, True
 
-        vix_series = pl.Series([float(r[0]) for r in reversed(vix_rows) if r[0] is not None])
+        vix_series = pl.Series(
+            [float(r[0]) for r in reversed(vix_rows) if r[0] is not None]
+        )
 
         # Yield slope: T10Y2Y from fred_data_daily if available, else zeros
         try:
@@ -478,7 +482,10 @@ def _get_hmm_regime(
                 [lookback_days],
             ).fetchall()
             if slope_rows:
-                slope_values = [float(r[0]) if r[0] is not None else 0.0 for r in reversed(slope_rows)]
+                slope_values = [
+                    float(r[0]) if r[0] is not None else 0.0
+                    for r in reversed(slope_rows)
+                ]
             else:
                 slope_values = [0.0] * len(vix_series)
         except Exception:
@@ -515,17 +522,25 @@ def _get_hmm_regime(
                 spy_momentum_values.append(pct)
 
         # Trim/pad momentum to match n
-        spy_momentum_values = spy_momentum_values[-n:] if len(spy_momentum_values) >= n else [0.0] * (n - len(spy_momentum_values)) + spy_momentum_values
+        spy_momentum_values = (
+            spy_momentum_values[-n:]
+            if len(spy_momentum_values) >= n
+            else [0.0] * (n - len(spy_momentum_values)) + spy_momentum_values
+        )
         spy_momentum = pl.Series(spy_momentum_values)
 
         config = HmmRegimeConfig(lookback_days=lookback_days)
-        result = HmmRegimeDetector(config).fit_predict(vix_series, yield_slope, spy_momentum)
+        result = HmmRegimeDetector(config).fit_predict(
+            vix_series, yield_slope, spy_momentum
+        )
 
         if result.fallback_used:
             return None, 0.5, True
 
         hmm_regime = (
-            MarketRegime.RISK_ON if result.regime == "risk_on" else MarketRegime.RISK_OFF
+            MarketRegime.RISK_ON
+            if result.regime == "risk_on"
+            else MarketRegime.RISK_OFF
         )
         return hmm_regime, result.confidence, False
 
@@ -549,9 +564,9 @@ def _get_inflation_regime(
     The tilts_dict contains keys: overweight, underweight, confidence.
     """
     try:
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
-        from llm_quant.regime.inflation import InflationRegimeDetector  # noqa: PLC0415
+        from llm_quant.regime.inflation import InflationRegimeDetector
 
         needed = lookback_days + 5  # small buffer for alignment
 
@@ -635,7 +650,7 @@ def _get_inflation_regime(
 def _get_tsmom_signals(
     conn: duckdb.DuckDBPyConnection,
     symbols: list[str],
-) -> "dict[str, Any] | None":
+) -> dict[str, Any] | None:
     """Compute multi-lookback TSMOM signals for all universe symbols.
 
     Fetches 252+ days of close prices from market_data_daily, computes
@@ -650,9 +665,9 @@ def _get_tsmom_signals(
         return None
 
     try:
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
-        from llm_quant.signals.tsmom import TsmomCalculator  # noqa: PLC0415
+        from llm_quant.signals.tsmom import TsmomCalculator
 
         placeholders = ", ".join(["?"] * len(symbols))
         rows = conn.execute(
@@ -681,15 +696,14 @@ def _get_tsmom_signals(
 
         result = {sig.symbol: sig for sig in sig_list}
         logger.info(
-            "TSMOM signals computed for %d / %d symbols "
-            "(long=%d, short=%d, flat=%d)",
+            "TSMOM signals computed for %d / %d symbols (long=%d, short=%d, flat=%d)",
             len(result),
             len(symbols),
             sum(1 for s in sig_list if s.direction == "long"),
             sum(1 for s in sig_list if s.direction == "short"),
             sum(1 for s in sig_list if s.direction == "flat"),
         )
-        return result if result else None
+        return result or None
 
     except Exception:
         logger.warning("TSMOM signal computation failed; skipping", exc_info=True)
@@ -724,7 +738,7 @@ def _get_cot_crowding(
         return None
 
     try:
-        from llm_quant.data.cot_fetcher import CotFetcher, SYMBOL_TO_COT_KEY
+        from llm_quant.data.cot_fetcher import SYMBOL_TO_COT_KEY, CotFetcher
 
         cot_symbols = [s for s in universe_symbols if s in SYMBOL_TO_COT_KEY]
         if not cot_symbols:
@@ -741,7 +755,7 @@ def _get_cot_crowding(
             except Exception:
                 logger.debug("COT signal fetch failed for %s", symbol, exc_info=True)
 
-        return crowding if crowding else None
+        return crowding or None
     except Exception:
         logger.warning("COT crowding overlay unavailable", exc_info=True)
         return None
@@ -979,14 +993,18 @@ def build_market_context(
         vix=round(vix, 2),
         yield_spread=round(yield_spread, 2),
         spy_trend=spy_trend,
-        credit_spread_oas=round(credit_spread_oas, 2) if credit_spread_oas is not None else None,
-        credit_spread_zscore=round(credit_spread_zscore, 4) if credit_spread_zscore is not None else None,
+        credit_spread_oas=round(credit_spread_oas, 2)
+        if credit_spread_oas is not None
+        else None,
+        credit_spread_zscore=round(credit_spread_zscore, 4)
+        if credit_spread_zscore is not None
+        else None,
         silent_stress=silent_stress,
         vix_regime_thresholds=vix_regime_thresholds,
         market_regime=market_regime,
         vix_percentile_126d=vix_percentile_126d,
         cot_crowding=cot_crowding,
-        execution_costs=execution_costs if execution_costs else None,
+        execution_costs=execution_costs or None,
         regime_confidence=round(regime_confidence, 4),
         hmm_regime_fallback=hmm_regime_fallback,
         tsmom_signals=tsmom_signals,
@@ -1006,8 +1024,12 @@ def build_market_context(
         context.vix_percentile_126d,
         context.market_regime,
         context.spy_trend,
-        f"{context.credit_spread_oas:.2f}" if context.credit_spread_oas is not None else "N/A",
-        f"{context.credit_spread_zscore:.4f}" if context.credit_spread_zscore is not None else "N/A",
+        f"{context.credit_spread_oas:.2f}"
+        if context.credit_spread_oas is not None
+        else "N/A",
+        f"{context.credit_spread_zscore:.4f}"
+        if context.credit_spread_zscore is not None
+        else "N/A",
         context.silent_stress,
     )
     return context

@@ -242,8 +242,7 @@ class CombinatorialDetector:
                 n_statements=2,
                 questions_block=f"0: {c_a.question}\n1: {c_b.question}",
                 prices_block=(
-                    f"0: {c_a.outcome_yes:.4f} (YES)\n"
-                    f"1: {c_b.outcome_yes:.4f} (YES)"
+                    f"0: {c_a.outcome_yes:.4f} (YES)\n1: {c_b.outcome_yes:.4f} (YES)"
                 ),
             )
             raw = self._call_claude(prompt)

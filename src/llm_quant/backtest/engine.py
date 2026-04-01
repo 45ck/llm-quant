@@ -918,7 +918,7 @@ class BacktestEngine:
             return 1.0
 
         # Compute daily returns from the last *window* observations
-        recent_nav = nav_series[-(window + 1):]
+        recent_nav = nav_series[-(window + 1) :]
         daily_returns = [
             recent_nav[i] / recent_nav[i - 1] - 1.0
             for i in range(1, len(recent_nav))
@@ -1062,7 +1062,9 @@ class BacktestEngine:
                 if len(vix_rows2) > 0:
                     vix_level = float(vix_rows2["vix_level"][0])
 
-            if vix_level is not None and not regime_filter(vix_level, cfg.vix_threshold):
+            if vix_level is not None and not regime_filter(
+                vix_level, cfg.vix_threshold
+            ):
                 n_buys = sum(1 for s in signals if s.action == Action.BUY)
                 if n_buys:
                     logger.debug(

@@ -33,9 +33,8 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any
 
 import polars as pl
 
@@ -338,8 +337,7 @@ class NlpSignalStrategy(Strategy):
             .str.to_date("%Y-%m-%d", strict=False)
             .alias("_doc_date")
         ).filter(
-            (pl.col("_doc_date") >= window_start)
-            & (pl.col("_doc_date") <= as_of_date)
+            (pl.col("_doc_date") >= window_start) & (pl.col("_doc_date") <= as_of_date)
         )
         if len(ticker_rows) == 0:
             return None

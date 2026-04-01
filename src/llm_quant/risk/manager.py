@@ -366,17 +366,19 @@ class RiskManager:
                 trade_notional = 0.0
 
         # 1. Position size (single-trade cap)
-        results.append(
-            check_position_size(trade_notional, nav, limits.max_trade_size)
-        )
+        results.append(check_position_size(trade_notional, nav, limits.max_trade_size))
 
         # 2. Position weight
         # Determine per-asset-class position weight limit
         asset_class = self.asset_class_map.get(signal.symbol, "equity")
         if asset_class == "crypto":
-            max_weight = getattr(limits, "crypto_max_position_weight", limits.max_position_weight)
+            max_weight = getattr(
+                limits, "crypto_max_position_weight", limits.max_position_weight
+            )
         elif asset_class == "forex":
-            max_weight = getattr(limits, "forex_max_position_weight", limits.max_position_weight)
+            max_weight = getattr(
+                limits, "forex_max_position_weight", limits.max_position_weight
+            )
         else:
             max_weight = limits.max_position_weight
 
@@ -540,12 +542,7 @@ class RiskManager:
         # 10. ATR-calibrated stop-loss validation (buys only, when ATR data available)
         if is_buy and atrs is not None:
             atr = atrs.get(signal.symbol)
-            if (
-                atr is not None
-                and atr > 0.0
-                and price > 0.0
-                and signal.stop_loss > 0.0
-            ):
+            if atr is not None and atr > 0.0 and price > 0.0 and signal.stop_loss > 0.0:
                 # Select multiplier based on asset class
                 if asset_class == "crypto":
                     multiplier = getattr(limits, "atr_stop_multiplier_crypto", 2.5)

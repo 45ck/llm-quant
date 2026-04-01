@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _EXECUTION_COSTS_BPS: dict[str, float] = {
-    "equity": 4.0,          # US equity: 2-6 bps round-trip
+    "equity": 4.0,  # US equity: 2-6 bps round-trip
     "international": 12.0,  # International developed: 7-18 bps
-    "emerging": 22.0,       # Emerging markets: 12-33 bps
-    "fixed_income": 6.0,    # Treasury ETFs: 3-9 bps
-    "hy_credit": 16.0,      # HY credit: 8-24 bps
-    "commodity": 6.0,       # Commodity ETFs (GLD/SLV/USO): ~crypto_etf level
-    "crypto": 6.0,          # Crypto ETF proxy: 3-9 bps
-    "forex": 17.0,          # Forex at ~$2500 notional: 17-18 bps
-    "volatility": 0.0,      # Non-tradeable (VIX reference only)
+    "emerging": 22.0,  # Emerging markets: 12-33 bps
+    "fixed_income": 6.0,  # Treasury ETFs: 3-9 bps
+    "hy_credit": 16.0,  # HY credit: 8-24 bps
+    "commodity": 6.0,  # Commodity ETFs (GLD/SLV/USO): ~crypto_etf level
+    "crypto": 6.0,  # Crypto ETF proxy: 3-9 bps
+    "forex": 17.0,  # Forex at ~$2500 notional: 17-18 bps
+    "volatility": 0.0,  # Non-tradeable (VIX reference only)
 }
 
 # Sector-level overrides for fixed income sub-types
@@ -478,7 +478,7 @@ def check_volatility_sizing(
 
 
 def check_portfolio_correlation_dcc(
-    strategy_returns: "pl.DataFrame",
+    strategy_returns: pl.DataFrame,
     warn_threshold: float = 0.70,
 ) -> RiskCheckResult:
     """Advisory correlation check using DCC-GARCH dynamic estimation.
@@ -507,9 +507,9 @@ def check_portfolio_correlation_dcc(
         correlation summary.  ``current_value`` is the avg pairwise correlation.
         ``limit_value`` is the warning threshold.
     """
-    import polars as pl  # noqa: PLC0415 — deferred to avoid circular import at module level
+    import polars as pl
 
-    from llm_quant.risk.correlation import DccGarchEstimator  # noqa: PLC0415
+    from llm_quant.risk.correlation import DccGarchEstimator
 
     if not isinstance(strategy_returns, pl.DataFrame) or strategy_returns.width < 2:
         return RiskCheckResult(
@@ -539,7 +539,10 @@ def check_portfolio_correlation_dcc(
         )
 
     avg_corr = result.avg_pairwise_corr
-    advisory = result.warning or f"Portfolio avg correlation {avg_corr:.2f} (div score {result.diversification_score:.2f})."
+    advisory = (
+        result.warning
+        or f"Portfolio avg correlation {avg_corr:.2f} (div score {result.diversification_score:.2f})."
+    )
     method = result.method_used.value
 
     return RiskCheckResult(
@@ -552,7 +555,7 @@ def check_portfolio_correlation_dcc(
 
 
 def check_cvar_limit(
-    portfolio_returns: "pl.Series",
+    portfolio_returns: pl.Series,
     proposed_trade_size: float,
 ) -> RiskCheckResult:
     """Check CVaR constraint using Filtered Historical Simulation.
@@ -584,9 +587,9 @@ def check_cvar_limit(
         ``current_value`` carries the CVaR estimate; ``limit_value`` is the
         configured limit.
     """
-    import polars as pl  # noqa: PLC0415 — deferred to avoid circular import
+    import polars as pl
 
-    from llm_quant.risk.cvar import CvarConfig, FhsCvarEstimator  # noqa: PLC0415
+    from llm_quant.risk.cvar import CvarConfig, FhsCvarEstimator
 
     if not isinstance(portfolio_returns, pl.Series) or len(portfolio_returns) < 30:
         return RiskCheckResult(

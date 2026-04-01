@@ -212,16 +212,10 @@ def generate_robustness_report(result: RobustnessResult) -> str:
         lines.append("")
         lines.append("| Field | Value |")
         lines.append("| --- | --- |")
-        lines.append(
-            f"| Annualized Sharpe | {_fmt_metric(mtrl.sharpe, '.3f')} |"
-        )
+        lines.append(f"| Annualized Sharpe | {_fmt_metric(mtrl.sharpe, '.3f')} |")
         lines.append(f"| Skewness | {_fmt_metric(mtrl.skew, '.3f')} |")
-        lines.append(
-            f"| Excess Kurtosis | {_fmt_metric(mtrl.kurtosis, '.3f')} |"
-        )
-        lines.append(
-            f"| Confidence Level | {_fmt_metric(mtrl.confidence, '.0%')} |"
-        )
+        lines.append(f"| Excess Kurtosis | {_fmt_metric(mtrl.kurtosis, '.3f')} |")
+        lines.append(f"| Confidence Level | {_fmt_metric(mtrl.confidence, '.0%')} |")
         lines.append(
             f"| Required months (MinTRL) | {_fmt_metric(mtrl.min_trl_months, '.1f')} |"
         )

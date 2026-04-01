@@ -10,7 +10,6 @@ measure correlation of signals, then combine using majority-vote weighting.
 
 from __future__ import annotations
 
-import json
 import math
 import sys
 from pathlib import Path
@@ -69,7 +68,9 @@ LEADER_PARAMS = {
     },
 }
 
-cost_model = CostModel(spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2)
+cost_model = CostModel(
+    spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2
+)
 
 print("Fetching data (TLT, LQD, IEF, TQQQ, 5 years)...")
 prices_df = fetch_ohlcv(["TLT", "LQD", "IEF", "TQQQ"], lookback_days=5 * 365 + 30)
@@ -156,7 +157,7 @@ def compute_metrics(returns: list[float]) -> dict:
     n = len(returns)
     mean = sum(returns) / n
     var = sum((r - mean) ** 2 for r in returns) / n
-    std = var ** 0.5
+    std = var**0.5
     sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
 
     # MaxDD
@@ -164,12 +165,10 @@ def compute_metrics(returns: list[float]) -> dict:
     peak = 1.0
     max_dd = 0.0
     for r in returns:
-        cum *= (1 + r)
-        if cum > peak:
-            peak = cum
+        cum *= 1 + r
+        peak = max(peak, cum)
         dd = (peak - cum) / peak
-        if dd > max_dd:
-            max_dd = dd
+        max_dd = max(max_dd, dd)
 
     # CAGR
     total = cum - 1
@@ -177,20 +176,30 @@ def compute_metrics(returns: list[float]) -> dict:
     cagr = ((cum) ** (1 / years) - 1) if years > 0 else 0.0
 
     # DSR approximation
-    skew = sum((r - mean) ** 3 for r in returns) / (n * std ** 3) if std > 0 else 0
-    kurt = sum((r - mean) ** 4 for r in returns) / (n * std ** 4) - 3 if std > 0 else 0
+    skew = sum((r - mean) ** 3 for r in returns) / (n * std**3) if std > 0 else 0
+    kurt = sum((r - mean) ** 4 for r in returns) / (n * std**4) - 3 if std > 0 else 0
     sr_hat = sharpe / math.sqrt(252)  # daily SR
-    denom = 1 - skew * sr_hat + (kurt - 1) / 4 * sr_hat ** 2
+    denom = 1 - skew * sr_hat + (kurt - 1) / 4 * sr_hat**2
     if denom > 0:
         z = sr_hat * math.sqrt(n - 1) / math.sqrt(denom)
         t = z / (1 + abs(z) * 0.2316419)
-        poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
-        dsr = 1 - (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z ** 2) * poly
+        poly = t * (
+            0.319381530
+            + t
+            * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429)))
+        )
+        dsr = 1 - (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z**2) * poly
         dsr = max(0.0, min(1.0, dsr))
     else:
         dsr = 0.0
 
-    return {"sharpe": sharpe, "max_dd": max_dd, "cagr": cagr, "total_return": total, "dsr": dsr}
+    return {
+        "sharpe": sharpe,
+        "max_dd": max_dd,
+        "cagr": cagr,
+        "total_return": total,
+        "dsr": dsr,
+    }
 
 
 print("\n" + "=" * 60)
@@ -202,9 +211,14 @@ leader_results = {}
 print("\n--- Individual Leader Results ---")
 for leader in LEADERS:
     print(f"\nRunning {leader}->TQQQ (30% weight)...")
-    r = run_single(LEADER_PARAMS[leader], f"tlt-tqqq-sprint" if leader == "TLT" else f"stacked-{leader.lower()}-tqqq")
+    r = run_single(
+        LEADER_PARAMS[leader],
+        "tlt-tqqq-sprint" if leader == "TLT" else f"stacked-{leader.lower()}-tqqq",
+    )
     leader_results[leader] = r
-    print(f"  Sharpe={r['sharpe']:.4f}  MaxDD={r['max_dd']*100:.1f}%  CAGR={r['annualized_return']*100:.1f}%  DSR={r['dsr']:.4f}")
+    print(
+        f"  Sharpe={r['sharpe']:.4f}  MaxDD={r['max_dd'] * 100:.1f}%  CAGR={r['annualized_return'] * 100:.1f}%  DSR={r['dsr']:.4f}"
+    )
 
 # Signal correlation analysis
 print("\n--- Signal Correlation (daily returns alignment) ---")
@@ -236,8 +250,8 @@ combined_returns = compute_combined_returns(rets_dict)
 combined_metrics = compute_metrics(combined_returns)
 
 print(f"  Sharpe: {combined_metrics['sharpe']:.4f}")
-print(f"  MaxDD:  {combined_metrics['max_dd']*100:.1f}%")
-print(f"  CAGR:   {combined_metrics['cagr']*100:.1f}%")
+print(f"  MaxDD:  {combined_metrics['max_dd'] * 100:.1f}%")
+print(f"  CAGR:   {combined_metrics['cagr'] * 100:.1f}%")
 print(f"  DSR:    {combined_metrics.get('dsr', 0):.4f}")
 
 # Theoretical portfolio SR using correlation adjustment
@@ -246,7 +260,9 @@ avg_individual_sr = sum(r["sharpe"] for r in leader_results.values()) / 3
 corr_adj = n / (1 + (n - 1) * avg_corr)
 theoretical_sr = avg_individual_sr * math.sqrt(corr_adj)
 print(f"\n  Theoretical combined SR (formula): {theoretical_sr:.4f}")
-print(f"  Formula: SR * sqrt(N / (1 + (N-1)*rho)) = {avg_individual_sr:.4f} * sqrt({corr_adj:.4f})")
+print(
+    f"  Formula: SR * sqrt(N / (1 + (N-1)*rho)) = {avg_individual_sr:.4f} * sqrt({corr_adj:.4f})"
+)
 
 # Gate assessment
 passes = (
@@ -254,10 +270,18 @@ passes = (
     and combined_metrics["max_dd"] < DD_THRESHOLD
     and combined_metrics.get("dsr", 0) >= DSR_THRESHOLD
 )
-print(f"\n  Gate Assessment (Sharpe>={SHARPE_THRESHOLD}, MaxDD<{DD_THRESHOLD*100}%, DSR>={DSR_THRESHOLD}):")
-print(f"    Sharpe: {'PASS' if combined_metrics['sharpe'] >= SHARPE_THRESHOLD else 'FAIL'} ({combined_metrics['sharpe']:.4f})")
-print(f"    MaxDD:  {'PASS' if combined_metrics['max_dd'] < DD_THRESHOLD else 'FAIL'} ({combined_metrics['max_dd']*100:.1f}%)")
-print(f"    DSR:    {'PASS' if combined_metrics.get('dsr', 0) >= DSR_THRESHOLD else 'FAIL'} ({combined_metrics.get('dsr', 0):.4f})")
+print(
+    f"\n  Gate Assessment (Sharpe>={SHARPE_THRESHOLD}, MaxDD<{DD_THRESHOLD * 100}%, DSR>={DSR_THRESHOLD}):"
+)
+print(
+    f"    Sharpe: {'PASS' if combined_metrics['sharpe'] >= SHARPE_THRESHOLD else 'FAIL'} ({combined_metrics['sharpe']:.4f})"
+)
+print(
+    f"    MaxDD:  {'PASS' if combined_metrics['max_dd'] < DD_THRESHOLD else 'FAIL'} ({combined_metrics['max_dd'] * 100:.1f}%)"
+)
+print(
+    f"    DSR:    {'PASS' if combined_metrics.get('dsr', 0) >= DSR_THRESHOLD else 'FAIL'} ({combined_metrics.get('dsr', 0):.4f})"
+)
 print(f"  OVERALL: {'PASS' if passes else 'FAIL'}")
 
 # Save research spec

@@ -25,7 +25,7 @@ import math
 
 import numpy as np
 import polars as pl
-from scipy.cluster.hierarchy import dendrogram, fcluster, leaves_list, linkage
+from scipy.cluster.hierarchy import leaves_list, linkage
 from scipy.spatial.distance import squareform
 
 from llm_quant.backtest.engine import BacktestEngine, CostModel
@@ -554,8 +554,7 @@ def print_hrp_report(
     print("-" * 90)
     hrp_total = sum(hrp_weights.values())
     print(
-        f"{'TOTAL':<24} {'':>9} {hrp_total:>8.3f} {1.0:>8.3f} "
-        f"{'':>8} {'':>8} {'':>8}"
+        f"{'TOTAL':<24} {'':>9} {hrp_total:>8.3f} {1.0:>8.3f} {'':>8} {'':>8} {'':>8}"
     )
 
     # Cluster-level summary

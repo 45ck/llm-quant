@@ -43,9 +43,7 @@ class TsmomConfig:
             )
         total_weight = sum(self.blend_weights)
         if abs(total_weight - 1.0) > 1e-6:
-            raise ValueError(
-                f"blend_weights must sum to 1.0, got {total_weight:.6f}"
-            )
+            raise ValueError(f"blend_weights must sum to 1.0, got {total_weight:.6f}")
 
 
 @dataclass
@@ -59,7 +57,9 @@ class TsmomSignal:
     scaled_signal: float  # raw_signal × vol_scalar
     direction: str  # "long", "short", or "flat"
     lookback_signals: dict[int, float]  # {21: +1.0, 63: +1.0, 252: -1.0}
-    signal_agreement: float  # fraction of lookbacks agreeing with blend direction (0.0–1.0)
+    signal_agreement: (
+        float  # fraction of lookbacks agreeing with blend direction (0.0–1.0)
+    )
 
 
 class TsmomCalculator:
@@ -212,9 +212,7 @@ class TsmomCalculator:
         required = {"symbol", "close"}
         missing = required - set(prices_df.columns)
         if missing:
-            raise ValueError(
-                f"prices_df is missing required columns: {missing}"
-            )
+            raise ValueError(f"prices_df is missing required columns: {missing}")
 
         signals: list[TsmomSignal] = []
         symbols = prices_df["symbol"].unique().to_list()
@@ -228,9 +226,7 @@ class TsmomCalculator:
                 sig = self.compute(price_series, symbol=sym)
                 signals.append(sig)
             except Exception:
-                logger.warning(
-                    "TSMOM compute failed for %s", sym, exc_info=True
-                )
+                logger.warning("TSMOM compute failed for %s", sym, exc_info=True)
 
         return signals
 

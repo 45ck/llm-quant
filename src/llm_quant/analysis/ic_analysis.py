@@ -18,13 +18,9 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +167,7 @@ class IcAnalyzer:
         for period in self.config.forward_periods:
             fwd_ret = _forward_returns(prices, period)
             max_obs = min(len(signal), len(fwd_ret))
-            if max_obs < 10:  # noqa: PLR2004
+            if max_obs < 10:
                 ic_by_period[period] = 0.0
                 continue
             ic_by_period[period] = self._compute_ic_manual(
@@ -188,7 +184,7 @@ class IcAnalyzer:
         from scipy import stats
 
         mask = np.isfinite(signal) & np.isfinite(forward_returns)
-        if mask.sum() < 5:  # noqa: PLR2004
+        if mask.sum() < 5:
             return 0.0
         corr, _ = stats.spearmanr(signal[mask], forward_returns[mask])
         return float(corr) if np.isfinite(corr) else 0.0
@@ -207,7 +203,9 @@ class IcAnalyzer:
 
         # For IC std, we'd need a time-series of rolling ICs; approximate with
         # cross-sectional std from available periods as a decay proxy
-        ic_values = np.array([ic_by_period.get(p, np.nan) for p in config.forward_periods])
+        ic_values = np.array(
+            [ic_by_period.get(p, np.nan) for p in config.forward_periods]
+        )
         ic_mean = float(ic_1d)
 
         # IC std: use std across periods (proxy when single asset)
@@ -222,7 +220,7 @@ class IcAnalyzer:
         passes_ic = abs(ic_mean) > config.ic_threshold
         passes_icir = abs(icir) > config.icir_threshold
 
-        if abs(ic_mean) > 0.07 and abs(icir) > 0.7:  # noqa: PLR2004
+        if abs(ic_mean) > 0.07 and abs(icir) > 0.7:
             grade = "STRONG"
         elif passes_ic and passes_icir:
             grade = "WEAK"
@@ -253,7 +251,7 @@ def _forward_returns(prices: np.ndarray, period: int) -> np.ndarray:
     If prices look like raw prices (values > 5 on average), compute log returns.
     If prices look like returns already (mean near 0), treat as returns and shift.
     """
-    if np.nanmean(np.abs(prices)) > 1.0:  # noqa: PLR2004 — raw prices
+    if np.nanmean(np.abs(prices)) > 1.0:
         log_px = np.log(np.where(prices > 0, prices, np.nan))
         fwd = np.roll(log_px, -period) - log_px
         fwd[-period:] = np.nan
@@ -283,7 +281,7 @@ def _estimate_halflife(ic_by_period: dict[int, float], periods: list[int]) -> fl
         xs.append(p)
         ys.append(np.log(abs(ic_p)))
 
-    if len(xs) < 2:  # noqa: PLR2004
+    if len(xs) < 2:
         return float("inf")
 
     # Linear regression in log space
@@ -311,7 +309,7 @@ def format_ic_report(result: IcResult) -> str:
     """
     lines: list[str] = []
 
-    def _pass(condition: bool) -> str:  # noqa: FBT001
+    def _pass(condition: bool) -> str:
         return "PASS" if condition else "FAIL"
 
     lines.append("=" * 60)
@@ -322,13 +320,19 @@ def format_ic_report(result: IcResult) -> str:
     lines.append("")
 
     lines.append("--- Core Metrics ---")
-    lines.append(f"IC mean (1d)  : {result.ic_mean:+.4f}  [{_pass(result.passes_ic_threshold)}]  (|IC| > 0.05)")
+    lines.append(
+        f"IC mean (1d)  : {result.ic_mean:+.4f}  [{_pass(result.passes_ic_threshold)}]  (|IC| > 0.05)"
+    )
     lines.append(f"IC std        : {result.ic_std:.4f}")
-    lines.append(f"ICIR          : {result.icir:+.4f}  [{_pass(result.passes_icir_threshold)}]  (|ICIR| > 0.5)")
+    lines.append(
+        f"ICIR          : {result.icir:+.4f}  [{_pass(result.passes_icir_threshold)}]  (|ICIR| > 0.5)"
+    )
     hl = result.ic_decay_halflife
     hl_str = f"{hl:.1f}d" if np.isfinite(hl) else "∞ (non-decaying)"
-    hl_pass = hl > 5.0 or not np.isfinite(hl)  # noqa: PLR2004
-    lines.append(f"IC half-life  : {hl_str}  [{_pass(hl_pass)}]  (> 5d for T+1 execution)")
+    hl_pass = hl > 5.0 or not np.isfinite(hl)
+    lines.append(
+        f"IC half-life  : {hl_str}  [{_pass(hl_pass)}]  (> 5d for T+1 execution)"
+    )
     lines.append("")
 
     lines.append("--- IC Decay Table ---")
@@ -341,15 +345,21 @@ def format_ic_report(result: IcResult) -> str:
     lines.append("")
 
     lines.append("--- Threshold Gates (advisory, not hard gates) ---")
-    lines.append(f"IC threshold  : {_pass(result.passes_ic_threshold)}  |IC| = {abs(result.ic_mean):.4f} (min 0.05)")
-    lines.append(f"ICIR threshold: {_pass(result.passes_icir_threshold)}  ICIR = {abs(result.icir):.4f} (min 0.5)")
+    lines.append(
+        f"IC threshold  : {_pass(result.passes_ic_threshold)}  |IC| = {abs(result.ic_mean):.4f} (min 0.05)"
+    )
+    lines.append(
+        f"ICIR threshold: {_pass(result.passes_icir_threshold)}  ICIR = {abs(result.icir):.4f} (min 0.5)"
+    )
     lines.append("")
 
     lines.append("--- Recommendation ---")
     if result.advisory_grade == "STRONG":
         lines.append("Worth backtesting — signal shows consistent IC and ICIR.")
     elif result.advisory_grade == "WEAK":
-        lines.append("Weak signal — proceed with caution. Backtest with tight OOS discipline.")
+        lines.append(
+            "Weak signal — proceed with caution. Backtest with tight OOS discipline."
+        )
     else:
         lines.append("Insufficient signal — do not backtest. IC below noise threshold.")
     lines.append("=" * 60)

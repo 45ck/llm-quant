@@ -66,15 +66,15 @@ _FED_MINUTES_URL_TEMPLATE = (
 
 # Typical FOMC meeting days by month (approximate; real dates vary by year).
 _TYPICAL_MEETING_DAYS: dict[int, list[int]] = {
-    1:  [28, 29, 30, 31, 27, 26],
-    2:  [],  # no Feb meeting in most years
-    3:  [19, 20, 21, 22, 18, 17],
-    4:  [],  # no standalone Apr meeting (but sometimes Apr/May)
-    5:  [1, 2, 3, 4, 5, 6, 7],
-    6:  [11, 12, 13, 14, 15, 10],
-    7:  [29, 30, 31, 28, 27],
-    8:  [],
-    9:  [17, 18, 19, 20, 16],
+    1: [28, 29, 30, 31, 27, 26],
+    2: [],  # no Feb meeting in most years
+    3: [19, 20, 21, 22, 18, 17],
+    4: [],  # no standalone Apr meeting (but sometimes Apr/May)
+    5: [1, 2, 3, 4, 5, 6, 7],
+    6: [11, 12, 13, 14, 15, 10],
+    7: [29, 30, 31, 28, 27],
+    8: [],
+    9: [17, 18, 19, 20, 16],
     10: [],
     11: [1, 2, 3, 4, 5, 6, 7],
     12: [10, 11, 12, 13, 14, 9],

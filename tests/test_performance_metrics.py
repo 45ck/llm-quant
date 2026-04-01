@@ -18,10 +18,8 @@ from __future__ import annotations
 import math
 import sys
 import types
-from datetime import date, timedelta
 
 import numpy as np
-import pytest
 
 # ---------------------------------------------------------------------------
 # Stub pandas_datareader before importing empyrical (avoids pandas 3.x crash)
@@ -32,8 +30,8 @@ if "pandas_datareader" not in sys.modules:
     sys.modules["pandas_datareader"] = _pdr_stub
     sys.modules["pandas_datareader.data"] = _pdr_data_stub
 
-import empyrical  # noqa: E402
-import pandas as pd  # noqa: E402
+import empyrical
+import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -97,7 +95,11 @@ def test_sharpe_known_value():
     s = _make_pd_series(returns.tolist())
     sharpe = _sharpe(s)
     # Expected: use the actual realised mean and std (not the parameter values)
-    expected = float(np.mean(returns)) / float(np.std(returns, ddof=1)) * math.sqrt(_TRADING_DAYS)
+    expected = (
+        float(np.mean(returns))
+        / float(np.std(returns, ddof=1))
+        * math.sqrt(_TRADING_DAYS)
+    )
     assert abs(sharpe - expected) < 1e-6, (
         f"Sharpe {sharpe:.6f} deviates from analytic formula {expected:.6f}"
     )
@@ -122,9 +124,7 @@ def test_max_drawdown_known_value():
     s = _make_pd_series(returns)
     mdd = _max_drawdown(s)
     expected = (0.785 - 1.100) / 1.100  # ~-0.2864
-    assert abs(mdd - expected) < 0.001, (
-        f"MaxDD {mdd:.6f}, expected {expected:.6f}"
-    )
+    assert abs(mdd - expected) < 0.001, f"MaxDD {mdd:.6f}, expected {expected:.6f}"
 
 
 def test_sortino_is_computable_for_mixed_returns():
@@ -144,7 +144,9 @@ def test_calmar_positive_for_uptrending_series():
     calmar = _calmar(s)
     # empyrical may return None if MaxDD is zero (division by zero guard)
     if calmar is not None:
-        assert calmar > 0, f"Calmar should be positive for uptrending series, got {calmar}"
+        assert calmar > 0, (
+            f"Calmar should be positive for uptrending series, got {calmar}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +198,9 @@ def test_sortino_all_positive_returns():
     # Acceptable: None (inf guarded) or a very large finite float
     if sortino is not None:
         assert math.isfinite(sortino), f"Sortino must be finite, got {sortino}"
-        assert sortino > 0, f"Sortino must be positive for all-positive returns, got {sortino}"
+        assert sortino > 0, (
+            f"Sortino must be positive for all-positive returns, got {sortino}"
+        )
 
 
 def test_max_drawdown_monotone_increasing():

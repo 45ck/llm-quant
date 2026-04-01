@@ -7,7 +7,6 @@ Track D gates: Sharpe >= 0.80, MaxDD < 40%, DSR >= 0.90
 
 from __future__ import annotations
 
-import json
 import math
 import sys
 from pathlib import Path
@@ -25,7 +24,7 @@ from llm_quant.data.indicators import compute_indicators
 SLUG = "lqd-tqqq-sprint"
 STRATEGY = "lead_lag"
 SYMBOLS = ["LQD", "TQQQ"]
-DD_THRESHOLD = 0.40   # Track D: relaxed to 40%
+DD_THRESHOLD = 0.40  # Track D: relaxed to 40%
 SHARPE_THRESHOLD = 0.80
 DSR_THRESHOLD = 0.90
 
@@ -41,7 +40,9 @@ BASE_PARAMS = {
     "rebalance_frequency_days": 1,
 }
 
-cost_model = CostModel(spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2)
+cost_model = CostModel(
+    spread_bps=10.0, flat_slippage_bps=5.0, slippage_volatility_factor=0.2
+)
 
 print("Fetching data (LQD + TQQQ, 5 years)...")
 prices_df = fetch_ohlcv(SYMBOLS, lookback_days=5 * 365 + 30)
@@ -88,35 +89,42 @@ def compute_dsr(returns: list[float], sharpe: float) -> float:
     """Approximate DSR from daily returns."""
     if not returns or len(returns) < 20:
         return 0.0
-    import math
+
     n = len(returns)
     mean = sum(returns) / n
     variance = sum((r - mean) ** 2 for r in returns) / n
-    std = variance ** 0.5
+    std = variance**0.5
     if std == 0:
         return 0.0
     # Skew and kurtosis
-    skew = sum((r - mean) ** 3 for r in returns) / (n * std ** 3)
-    kurt = sum((r - mean) ** 4 for r in returns) / (n * std ** 4) - 3
+    skew = sum((r - mean) ** 3 for r in returns) / (n * std**3)
+    kurt = sum((r - mean) ** 4 for r in returns) / (n * std**4) - 3
     # DSR formula (De Prado)
     sr_hat = sharpe
-    z = sr_hat * math.sqrt(n - 1) / math.sqrt(1 - skew * sr_hat + (kurt - 1) / 4 * sr_hat ** 2)
+    z = (
+        sr_hat
+        * math.sqrt(n - 1)
+        / math.sqrt(1 - skew * sr_hat + (kurt - 1) / 4 * sr_hat**2)
+    )
     # Normal CDF approximation
     t = z / (1 + abs(z) * (0.2316419))
-    poly = t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
-    cdf = 1 - (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z ** 2) * poly
+    poly = t * (
+        0.319381530
+        + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429)))
+    )
+    cdf = 1 - (1 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * z**2) * poly
     return max(0.0, min(1.0, cdf))
 
 
 print("\n" + "=" * 60)
-print(f"LQD->TQQQ WEIGHT VARIANT ANALYSIS (Track D - D6)")
+print("LQD->TQQQ WEIGHT VARIANT ANALYSIS (Track D - D6)")
 print("=" * 60)
 
 weight_configs = [
     ("base (30%)", {**BASE_PARAMS, "target_weight": 0.30}),
-    ("50%",        {**BASE_PARAMS, "target_weight": 0.50}),
-    ("70%",        {**BASE_PARAMS, "target_weight": 0.70}),
-    ("90%",        {**BASE_PARAMS, "target_weight": 0.90}),
+    ("50%", {**BASE_PARAMS, "target_weight": 0.50}),
+    ("70%", {**BASE_PARAMS, "target_weight": 0.70}),
+    ("90%", {**BASE_PARAMS, "target_weight": 0.90}),
 ]
 
 results = []
@@ -128,27 +136,33 @@ for label, params in weight_configs:
         and r["max_dd"] < DD_THRESHOLD
         and r["dsr"] >= DSR_THRESHOLD
     )
-    results.append({
-        "weight": label,
-        "target_weight": params["target_weight"],
-        "sharpe": round(r["sharpe"], 4),
-        "max_dd": round(r["max_dd"], 4),
-        "annualized_return": round(r["annualized_return"], 4),
-        "total_return": round(r["total_return"], 4),
-        "dsr": round(r["dsr"], 4),
-        "sortino": round(r["sortino"], 4),
-        "calmar": round(r["calmar"], 4),
-        "total_trades": r["total_trades"],
-        "win_rate": round(r["win_rate"], 4),
-        "passes_track_d": passes,
-    })
-    print(f"  Sharpe={r['sharpe']:.4f}  MaxDD={r['max_dd']*100:.1f}%  CAGR={r['annualized_return']*100:.1f}%  DSR={r['dsr']:.4f}  {'PASS' if passes else 'FAIL'}")
+    results.append(
+        {
+            "weight": label,
+            "target_weight": params["target_weight"],
+            "sharpe": round(r["sharpe"], 4),
+            "max_dd": round(r["max_dd"], 4),
+            "annualized_return": round(r["annualized_return"], 4),
+            "total_return": round(r["total_return"], 4),
+            "dsr": round(r["dsr"], 4),
+            "sortino": round(r["sortino"], 4),
+            "calmar": round(r["calmar"], 4),
+            "total_trades": r["total_trades"],
+            "win_rate": round(r["win_rate"], 4),
+            "passes_track_d": passes,
+        }
+    )
+    print(
+        f"  Sharpe={r['sharpe']:.4f}  MaxDD={r['max_dd'] * 100:.1f}%  CAGR={r['annualized_return'] * 100:.1f}%  DSR={r['dsr']:.4f}  {'PASS' if passes else 'FAIL'}"
+    )
 
 print("\n\n=== SUMMARY TABLE ===")
 print(f"{'Weight':<12} {'Sharpe':<8} {'MaxDD':<10} {'CAGR':<10} {'DSR':<8} {'Pass'}")
 print("-" * 60)
 for r in results:
-    print(f"{r['weight']:<12} {r['sharpe']:<8.4f} {r['max_dd']*100:<10.1f} {r['annualized_return']*100:<10.1f} {r['dsr']:<8.4f} {'YES' if r['passes_track_d'] else 'NO'}")
+    print(
+        f"{r['weight']:<12} {r['sharpe']:<8.4f} {r['max_dd'] * 100:<10.1f} {r['annualized_return'] * 100:<10.1f} {r['dsr']:<8.4f} {'YES' if r['passes_track_d'] else 'NO'}"
+    )
 
 # Save to YAML
 out_path = Path(f"data/strategies/{SLUG}/weight_variants.yaml")

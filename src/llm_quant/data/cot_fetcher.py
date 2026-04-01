@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 # Codes taken from the CFTC published instrument reference.
 # TFF report for FX instruments, Disaggregated for commodities.
 CFTC_CODES: dict[str, str] = {
-    "GLD": "088691",   # Gold
-    "SLV": "084691",   # Silver
-    "USO": "067651",   # Crude Oil (WTI)
+    "GLD": "088691",  # Gold
+    "SLV": "084691",  # Silver
+    "USO": "067651",  # Crude Oil (WTI)
     "EURUSD": "099741",  # Euro FX
     "USDJPY": "097741",  # Japanese Yen
     "GBPUSD": "096742",  # British Pound
@@ -45,9 +45,13 @@ SYMBOL_TO_COT_KEY: dict[str, str] = {
 }
 
 # Fixed thresholds — do NOT optimise these (anti-overfitting discipline).
-COT_CROWDED_LONG_THRESHOLD: int = 80   # COT index > 80 → commercials net short (crowded long)
-COT_CROWDED_SHORT_THRESHOLD: int = 20  # COT index < 20 → commercials net long (crowded short)
-COT_LOOKBACK_WEEKS: int = 156          # 3-year (156-week) min-max window — fixed
+COT_CROWDED_LONG_THRESHOLD: int = (
+    80  # COT index > 80 → commercials net short (crowded long)
+)
+COT_CROWDED_SHORT_THRESHOLD: int = (
+    20  # COT index < 20 → commercials net long (crowded short)
+)
+COT_LOOKBACK_WEEKS: int = 156  # 3-year (156-week) min-max window — fixed
 
 # Symbols explicitly excluded from COT analysis.
 # USO: post-April 2020 fund restructuring broke the WTI futures COT mapping —
@@ -97,9 +101,9 @@ class CotFetcher:
         )
 
         try:
+            import json
             import urllib.parse
             import urllib.request
-            import json
 
             # CFTC Socrata API: filter by cftc_contract_market_code, limit rows
             cutoff = (datetime.now(tz=UTC) - timedelta(weeks=lookback_weeks)).strftime(
@@ -212,9 +216,7 @@ class CotFetcher:
             pl.when(roll_max - roll_min == 0.0)
             .then(pl.lit(50.0))
             .otherwise(
-                (pl.col("commercial_net") - roll_min)
-                / (roll_max - roll_min)
-                * 100.0
+                (pl.col("commercial_net") - roll_min) / (roll_max - roll_min) * 100.0
             )
             .alias("cot_index")
         )

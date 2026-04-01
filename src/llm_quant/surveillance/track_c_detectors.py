@@ -546,7 +546,9 @@ def check_beta_drift(
     # OLS beta = Cov(tc, spy) / Var(spy)
     tc_mean = sum(tc_rets) / n
     spy_mean = sum(spy_rets) / n
-    cov = sum((tc_rets[i] - tc_mean) * (spy_rets[i] - spy_mean) for i in range(n)) / max(n - 1, 1)
+    cov = sum(
+        (tc_rets[i] - tc_mean) * (spy_rets[i] - spy_mean) for i in range(n)
+    ) / max(n - 1, 1)
     spy_var = sum((r - spy_mean) ** 2 for r in spy_rets) / max(n - 1, 1)
     beta = cov / spy_var if spy_var > 0 else 0.0
 
@@ -727,7 +729,9 @@ def check_cross_strategy_correlation(
     # Pearson correlation
     tc_mean = sum(tc_rets) / n
     ta_mean = sum(ta_rets) / n
-    cov = sum((tc_rets[i] - tc_mean) * (ta_rets[i] - ta_mean) for i in range(n)) / max(n - 1, 1)
+    cov = sum((tc_rets[i] - tc_mean) * (ta_rets[i] - ta_mean) for i in range(n)) / max(
+        n - 1, 1
+    )
     tc_std = (sum((r - tc_mean) ** 2 for r in tc_rets) / max(n - 1, 1)) ** 0.5
     ta_std = (sum((r - ta_mean) ** 2 for r in ta_rets) / max(n - 1, 1)) ** 0.5
     corr = cov / (tc_std * ta_std) if tc_std > 0 and ta_std > 0 else 0.0

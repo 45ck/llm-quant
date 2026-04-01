@@ -1,3 +1,3 @@
-from .ic_analysis import IcAnalyzer, IcAnalysisConfig, IcResult
+from .ic_analysis import IcAnalysisConfig, IcAnalyzer, IcResult
 
-__all__ = ["IcAnalyzer", "IcAnalysisConfig", "IcResult"]
+__all__ = ["IcAnalysisConfig", "IcAnalyzer", "IcResult"]

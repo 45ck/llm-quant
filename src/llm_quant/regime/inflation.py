@@ -41,11 +41,11 @@ class InflationRegime(StrEnum):
 
 
 class MacroQuadrant(StrEnum):
-    REFLATIONARY_BOOM = "reflationary_boom"     # rising growth + rising inflation
+    REFLATIONARY_BOOM = "reflationary_boom"  # rising growth + rising inflation
     DISINFLATIONARY_BOOM = "disinflationary_boom"  # rising growth + falling inflation
-    STAGFLATION = "stagflation"                 # falling growth + rising inflation
-    DEFLATIONARY_BUST = "deflationary_bust"     # falling growth + falling inflation
-    TRANSITION = "transition"                   # neutral on one or both axes
+    STAGFLATION = "stagflation"  # falling growth + rising inflation
+    DEFLATIONARY_BUST = "deflationary_bust"  # falling growth + falling inflation
+    TRANSITION = "transition"  # neutral on one or both axes
 
 
 @dataclass
@@ -90,15 +90,15 @@ QUADRANT_TILTS: dict[MacroQuadrant, QuadrantTilts] = {
 _TRANSITION_TILTS = QUADRANT_TILTS[MacroQuadrant.TRANSITION]
 
 # Momentum threshold (fraction) to classify SPY growth regime.
-_GROWTH_RISING_THRESHOLD = 0.02   # > +2% 63-day return → rising
+_GROWTH_RISING_THRESHOLD = 0.02  # > +2% 63-day return → rising
 _GROWTH_FALLING_THRESHOLD = -0.02  # < -2% 63-day return → falling
 
 # Breakeven change threshold (percentage points) for inflation classification.
-_BREAKEVEN_RISING_BPS = 0.10   # > +10 bps 63-day change → rising
+_BREAKEVEN_RISING_BPS = 0.10  # > +10 bps 63-day change → rising
 _BREAKEVEN_FALLING_BPS = -0.10  # < -10 bps 63-day change → falling
 
 # CPI momentum threshold (fraction) for fallback inflation classification.
-_CPI_RISING_THRESHOLD = 0.001   # > +0.1% 3m change → rising
+_CPI_RISING_THRESHOLD = 0.001  # > +0.1% 3m change → rising
 _CPI_FALLING_THRESHOLD = -0.001  # < -0.1% 3m change → falling
 
 
@@ -217,7 +217,12 @@ class InflationRegimeDetector:
             return GrowthRegime.NEUTRAL
 
         momentum = (price_now / price_lookback) - 1.0
-        logger.debug("SPY 63d momentum=%.4f (now=%.2f, lookback=%.2f)", momentum, price_now, price_lookback)
+        logger.debug(
+            "SPY 63d momentum=%.4f (now=%.2f, lookback=%.2f)",
+            momentum,
+            price_now,
+            price_lookback,
+        )
 
         if momentum > _GROWTH_RISING_THRESHOLD:
             return GrowthRegime.RISING
@@ -243,12 +248,19 @@ class InflationRegimeDetector:
             RISING / FALLING / NEUTRAL.
         """
         # --- Primary: TIPS breakeven ---
-        if tips_breakeven is not None and len(tips_breakeven) >= self.inflation_lookback + 1:
+        if (
+            tips_breakeven is not None
+            and len(tips_breakeven) >= self.inflation_lookback + 1
+        ):
             n = len(tips_breakeven)
-            recent = tips_breakeven.slice(n - (self.inflation_lookback + 1), self.inflation_lookback + 1)
+            recent = tips_breakeven.slice(
+                n - (self.inflation_lookback + 1), self.inflation_lookback + 1
+            )
             be_now = float(recent[-1])
             be_lookback = float(recent[0])
-            change_bps = be_now - be_lookback  # in percentage-point units matching T5YIE
+            change_bps = (
+                be_now - be_lookback
+            )  # in percentage-point units matching T5YIE
             logger.debug(
                 "TIPS breakeven 63d change=%.4f pp (now=%.4f, lookback=%.4f)",
                 change_bps,

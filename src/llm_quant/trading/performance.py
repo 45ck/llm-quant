@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import date as date_type
-
 import sys
 import types
+from datetime import date as date_type
 
 import duckdb
 import pandas as pd
@@ -27,7 +26,7 @@ if "pandas_datareader" not in sys.modules:
     sys.modules["pandas_datareader"] = _pdr_stub
     sys.modules["pandas_datareader.data"] = _pdr_data_stub
 
-import empyrical  # noqa: E402
+import empyrical
 
 logger = logging.getLogger(__name__)
 
@@ -288,12 +287,20 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
             raw_sharpe = empyrical.sharpe_ratio(
                 returns_pd, risk_free=0.0, annualization=_TRADING_DAYS
             )
-            sharpe_ratio = float(raw_sharpe) if raw_sharpe is not None and not math.isnan(raw_sharpe) else 0.0
+            sharpe_ratio = (
+                float(raw_sharpe)
+                if raw_sharpe is not None and not math.isnan(raw_sharpe)
+                else 0.0
+            )
 
             raw_sortino = empyrical.sortino_ratio(
                 returns_pd, required_return=0.0, annualization=_TRADING_DAYS
             )
-            if raw_sortino is not None and not math.isnan(raw_sortino) and not math.isinf(raw_sortino):
+            if (
+                raw_sortino is not None
+                and not math.isnan(raw_sortino)
+                and not math.isinf(raw_sortino)
+            ):
                 sortino_ratio = float(raw_sortino)
 
     # ------------------------------------------------------------------
@@ -330,7 +337,11 @@ def compute_performance(  # noqa: C901, PLR0912, PLR0915
             raw_calmar = empyrical.calmar_ratio(
                 _empyrical_returns_pd, annualization=_TRADING_DAYS
             )
-            if raw_calmar is not None and not math.isnan(raw_calmar) and not math.isinf(raw_calmar):
+            if (
+                raw_calmar is not None
+                and not math.isnan(raw_calmar)
+                and not math.isinf(raw_calmar)
+            ):
                 calmar_ratio = float(raw_calmar)
 
     # ------------------------------------------------------------------

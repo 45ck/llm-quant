@@ -2222,7 +2222,7 @@ class MacroBarometerStrategy(Strategy):
         recent = blend_history[-z_win:]
         mean = sum(recent) / len(recent)
         var = sum((x - mean) ** 2 for x in recent) / len(recent)
-        std = var ** 0.5
+        std = var**0.5
         if std < 1e-10:
             return 0.0
         return (current_blend - mean) / std
@@ -2264,7 +2264,7 @@ class MacroBarometerStrategy(Strategy):
                 is_bull = z > 0
                 if is_bull:
                     bull_count += 1
-                barometer_details.append(f"{baro}:z={z:.2f}({'+'if is_bull else '-'})")
+                barometer_details.append(f"{baro}:z={z:.2f}({'+' if is_bull else '-'})")
 
         if not barometer_details:
             return []
@@ -2378,7 +2378,7 @@ class VRPTimingStrategy(Strategy):
             return None
         mean_ret = sum(returns) / n
         var = sum((r - mean_ret) ** 2 for r in returns) / (n - 1)
-        return (var ** 0.5) * (252 ** 0.5) * 100  # annualized, in VIX-like units
+        return (var**0.5) * (252**0.5) * 100  # annualized, in VIX-like units
 
     @staticmethod
     def _sma(values: list[float], period: int) -> float | None:
@@ -2500,9 +2500,7 @@ class VRPTimingStrategy(Strategy):
         # --- ENTRY LOGIC ---
         # VRP must cross above entry threshold from below
         crossed_up = (
-            prev_vrp is not None
-            and prev_vrp < vrp_entry
-            and vrp_smoothed >= vrp_entry
+            prev_vrp is not None and prev_vrp < vrp_entry and vrp_smoothed >= vrp_entry
         )
         if not crossed_up:
             return []
@@ -2622,9 +2620,7 @@ class VolScaledTsmomStrategy(Strategy):
                 if not is_long:
                     # Scale weight by signal strength and vol scalar
                     base_weight = self.config.target_position_weight
-                    weight = base_weight * min(
-                        abs(tsmom_sig.scaled_signal), 1.0
-                    )
+                    weight = base_weight * min(abs(tsmom_sig.scaled_signal), 1.0)
                     weight = max(weight, base_weight * 0.5)  # floor at 50%
 
                     conviction = (
@@ -2668,9 +2664,7 @@ class VolScaledTsmomStrategy(Strategy):
                     )
                 if not is_short:
                     base_weight = self.config.target_position_weight
-                    weight = base_weight * min(
-                        abs(tsmom_sig.scaled_signal), 1.0
-                    )
+                    weight = base_weight * min(abs(tsmom_sig.scaled_signal), 1.0)
                     weight = max(weight, base_weight * 0.5)
 
                     conviction = (
@@ -2821,7 +2815,9 @@ class RSI2ContrarianStrategy(Strategy):
                 rsi = self._compute_rsi(closes, rsi_period)
                 if rsi is not None and rsi > overbought:
                     should_exit = True
-                    exit_reason = f"RSI({rsi_period}) overbought ({rsi:.1f} > {overbought})"
+                    exit_reason = (
+                        f"RSI({rsi_period}) overbought ({rsi:.1f} > {overbought})"
+                    )
 
                 # 2. Time stop
                 if not should_exit and symbol in self._entry_dates:
@@ -2865,9 +2861,11 @@ class RSI2ContrarianStrategy(Strategy):
                 continue  # Don't enter and exit same symbol same day
 
             # --- ENTRY LOGIC ---
-            if len(portfolio.positions) + len(
-                [s for s in signals if s.action == Action.BUY]
-            ) >= self.config.max_positions:
+            if (
+                len(portfolio.positions)
+                + len([s for s in signals if s.action == Action.BUY])
+                >= self.config.max_positions
+            ):
                 continue
 
             # Compute RSI(2)
@@ -2974,9 +2972,7 @@ class OpexWeekStrategy(Strategy):
         if in_window and not has_pos:
             # Check VIX level
             vix_data = (
-                indicators_df.filter(pl.col("symbol") == vix_sym)
-                .sort("date")
-                .tail(1)
+                indicators_df.filter(pl.col("symbol") == vix_sym).sort("date").tail(1)
             )
             if len(vix_data) > 0:
                 vix_level = vix_data.row(0, named=True)["close"]
@@ -2989,7 +2985,9 @@ class OpexWeekStrategy(Strategy):
                     )
                     return []
 
-            logger.info("OpexWeek: ENTER %s on %s (OPEX %s)", symbol, as_of_date, opex_fri)
+            logger.info(
+                "OpexWeek: ENTER %s on %s (OPEX %s)", symbol, as_of_date, opex_fri
+            )
             return [
                 TradeSignal(
                     symbol=symbol,
@@ -3076,10 +3074,7 @@ class WeekendDriftStrategy(Strategy):
 
         # Entry on Friday
         if dow == entry_day and not has_pos:
-            sym_data = (
-                indicators_df.filter(pl.col("symbol") == symbol)
-                .sort("date")
-            )
+            sym_data = indicators_df.filter(pl.col("symbol") == symbol).sort("date")
             if len(sym_data) < vol_lookback:
                 return []
 
@@ -3091,24 +3086,27 @@ class WeekendDriftStrategy(Strategy):
                 if mom_ret < mom_floor:
                     logger.info(
                         "WeekendDrift: momentum=%.3f < %.3f, skip on %s",
-                        mom_ret, mom_floor, as_of_date,
+                        mom_ret,
+                        mom_floor,
+                        as_of_date,
                     )
                     return []
 
             # 20d realized vol filter (annualized)
             if len(closes) >= vol_lookback + 1:
                 daily_rets = [
-                    closes[j] / closes[j - 1] - 1.0
-                    for j in range(1, len(closes))
+                    closes[j] / closes[j - 1] - 1.0 for j in range(1, len(closes))
                 ]
                 if daily_rets:
                     mean_r = sum(daily_rets) / len(daily_rets)
                     var_r = sum((r - mean_r) ** 2 for r in daily_rets) / len(daily_rets)
-                    ann_vol = (var_r ** 0.5) * (365 ** 0.5)  # BTC trades 365 days
+                    ann_vol = (var_r**0.5) * (365**0.5)  # BTC trades 365 days
                     if ann_vol > vol_ceiling:
                         logger.info(
                             "WeekendDrift: vol=%.3f > %.3f, skip on %s",
-                            ann_vol, vol_ceiling, as_of_date,
+                            ann_vol,
+                            vol_ceiling,
+                            as_of_date,
                         )
                         return []
 
@@ -3180,7 +3178,8 @@ class CryptoWeekendEquityStrategy(Strategy):
                     if dow == 1:
                         logger.info(
                             "CryptoWeekendEquity: EXIT %s on %s (Tuesday)",
-                            trade_sym, as_of_date,
+                            trade_sym,
+                            as_of_date,
                         )
                         self._entry_date = None
                         return [
@@ -3200,10 +3199,7 @@ class CryptoWeekendEquityStrategy(Strategy):
             return []
 
         # Compute BTC weekend return: Friday close to most recent close before Monday
-        btc_data = (
-            indicators_df.filter(pl.col("symbol") == sig_sym)
-            .sort("date")
-        )
+        btc_data = indicators_df.filter(pl.col("symbol") == sig_sym).sort("date")
         if len(btc_data) < 5:
             return []
 
@@ -3242,13 +3238,17 @@ class CryptoWeekendEquityStrategy(Strategy):
         if weekend_ret < threshold:
             logger.info(
                 "CryptoWeekendEquity: BTC weekend ret=%.3f < %.3f, skip on %s",
-                weekend_ret, threshold, as_of_date,
+                weekend_ret,
+                threshold,
+                as_of_date,
             )
             return []
 
         logger.info(
             "CryptoWeekendEquity: ENTER %s on %s (BTC weekend=%.3f)",
-            trade_sym, as_of_date, weekend_ret,
+            trade_sym,
+            as_of_date,
+            weekend_ret,
         )
         self._entry_date = as_of_date
         return [
@@ -3550,25 +3550,39 @@ class LeveragedMeanRevStrategy(Strategy):
         if vix_now < vix_low or vix_now > vix_high:
             # Still check exits for existing positions
             return self._check_exits(
-                as_of_date, etf_symbols, portfolio, prices,
-                time_stop, stop_loss_pct,
+                as_of_date,
+                etf_symbols,
+                portfolio,
+                prices,
+                time_stop,
+                stop_loss_pct,
             )
 
         # VIX RSI check
         vix_rsi = self._rsi(vix_closes, vix_rsi_period)
         if vix_rsi is None or vix_rsi < vix_rsi_thresh:
             return self._check_exits(
-                as_of_date, etf_symbols, portfolio, prices,
-                time_stop, stop_loss_pct,
+                as_of_date,
+                etf_symbols,
+                portfolio,
+                prices,
+                time_stop,
+                stop_loss_pct,
             )
 
         signals: list[TradeSignal] = []
 
         # Check exits first
-        signals.extend(self._check_exits(
-            as_of_date, etf_symbols, portfolio, prices,
-            time_stop, stop_loss_pct,
-        ))
+        signals.extend(
+            self._check_exits(
+                as_of_date,
+                etf_symbols,
+                portfolio,
+                prices,
+                time_stop,
+                stop_loss_pct,
+            )
+        )
 
         # Check entries for each ETF
         for sym in etf_symbols:
@@ -3608,7 +3622,12 @@ class LeveragedMeanRevStrategy(Strategy):
 
             logger.info(
                 "LeveragedMeanRev: ENTER %s on %s (decline=%.3f, down=%dd, VIX=%.1f, VIX_RSI=%.1f)",
-                sym, as_of_date, cum_decline, consec_down, vix_now, vix_rsi,
+                sym,
+                as_of_date,
+                cum_decline,
+                consec_down,
+                vix_now,
+                vix_rsi,
             )
 
             signals.append(
@@ -3823,7 +3842,9 @@ class AdaptiveSectorMomentumStrategy(Strategy):
                 # Rank sectors by AMS
                 scores: list[tuple[str, float]] = []
                 for sym in sectors:
-                    sym_data = indicators_df.filter(pl.col("symbol") == sym).sort("date")
+                    sym_data = indicators_df.filter(pl.col("symbol") == sym).sort(
+                        "date"
+                    )
                     if len(sym_data) < 253:
                         continue
                     closes = sym_data["close"].to_list()
@@ -3984,19 +4005,25 @@ class SkipMonthTsmomStrategy(Strategy):
                 if is_short:
                     signals.append(
                         TradeSignal(
-                            symbol=symbol, action=Action.CLOSE,
-                            conviction=Conviction.HIGH, target_weight=0.0,
+                            symbol=symbol,
+                            action=Action.CLOSE,
+                            conviction=Conviction.HIGH,
+                            target_weight=0.0,
                             stop_loss=0.0,
                             reasoning=f"SkipTSMOM reversal to long: skip_ret={skip_ret:.3f}",
                         )
                     )
                 if not is_long:
-                    weight = self.config.target_position_weight * min(abs(scaled_signal), 1.0)
+                    weight = self.config.target_position_weight * min(
+                        abs(scaled_signal), 1.0
+                    )
                     weight = max(weight, self.config.target_position_weight * 0.5)
                     signals.append(
                         TradeSignal(
-                            symbol=symbol, action=Action.BUY,
-                            conviction=Conviction.HIGH, target_weight=weight,
+                            symbol=symbol,
+                            action=Action.BUY,
+                            conviction=Conviction.HIGH,
+                            target_weight=weight,
                             stop_loss=close * (1.0 - self.config.stop_loss_pct),
                             reasoning=(
                                 f"SkipTSMOM long: skip_ret={skip_ret:.3f}, "
@@ -4009,19 +4036,25 @@ class SkipMonthTsmomStrategy(Strategy):
                 if is_long:
                     signals.append(
                         TradeSignal(
-                            symbol=symbol, action=Action.CLOSE,
-                            conviction=Conviction.HIGH, target_weight=0.0,
+                            symbol=symbol,
+                            action=Action.CLOSE,
+                            conviction=Conviction.HIGH,
+                            target_weight=0.0,
                             stop_loss=0.0,
                             reasoning=f"SkipTSMOM reversal to short: skip_ret={skip_ret:.3f}",
                         )
                     )
                 if not is_short:
-                    weight = self.config.target_position_weight * min(abs(scaled_signal), 1.0)
+                    weight = self.config.target_position_weight * min(
+                        abs(scaled_signal), 1.0
+                    )
                     weight = max(weight, self.config.target_position_weight * 0.5)
                     signals.append(
                         TradeSignal(
-                            symbol=symbol, action=Action.SELL,
-                            conviction=Conviction.HIGH, target_weight=-weight,
+                            symbol=symbol,
+                            action=Action.SELL,
+                            conviction=Conviction.HIGH,
+                            target_weight=-weight,
                             stop_loss=close * (1.0 + self.config.stop_loss_pct),
                             reasoning=(
                                 f"SkipTSMOM short: skip_ret={skip_ret:.3f}, "
@@ -4033,8 +4066,10 @@ class SkipMonthTsmomStrategy(Strategy):
             elif abs(scaled_signal) <= self._flat_threshold and has_position:
                 signals.append(
                     TradeSignal(
-                        symbol=symbol, action=Action.CLOSE,
-                        conviction=Conviction.MEDIUM, target_weight=0.0,
+                        symbol=symbol,
+                        action=Action.CLOSE,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=0.0,
                         stop_loss=0.0,
                         reasoning=f"SkipTSMOM flat: scaled={scaled_signal:.3f}, closing",
                     )
@@ -4144,8 +4179,10 @@ class CyclicalDefensiveRotationStrategy(Strategy):
             if "TLT" in portfolio.positions:
                 signals.append(
                     TradeSignal(
-                        symbol="TLT", action=Action.CLOSE,
-                        conviction=Conviction.HIGH, target_weight=0.0,
+                        symbol="TLT",
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
                         stop_loss=0.0,
                         reasoning=f"CyclDef rotation to SPY: {sig_long}/{sig_short} SMA rising",
                     )
@@ -4153,8 +4190,10 @@ class CyclicalDefensiveRotationStrategy(Strategy):
             if "SPY" not in portfolio.positions and spy_price > 0:
                 signals.append(
                     TradeSignal(
-                        symbol="SPY", action=Action.BUY,
-                        conviction=Conviction.HIGH, target_weight=spy_weight,
+                        symbol="SPY",
+                        action=Action.BUY,
+                        conviction=Conviction.HIGH,
+                        target_weight=spy_weight,
                         stop_loss=spy_price * 0.93,
                         reasoning=(
                             f"CyclDef expansion: {sig_long}/{sig_short} ratio SMA "
@@ -4167,8 +4206,10 @@ class CyclicalDefensiveRotationStrategy(Strategy):
             if "SPY" in portfolio.positions:
                 signals.append(
                     TradeSignal(
-                        symbol="SPY", action=Action.CLOSE,
-                        conviction=Conviction.HIGH, target_weight=0.0,
+                        symbol="SPY",
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
                         stop_loss=0.0,
                         reasoning=f"CyclDef rotation to TLT: {sig_long}/{sig_short} SMA falling",
                     )
@@ -4176,8 +4217,10 @@ class CyclicalDefensiveRotationStrategy(Strategy):
             if "TLT" not in portfolio.positions and tlt_price > 0:
                 signals.append(
                     TradeSignal(
-                        symbol="TLT", action=Action.BUY,
-                        conviction=Conviction.HIGH, target_weight=tlt_weight,
+                        symbol="TLT",
+                        action=Action.BUY,
+                        conviction=Conviction.HIGH,
+                        target_weight=tlt_weight,
                         stop_loss=tlt_price * 0.93,
                         reasoning=(
                             f"CyclDef contraction: {sig_long}/{sig_short} ratio SMA "
@@ -4240,9 +4283,7 @@ class GarchRegimeStrategy(Strategy):
         regime_persistence = int(params.get("regime_persistence", 0))
 
         # Get target symbol data
-        sym_data = indicators_df.filter(
-            pl.col("symbol") == target_sym
-        ).sort("date")
+        sym_data = indicators_df.filter(pl.col("symbol") == target_sym).sort("date")
 
         min_obs = pctile_window + 100  # Need enough history for GARCH fit
         if len(sym_data) < min_obs:
@@ -4250,11 +4291,13 @@ class GarchRegimeStrategy(Strategy):
 
         closes = sym_data["close"].to_list()
         # Compute log returns
-        returns = np.array([
-            np.log(closes[i] / closes[i - 1])
-            for i in range(1, len(closes))
-            if closes[i] > 0 and closes[i - 1] > 0
-        ])
+        returns = np.array(
+            [
+                np.log(closes[i] / closes[i - 1])
+                for i in range(1, len(closes))
+                if closes[i] > 0 and closes[i - 1] > 0
+            ]
+        )
 
         if len(returns) < min_obs:
             return []
@@ -4262,10 +4305,14 @@ class GarchRegimeStrategy(Strategy):
         # Fit GARCH(1,1) — use recent data for fitting
         try:
             from arch import arch_model
+
             model = arch_model(
                 returns * 100,  # arch expects percentage returns
-                vol="Garch", p=garch_p, q=garch_q,
-                mean="Zero", rescale=False,
+                vol="Garch",
+                p=garch_p,
+                q=garch_q,
+                mean="Zero",
+                rescale=False,
             )
             result = model.fit(disp="off", show_warning=False)
             cond_var = result.conditional_volatility[-1] ** 2
@@ -4315,8 +4362,10 @@ class GarchRegimeStrategy(Strategy):
             if cash_sym in portfolio.positions:
                 signals.append(
                     TradeSignal(
-                        symbol=cash_sym, action=Action.CLOSE,
-                        conviction=Conviction.HIGH, target_weight=0.0,
+                        symbol=cash_sym,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
                         stop_loss=0.0,
                         reasoning=f"GARCH regime → low-vol: exit {cash_sym}",
                     )
@@ -4324,8 +4373,10 @@ class GarchRegimeStrategy(Strategy):
             if target_price > 0:
                 signals.append(
                     TradeSignal(
-                        symbol=target_sym, action=Action.BUY,
-                        conviction=Conviction.HIGH, target_weight=low_vol_w,
+                        symbol=target_sym,
+                        action=Action.BUY,
+                        conviction=Conviction.HIGH,
+                        target_weight=low_vol_w,
                         stop_loss=target_price * 0.93,
                         reasoning=(
                             f"GARCH regime → low-vol: {target_sym}@{low_vol_w:.0%} "
@@ -4338,8 +4389,10 @@ class GarchRegimeStrategy(Strategy):
             if target_sym in portfolio.positions:
                 signals.append(
                     TradeSignal(
-                        symbol=target_sym, action=Action.CLOSE,
-                        conviction=Conviction.HIGH, target_weight=0.0,
+                        symbol=target_sym,
+                        action=Action.CLOSE,
+                        conviction=Conviction.HIGH,
+                        target_weight=0.0,
                         stop_loss=0.0,
                         reasoning=f"GARCH regime → high-vol: reduce {target_sym}",
                     )
@@ -4347,8 +4400,10 @@ class GarchRegimeStrategy(Strategy):
             if target_price > 0:
                 signals.append(
                     TradeSignal(
-                        symbol=target_sym, action=Action.BUY,
-                        conviction=Conviction.MEDIUM, target_weight=high_vol_w,
+                        symbol=target_sym,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=high_vol_w,
                         stop_loss=target_price * 0.90,
                         reasoning=(
                             f"GARCH regime → high-vol: {target_sym}@{high_vol_w:.0%} "
@@ -4360,8 +4415,10 @@ class GarchRegimeStrategy(Strategy):
             if cash_price > 0 and cash_weight > 0.01:
                 signals.append(
                     TradeSignal(
-                        symbol=cash_sym, action=Action.BUY,
-                        conviction=Conviction.MEDIUM, target_weight=cash_weight,
+                        symbol=cash_sym,
+                        action=Action.BUY,
+                        conviction=Conviction.MEDIUM,
+                        target_weight=cash_weight,
                         stop_loss=cash_price * 0.99,
                         reasoning=(
                             f"GARCH regime → high-vol: {cash_sym}@{cash_weight:.0%} "

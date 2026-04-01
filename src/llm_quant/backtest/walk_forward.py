@@ -17,7 +17,6 @@ import logging
 import sys
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from pathlib import Path
 from typing import Any
 
 import polars as pl
@@ -171,9 +170,7 @@ class WalkForwardEngine:
     # Public API
     # ------------------------------------------------------------------
 
-    def generate_folds(
-        self, start_date: date, end_date: date
-    ) -> list[WalkForwardFold]:
+    def generate_folds(self, start_date: date, end_date: date) -> list[WalkForwardFold]:
         """Generate IS/OOS fold date ranges without running any backtest.
 
         Parameters
@@ -204,8 +201,7 @@ class WalkForwardEngine:
             test_end = test_start + timedelta(days=step_days - 1)
 
             # Clamp test_end to overall end_date
-            if test_end > end_date:
-                test_end = end_date
+            test_end = min(test_end, end_date)
 
             # Test must have enough data
             test_span = (test_end - test_start).days + 1
@@ -283,9 +279,6 @@ class WalkForwardEngine:
             Aggregate OOS metrics across all completed folds.
         """
         # Lazy import to avoid circular dependency at module load time
-        from llm_quant.backtest.engine import BacktestEngine, CostModel
-        from llm_quant.backtest.strategies import STRATEGY_REGISTRY, create_strategy
-        from llm_quant.backtest.strategy import StrategyConfig
         from llm_quant.data.fetcher import fetch_ohlcv
         from llm_quant.data.indicators import compute_indicators
 
@@ -399,9 +392,7 @@ class WalkForwardEngine:
         oos_indicators = _slice_df(indicators_df, fold.test_start, fold.test_end)
 
         if len(is_prices) == 0 or len(oos_prices) == 0:
-            logger.warning(
-                "Fold %d: empty data slice — skipping", fold.fold_idx
-            )
+            logger.warning("Fold %d: empty data slice — skipping", fold.fold_idx)
             return None
 
         cost_model = CostModel()
@@ -503,9 +494,7 @@ class WalkForwardEngine:
 
 def _slice_df(df: pl.DataFrame, start: date, end: date) -> pl.DataFrame:
     """Filter a DataFrame to rows where 'date' is in [start, end]."""
-    return df.filter(
-        (pl.col("date") >= start) & (pl.col("date") <= end)
-    )
+    return df.filter((pl.col("date") >= start) & (pl.col("date") <= end))
 
 
 # ---------------------------------------------------------------------------
@@ -526,10 +515,10 @@ def _print_fold_table(folds: list[WalkForwardFold]) -> None:
     print(sep)
     for f in folds:
         print(
-            f"{f.fold_idx:>4}  {str(f.train_start):>12}  {str(f.train_end):>12}  "
-            f"{str(f.test_start):>12}  {str(f.test_end):>12}  "
+            f"{f.fold_idx:>4}  {f.train_start!s:>12}  {f.train_end!s:>12}  "
+            f"{f.test_start!s:>12}  {f.test_end!s:>12}  "
             f"{f.is_sharpe:>7.2f}  {f.oos_sharpe:>7.2f}  "
-            f"{f.oos_cagr*100:>8.1f}%  {f.oos_max_dd*100:>8.1f}%  {f.oos_n_trades:>6}"
+            f"{f.oos_cagr * 100:>8.1f}%  {f.oos_max_dd * 100:>8.1f}%  {f.oos_n_trades:>6}"
         )
     print(sep)
 
@@ -540,9 +529,11 @@ def _print_aggregate(result: WalkForwardResult) -> None:
     print(f"  Folds completed : {result.n_folds}")
     print(f"  Mean IS Sharpe  : {result.is_sharpe:.3f}")
     print(f"  Mean OOS Sharpe : {result.oos_sharpe:.3f}")
-    print(f"  OOS/IS ratio    : {result.oos_is_ratio:.3f}  (gate: > {WalkForwardEngine.WF_GATE})")
-    print(f"  Mean OOS CAGR   : {result.oos_cagr*100:.1f}%")
-    print(f"  Mean OOS MaxDD  : {result.oos_max_dd*100:.1f}%")
+    print(
+        f"  OOS/IS ratio    : {result.oos_is_ratio:.3f}  (gate: > {WalkForwardEngine.WF_GATE})"
+    )
+    print(f"  Mean OOS CAGR   : {result.oos_cagr * 100:.1f}%")
+    print(f"  Mean OOS MaxDD  : {result.oos_max_dd * 100:.1f}%")
     print()
     verdict = "PASS" if result.passes_gate else "FAIL"
     print(f"  Walk-forward gate: {verdict}")
@@ -629,7 +620,9 @@ if __name__ == "__main__":
     engine = WalkForwardEngine(strategy_name=args.strategy, config=cfg)
 
     print(f"\nWalk-Forward Validation — {args.strategy}")
-    print(f"Mode: {args.mode}  |  Folds: {args.n_splits}  |  Period: {start_date} → {end_date}")
+    print(
+        f"Mode: {args.mode}  |  Folds: {args.n_splits}  |  Period: {start_date} → {end_date}"
+    )
     print()
 
     result = engine.run(

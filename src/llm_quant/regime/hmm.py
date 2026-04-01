@@ -31,7 +31,9 @@ class HmmRegimeConfig:
 class HmmRegimeResult:
     regime: str  # "risk_on" or "risk_off"
     confidence: float  # probability of the predicted state (0–1)
-    state_probs: list[float] = field(default_factory=list)  # [prob_risk_off, prob_risk_on]
+    state_probs: list[float] = field(
+        default_factory=list
+    )  # [prob_risk_off, prob_risk_on]
     fallback_used: bool = True  # True if fell back to heuristic
 
 
@@ -65,7 +67,7 @@ class HmmRegimeDetector:
             if hmmlearn is unavailable or any error occurs.
         """
         try:
-            from hmmlearn.hmm import GaussianHMM  # noqa: PLC0415
+            from hmmlearn.hmm import GaussianHMM
         except ImportError:
             logger.warning("hmmlearn not available; using fallback regime detection")
             return HmmRegimeResult(
@@ -76,7 +78,9 @@ class HmmRegimeDetector:
             )
 
         try:
-            observations = self._normalize_features(vix_series, yield_slope, spy_momentum)
+            observations = self._normalize_features(
+                vix_series, yield_slope, spy_momentum
+            )
 
             # Need at least min_observations weekly obs
             # Weekly sampling: every 5 rows from daily data
@@ -105,7 +109,9 @@ class HmmRegimeDetector:
             return self._decode_state(model, observations)
 
         except Exception:
-            logger.warning("HMM fitting failed; using fallback regime detection", exc_info=True)
+            logger.warning(
+                "HMM fitting failed; using fallback regime detection", exc_info=True
+            )
             return HmmRegimeResult(
                 regime="risk_on",
                 confidence=0.5,
@@ -126,7 +132,7 @@ class HmmRegimeDetector:
             arr = s.to_numpy(allow_copy=True).astype(float)
             # Drop NaN for stats, then normalize full array
             valid = arr[~np.isnan(arr)]
-            if len(valid) < 2:  # noqa: PLR2004
+            if len(valid) < 2:
                 # Can't normalize — fill with zeros
                 cols.append(np.zeros_like(arr))
             else:
@@ -160,9 +166,9 @@ class HmmRegimeDetector:
         -------
         HmmRegimeResult
         """
-        from hmmlearn.hmm import GaussianHMM  # noqa: PLC0415
+        from hmmlearn.hmm import GaussianHMM
 
-        assert isinstance(model, GaussianHMM)  # noqa: S101
+        assert isinstance(model, GaussianHMM)
 
         # Predict posterior probabilities for the last observation
         # We use the full sequence for Viterbi path, then take final state probs

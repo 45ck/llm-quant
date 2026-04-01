@@ -1,12 +1,17 @@
-from .hmm import HmmRegimeDetector, HmmRegimeConfig, HmmRegimeResult
-from .inflation import InflationRegimeDetector, MacroQuadrant, QuadrantTilts, QUADRANT_TILTS
+from .hmm import HmmRegimeConfig, HmmRegimeDetector, HmmRegimeResult
+from .inflation import (
+    QUADRANT_TILTS,
+    InflationRegimeDetector,
+    MacroQuadrant,
+    QuadrantTilts,
+)
 
 __all__ = [
-    "HmmRegimeDetector",
+    "QUADRANT_TILTS",
     "HmmRegimeConfig",
+    "HmmRegimeDetector",
     "HmmRegimeResult",
     "InflationRegimeDetector",
     "MacroQuadrant",
     "QuadrantTilts",
-    "QUADRANT_TILTS",
 ]

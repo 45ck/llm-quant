@@ -18,6 +18,11 @@ from llm_quant.surveillance.detectors import (
     check_regime_drift,
     check_risk_drift,
 )
+from llm_quant.surveillance.models import (
+    SeverityLevel,
+    SurveillanceCheck,
+    SurveillanceReport,
+)
 from llm_quant.surveillance.track_c_detectors import (
     check_beta_drift,
     check_cross_strategy_correlation,
@@ -29,11 +34,6 @@ from llm_quant.surveillance.track_d_monitor import (
     check_track_d_beta_decay,
     check_track_d_hold_periods,
     check_track_d_vix_regime,
-)
-from llm_quant.surveillance.models import (
-    SeverityLevel,
-    SurveillanceCheck,
-    SurveillanceReport,
 )
 
 logger = logging.getLogger(__name__)

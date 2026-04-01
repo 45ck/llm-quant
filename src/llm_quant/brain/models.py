@@ -119,7 +119,7 @@ class MarketContext:
     regime_confidence: float = 0.0  # HMM state probability (0–1)
     hmm_regime_fallback: bool = True  # True if HMM fell back to heuristic
     # Task llm-quant-rbu: multi-lookback TSMOM signals (symbol → TsmomSignal)
-    tsmom_signals: dict[str, "TsmomSignal"] | None = None
+    tsmom_signals: dict[str, TsmomSignal] | None = None
     # Task llm-quant-t2s: 2x2 inflation regime overlay (Bridgewater / Dalio framework)
     macro_quadrant: str | None = None  # e.g. "disinflationary_boom"
     quadrant_tilts: dict | None = None  # keys: overweight, underweight, confidence
