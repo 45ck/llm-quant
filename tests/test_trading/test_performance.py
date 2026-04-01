@@ -4,6 +4,13 @@ from datetime import date, timedelta
 
 import pytest
 
+try:
+    import empyrical as _empyrical  # noqa: F401
+except ImportError:
+    _empyrical = None
+
+pytestmark = pytest.mark.skipif(_empyrical is None, reason="empyrical not installed")
+
 from llm_quant.trading.performance import compute_performance
 
 

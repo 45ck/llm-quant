@@ -30,8 +30,15 @@ if "pandas_datareader" not in sys.modules:
     sys.modules["pandas_datareader"] = _pdr_stub
     sys.modules["pandas_datareader.data"] = _pdr_data_stub
 
-import empyrical
+import pytest
+
+try:
+    import empyrical
+except ImportError:
+    empyrical = None
 import pandas as pd
+
+pytestmark = pytest.mark.skipif(empyrical is None, reason="empyrical not installed")
 
 # ---------------------------------------------------------------------------
 # Helpers

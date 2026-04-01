@@ -26,7 +26,10 @@ if "pandas_datareader" not in sys.modules:
     sys.modules["pandas_datareader"] = _pdr_stub
     sys.modules["pandas_datareader.data"] = _pdr_data_stub
 
-import empyrical
+try:
+    import empyrical
+except ImportError:
+    empyrical = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
