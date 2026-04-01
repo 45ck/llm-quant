@@ -64,6 +64,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "tip-tlt-real-yield-v1": "DIRECT",  # Direct computation (real yield regime)
     "breakeven-inflation-v1": "DIRECT",  # Direct computation (breakeven inflation)
     "global-yield-flow-v2": "DIRECT",  # Direct computation (capital flow)
+    "commodity-carry-v2": "DIRECT",  # Direct computation (commodity carry)
 }
 
 # Mechanism family labels for context
@@ -93,6 +94,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "tip-tlt-real-yield-v1": "F15: Real Yield Proxy",
     "breakeven-inflation-v1": "F16: Breakeven Inflation",
     "global-yield-flow-v2": "F17: Capital Flow",
+    "commodity-carry-v2": "F18: Commodity Carry",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -123,6 +125,7 @@ TRACK_A_SLUGS: list[str] = [
     "tip-tlt-real-yield-v1",
     "breakeven-inflation-v1",
     "global-yield-flow-v2",
+    "commodity-carry-v2",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -275,6 +278,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_breakeven_inflation_returns(data_dir)
     if slug == "global-yield-flow-v2":
         return _compute_global_yield_flow_v2_returns(data_dir)
+    if slug == "commodity-carry-v2":
+        return _compute_commodity_carry_v2_returns(data_dir)
     return None
 
 
@@ -1170,6 +1175,117 @@ def _compute_global_yield_flow_v2_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute global-yield-flow-v2 returns: %s", e)
+        return None
+
+
+def _compute_commodity_carry_v2_returns(data_dir: Path) -> dict | None:
+    """Commodity carry v2: USO/DBC ratio momentum → USO+GLD+SPY / SPY allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["USO", "DBC", "SPY", "GLD", "SHY"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 60
+        lookback = 20
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build USO/DBC ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            uso = sym_data["USO"].get(d, 0.0)
+            dbc = sym_data["DBC"].get(d, 0.0)
+            ratio_series.append(uso / dbc if uso > 0 and dbc > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            if ratio_mom > 0:
+                # Backwardation (carry positive): USO + GLD + SPY buffer
+                regime = "carry"
+                day_ret = (
+                    _asset_ret("USO", i) * 0.20
+                    + _asset_ret("GLD", i) * 0.20
+                    + spy_rets[i] * 0.30
+                )
+            else:
+                # Contango (carry negative): defensive
+                regime = "contango"
+                day_ret = spy_rets[i] * 0.70 + _asset_ret("SHY", i) * 0.10
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.972,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute commodity-carry-v2 returns: %s", e)
         return None
 
 
