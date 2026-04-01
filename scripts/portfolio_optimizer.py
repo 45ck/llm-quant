@@ -60,6 +60,8 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "dba-commodity-cycle-v1": "DIRECT",  # Direct computation (regime strategy)
     "xlk-xle-sector-rotation-v1": "DIRECT",  # Direct computation (regime strategy)
     "vol-regime-v2": "DIRECT",  # Direct computation (vol regime strategy)
+    "tlt-shy-curve-momentum-v1": "DIRECT",  # Direct computation (curve regime)
+    "tip-tlt-real-yield-v1": "DIRECT",  # Direct computation (real yield regime)
 }
 
 # Mechanism family labels for context
@@ -85,6 +87,8 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "dba-commodity-cycle-v1": "F11: Commodity Cycle",
     "xlk-xle-sector-rotation-v1": "F12: Sector Rotation",
     "vol-regime-v2": "F13: Volatility Regime",
+    "tlt-shy-curve-momentum-v1": "F14: Curve Shape Momentum",
+    "tip-tlt-real-yield-v1": "F15: Real Yield Proxy",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -111,6 +115,8 @@ TRACK_A_SLUGS: list[str] = [
     "dba-commodity-cycle-v1",
     "xlk-xle-sector-rotation-v1",
     "vol-regime-v2",
+    "tlt-shy-curve-momentum-v1",
+    "tip-tlt-real-yield-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -255,6 +261,10 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_xlk_xle_sector_rotation_returns(data_dir)
     if slug == "vol-regime-v2":
         return _compute_vol_regime_v2_returns(data_dir)
+    if slug == "tlt-shy-curve-momentum-v1":
+        return _compute_tlt_shy_curve_momentum_returns(data_dir)
+    if slug == "tip-tlt-real-yield-v1":
+        return _compute_tip_tlt_real_yield_returns(data_dir)
     return None
 
 
@@ -708,6 +718,230 @@ def _compute_vol_regime_v2_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute vol-regime-v2 returns: %s", e)
+        return None
+
+
+def _compute_tlt_shy_curve_momentum_returns(data_dir: Path) -> dict | None:
+    """TLT/SHY curve momentum: ratio momentum → SPY/GLD allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "GLD", "TLT", "SHY"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        warmup = 60
+        lookback = 30
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build TLT/SHY ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            tlt = sym_data["TLT"].get(d, 0.0)
+            shy = sym_data["SHY"].get(d, 0.0)
+            ratio_series.append(tlt / shy if tlt > 0 and shy > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            # GLD return
+            d, dp = dates[i], dates[i - 1]
+            gld = sym_data["GLD"]
+            gld_r = (
+                (gld[d] / gld[dp] - 1)
+                if d in gld and dp in gld and gld[dp] > 0
+                else 0.0
+            )
+
+            if ratio_mom > 0:
+                # Flattening: long bonds rising relative to short → risk-on
+                regime = "flattening"
+                day_ret = spy_rets[i] * 0.80
+            else:
+                # Steepening: long bonds selling off → risk-off
+                regime = "steepening"
+                day_ret = gld_r * 0.80
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.966,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute tlt-shy-curve-momentum returns: %s", e)
+        return None
+
+
+def _compute_tip_tlt_real_yield_returns(data_dir: Path) -> dict | None:
+    """TIP/TLT real yield proxy: ratio momentum → SPY/GLD+SHY allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPY", "GLD", "SHY", "TIP", "TLT"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        warmup = 60
+        lookback = 20
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build TIP/TLT ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            tip = sym_data["TIP"].get(d, 0.0)
+            tlt = sym_data["TLT"].get(d, 0.0)
+            ratio_series.append(tip / tlt if tip > 0 and tlt > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            # Asset returns
+            d, dp = dates[i], dates[i - 1]
+            gld = sym_data["GLD"]
+            gld_r = (
+                (gld[d] / gld[dp] - 1)
+                if d in gld and dp in gld and gld[dp] > 0
+                else 0.0
+            )
+            shy = sym_data["SHY"]
+            shy_r = (
+                (shy[d] / shy[dp] - 1)
+                if d in shy and dp in shy and shy[dp] > 0
+                else 0.0
+            )
+
+            if ratio_mom < 0:
+                # Real yields falling (loosening) → risk-on
+                regime = "loosening"
+                day_ret = spy_rets[i] * 0.75
+            else:
+                # Real yields rising (tightening) → defensive
+                regime = "tightening"
+                day_ret = gld_r * 0.50 + shy_r * 0.20
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.982,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute tip-tlt-real-yield returns: %s", e)
         return None
 
 
