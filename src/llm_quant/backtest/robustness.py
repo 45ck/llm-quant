@@ -1194,3 +1194,294 @@ def time_in_market(daily_returns: list[float]) -> TimeInMarketResult:
         pct_invested=pct,
         passed=pct < 0.80,
     )
+
+
+# ---------------------------------------------------------------------------
+# Track C — Structural Arb Gates (beta, cost stress, leg risk, min trades)
+# ---------------------------------------------------------------------------
+
+# Gate thresholds — module-level constants
+TRACK_C_BETA_THRESHOLD = 0.15
+TRACK_C_MIN_TRADES = 50
+TRACK_C_LEG_FAILURE_RATE = 0.05
+TRACK_C_LEG_RISK_SEED = 42
+
+
+@dataclass
+class TrackCGateResult:
+    """Result of Track C structural arb gate checks.
+
+    Track C strategies (prediction market arb, CEF discount capture,
+    funding rate) must satisfy market-neutrality and statistical
+    significance requirements that are not relevant to directional
+    Tracks A/B.
+
+    Gates
+    -----
+    1. beta_gate        — rolling 30-day beta to SPY < 0.15
+    2. cost_stress_gate — Sharpe > 0 after 2x transaction costs
+    3. leg_risk_gate    — positive Sharpe after 5% random leg failures
+    4. min_trades_gate  — at least 50 completed trades
+    """
+
+    # Raw inputs (audit trail)
+    beta_to_spy: float = 0.0  # max absolute rolling 30-day beta
+    cost_multiplied_sharpe: float = 0.0
+    leg_risk_sharpe: float = 0.0
+    trade_count: int = 0
+    base_sharpe: float = 0.0
+
+    # Individual gate results
+    beta_gate: bool = False
+    cost_stress_gate: bool = False
+    leg_risk_gate: bool = False
+    min_trades_gate: bool = False
+
+    # Overall
+    overall_passed: bool = False
+    gate_details: dict[str, bool] = field(default_factory=dict)
+
+    def compute_overall(self) -> None:
+        """Compute overall gate pass from individual gate results."""
+        self.gate_details = {
+            "beta_to_spy_<_0.15": self.beta_gate,
+            "cost_2x_sharpe_>_0": self.cost_stress_gate,
+            "leg_risk_sharpe_>_0": self.leg_risk_gate,
+            "min_50_trades": self.min_trades_gate,
+        }
+        self.overall_passed = all(self.gate_details.values())
+
+
+def _compute_rolling_beta(
+    strategy_returns: list[float],
+    spy_returns: list[float],
+    window: int = 30,
+) -> float:
+    """Compute the maximum absolute rolling beta of strategy vs SPY.
+
+    Uses rolling 30-day OLS beta: beta = cov(strat, spy) / var(spy).
+    Returns the maximum absolute beta across all rolling windows.
+    If insufficient data for even one window, falls back to the
+    full-period beta.
+
+    Parameters
+    ----------
+    strategy_returns : list[float]
+        Daily strategy returns.
+    spy_returns : list[float]
+        Daily SPY returns (same length as strategy_returns).
+    window : int
+        Rolling window in trading days. Default 30.
+
+    Returns
+    -------
+    float
+        Maximum absolute rolling beta. Gate fails if >= 0.15.
+    """
+    n = min(len(strategy_returns), len(spy_returns))
+    if n < 2:
+        return 0.0
+
+    s = np.array(strategy_returns[:n])
+    m = np.array(spy_returns[:n])
+
+    # Minimum variance threshold — below this, SPY returns are effectively
+    # constant and beta is undefined (return 0.0).  1e-20 guards against
+    # floating-point artefacts on arrays of identical values.
+    _VAR_EPS = 1e-20
+
+    if n < window:
+        # Fall back to full-period beta
+        var_m = np.var(m, ddof=1)
+        if var_m < _VAR_EPS:
+            return 0.0
+        cov_sm = np.cov(s, m, ddof=1)[0, 1]
+        return abs(cov_sm / var_m)
+
+    # Rolling beta
+    max_abs_beta = 0.0
+    for start in range(n - window + 1):
+        end = start + window
+        s_w = s[start:end]
+        m_w = m[start:end]
+        var_m = np.var(m_w, ddof=1)
+        if var_m < _VAR_EPS:
+            continue
+        cov_sm = np.cov(s_w, m_w, ddof=1)[0, 1]
+        beta = cov_sm / var_m
+        max_abs_beta = max(max_abs_beta, abs(beta))
+
+    return max_abs_beta
+
+
+def _simulate_leg_risk(
+    strategy_returns: list[float],
+    spy_returns: list[float],
+    failure_rate: float = TRACK_C_LEG_FAILURE_RATE,
+    seed: int = TRACK_C_LEG_RISK_SEED,
+) -> float:
+    """Simulate leg risk by randomly failing one leg on a fraction of trades.
+
+    For pairs/arb strategies, a failed leg means only one side executes.
+    We model this by replacing the strategy return on randomly selected
+    invested days with the SPY return (the unhedged market-side exposure),
+    simulating the scenario where the hedge leg fails to fill.
+
+    Parameters
+    ----------
+    strategy_returns : list[float]
+        Daily strategy returns (0.0 = cash/uninvested day).
+    spy_returns : list[float]
+        Daily SPY returns (same length).
+    failure_rate : float
+        Fraction of invested days where one leg fails. Default 0.05 (5%).
+    seed : int
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    float
+        Annualized Sharpe ratio after leg risk injection.
+    """
+    n = min(len(strategy_returns), len(spy_returns))
+    if n < 2:
+        return 0.0
+
+    s = np.array(strategy_returns[:n])
+    m = np.array(spy_returns[:n])
+
+    # Identify invested days (non-zero return)
+    invested_mask = s != 0.0
+    invested_indices = np.where(invested_mask)[0]
+    n_invested = len(invested_indices)
+
+    if n_invested < 1:
+        return 0.0
+
+    # Number of trades to fail
+    n_failures = min(max(1, round(n_invested * failure_rate)), n_invested)
+
+    rng = np.random.default_rng(seed)
+    failed_indices = rng.choice(invested_indices, size=n_failures, replace=False)
+
+    # Replace failed-leg days with unhedged market exposure
+    stressed = s.copy()
+    stressed[failed_indices] = m[failed_indices]
+
+    return compute_sharpe(stressed.tolist(), annualize=True)
+
+
+def run_track_c_gates(
+    strategy_returns: list[float],
+    spy_returns: list[float],
+    trade_count: int,
+    base_sharpe: float,
+    cost_multiplied_sharpe: float,
+    beta_threshold: float = TRACK_C_BETA_THRESHOLD,
+    min_trades: int = TRACK_C_MIN_TRADES,
+    leg_failure_rate: float = TRACK_C_LEG_FAILURE_RATE,
+    leg_risk_seed: int = TRACK_C_LEG_RISK_SEED,
+) -> TrackCGateResult:
+    """Run the Track C structural arb gate checks.
+
+    Track C strategies are market-neutral arb strategies. They must
+    demonstrate low beta to SPY, survive cost stress, withstand partial
+    fill failures, and have enough trades for statistical significance.
+
+    Parameters
+    ----------
+    strategy_returns : list[float]
+        Daily strategy returns (0.0 for uninvested days).
+    spy_returns : list[float]
+        Daily SPY returns (same length as strategy_returns).
+    trade_count : int
+        Total number of completed round-trip trades.
+    base_sharpe : float
+        Annualized Sharpe ratio from the primary backtest.
+    cost_multiplied_sharpe : float
+        Sharpe ratio re-computed with 2x transaction costs.
+    beta_threshold : float
+        Maximum acceptable absolute rolling beta to SPY. Default 0.15.
+    min_trades : int
+        Minimum trades for statistical significance. Default 50.
+    leg_failure_rate : float
+        Fraction of trades with simulated leg failure. Default 0.05.
+    leg_risk_seed : int
+        Random seed for leg risk simulation. Default 42.
+
+    Returns
+    -------
+    TrackCGateResult
+        Individual gate results and overall pass/fail flag.
+    """
+    result = TrackCGateResult(
+        base_sharpe=base_sharpe,
+        cost_multiplied_sharpe=cost_multiplied_sharpe,
+        trade_count=trade_count,
+    )
+
+    # Gate 1: Beta to SPY (market-neutrality)
+    result.beta_to_spy = float(_compute_rolling_beta(strategy_returns, spy_returns))
+    result.beta_gate = result.beta_to_spy < beta_threshold
+    if not result.beta_gate:
+        logger.warning(
+            "Track C beta gate FAILED: max |beta|=%.4f >= threshold %.3f — "
+            "strategy has residual market exposure; check leg sizing.",
+            result.beta_to_spy,
+            beta_threshold,
+        )
+
+    # Gate 2: Cost stress test (2x fees, Sharpe > 0)
+    result.cost_stress_gate = cost_multiplied_sharpe > 0
+    if not result.cost_stress_gate:
+        logger.warning(
+            "Track C cost stress gate FAILED: 2x-fee Sharpe %.3f <= 0 — "
+            "strategy edge is consumed by transaction costs.",
+            cost_multiplied_sharpe,
+        )
+
+    # Gate 3: Leg risk simulation (5% partial fill failure)
+    result.leg_risk_sharpe = float(
+        _simulate_leg_risk(
+            strategy_returns,
+            spy_returns,
+            failure_rate=leg_failure_rate,
+            seed=leg_risk_seed,
+        )
+    )
+    result.leg_risk_gate = result.leg_risk_sharpe > 0
+    if not result.leg_risk_gate:
+        logger.warning(
+            "Track C leg risk gate FAILED: Sharpe=%.3f after %.0f%% leg failures — "
+            "strategy cannot absorb partial fill risk.",
+            result.leg_risk_sharpe,
+            leg_failure_rate * 100,
+        )
+
+    # Gate 4: Min trades (statistical significance)
+    result.min_trades_gate = trade_count >= min_trades
+    if not result.min_trades_gate:
+        logger.warning(
+            "Track C min trades gate FAILED: %d trades < required %d — "
+            "insufficient sample size for arb statistical significance.",
+            trade_count,
+            min_trades,
+        )
+
+    result.compute_overall()
+
+    logger.info(
+        "Track C gates %s: beta=%.4f(%s) cost_stress_sr=%.3f(%s) "
+        "leg_risk_sr=%.3f(%s) trades=%d(%s)",
+        "PASSED" if result.overall_passed else "FAILED",
+        result.beta_to_spy,
+        "pass" if result.beta_gate else "FAIL",
+        cost_multiplied_sharpe,
+        "pass" if result.cost_stress_gate else "FAIL",
+        result.leg_risk_sharpe,
+        "pass" if result.leg_risk_gate else "FAIL",
+        trade_count,
+        "pass" if result.min_trades_gate else "FAIL",
+    )
+
+    return result
