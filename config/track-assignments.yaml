@@ -1,0 +1,248 @@
+# Track Assignments — maps each strategy slug to its track pod
+#
+# Track A (Defensive Alpha): 29 strategies across 18 mechanism families
+#   Benchmark: 60/40 SPY/TLT | Sharpe > 0.8, MaxDD < 15%
+#
+# Track B (Aggressive Alpha): 3 strategies
+#   Benchmark: 100% SPY | Sharpe > 1.0, MaxDD < 30%, CAGR > 40%
+#
+# Track D (Sprint Alpha): 1 strategy (experimental leveraged)
+#   Benchmark: 100% TQQQ | Sharpe >= 0.80, MaxDD < 40%
+#
+# Discretionary: manual macro strategy (default pod)
+#   Benchmark: 60/40 SPY/TLT
+#
+# Updated: 2026-04-06
+
+tracks:
+  track-a:
+    pod_id: track-a
+    display_name: "Track A -- Defensive Alpha"
+    benchmark: "60/40 SPY/TLT"
+    initial_capital: 100000
+    target_allocation_pct: 70
+    strategies:
+      # --- F1: Credit-Lead (9 strategies) ---
+      - slug: lqd-spy-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "LQD 5d return leads SPY"
+
+      - slug: agg-spy-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "AGG 5d return leads SPY"
+
+      - slug: hyg-spy-5d-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "HYG 5d return leads SPY"
+
+      - slug: agg-qqq-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "AGG 5d return leads QQQ"
+
+      - slug: lqd-qqq-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "LQD 5d return leads QQQ"
+
+      - slug: vcit-qqq-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "VCIT 5d return leads QQQ"
+
+      - slug: hyg-qqq-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "HYG 5d return leads QQQ"
+
+      - slug: emb-spy-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "EMB 5d return leads SPY"
+
+      - slug: agg-efa-credit-lead
+        family: F1
+        mechanism: credit_lead
+        description: "AGG 5d return leads EFA"
+
+      # --- F2: Precious Metals Mean Reversion (1 strategy in Track A) ---
+      - slug: gld-slv-mean-reversion-v4
+        family: F2
+        mechanism: precious_metals_mr
+        description: "GLD/SLV ratio consensus Bollinger Bands [60,90,120]"
+
+      # --- F3: Time-Series Momentum (1 strategy) ---
+      - slug: skip-month-tsmom-v1
+        family: F3
+        mechanism: tsmom
+        description: "Multi-asset skip-month TSMOM (SPY/TLT/GLD/EFA)"
+
+      # --- F5: Overnight Momentum (1 strategy) ---
+      - slug: spy-overnight-momentum
+        family: F5
+        mechanism: overnight_momentum
+        description: "SPY 10d avg overnight return momentum"
+
+      # --- F6: Rate Momentum (3 strategies) ---
+      - slug: tlt-spy-rate-momentum
+        family: F6
+        mechanism: rate_momentum
+        description: "TLT 10d return leads SPY"
+
+      - slug: tlt-qqq-rate-tech
+        family: F6
+        mechanism: rate_momentum
+        description: "TLT 10d return leads QQQ"
+
+      - slug: ief-qqq-rate-tech
+        family: F6
+        mechanism: rate_momentum
+        description: "IEF 10d return leads QQQ"
+
+      # --- F7: Behavioral-Structural (1 strategy) ---
+      - slug: behavioral-structural
+        family: F7
+        mechanism: behavioral_structural
+        description: "Low-vol sector rotation + correlation regime + TLT MR"
+
+      # --- F9: Credit Spread Regime (1 strategy) ---
+      - slug: credit-spread-regime-v1
+        family: F9
+        mechanism: credit_spread_regime
+        description: "HYG/SHY ratio momentum + vs SMA regime switch"
+
+      # --- F11: Commodity Cycle (1 strategy) ---
+      - slug: dba-commodity-cycle-v1
+        family: F11
+        mechanism: commodity_cycle
+        description: "DBA 60d absolute momentum regime"
+
+      # --- F12: Sector Rotation (1 strategy) ---
+      - slug: xlk-xle-sector-rotation-v1
+        family: F12
+        mechanism: sector_rotation
+        description: "XLK/XLE ratio momentum + vs SMA rotation"
+
+      # --- F13: Volatility Regime (1 strategy) ---
+      - slug: vol-regime-v2
+        family: F13
+        mechanism: vol_regime
+        description: "SPY vs GLD 30d vol ratio regime"
+
+      # --- F14: Yield Curve Momentum (1 strategy) ---
+      - slug: tlt-shy-curve-momentum-v1
+        family: F14
+        mechanism: curve_momentum
+        description: "TLT/SHY ratio momentum (flattening/steepening)"
+
+      # --- F15: Real Yield (1 strategy) ---
+      - slug: tip-tlt-real-yield-v1
+        family: F15
+        mechanism: real_yield
+        description: "TIP/TLT ratio momentum (real yield tightening/loosening)"
+
+      # --- F16: Breakeven Inflation (1 strategy) ---
+      - slug: breakeven-inflation-v1
+        family: F16
+        mechanism: breakeven_inflation
+        description: "TIP/IEF ratio momentum (inflation rising/falling)"
+
+      # --- F17: Global Yield Flow (1 strategy) ---
+      - slug: global-yield-flow-v2
+        family: F17
+        mechanism: global_yield_flow
+        description: "TLT/EFA ratio momentum (US inflow vs intl preferred)"
+
+      # --- F18: Commodity Carry (1 strategy) ---
+      - slug: commodity-carry-v2
+        family: F18
+        mechanism: commodity_carry
+        description: "USO/DBC ratio momentum (carry vs contango)"
+
+      # --- F19: Disinflation (1 strategy) ---
+      - slug: tlt-gld-disinflation-v1
+        family: F19
+        mechanism: disinflation
+        description: "TLT/GLD ratio momentum (disinflation vs inflation)"
+
+      # --- F21: Commodity-Equity (1 strategy) ---
+      - slug: dbc-spy-commodity-equity-v1
+        family: F21
+        mechanism: commodity_equity
+        description: "DBC/SPY ratio momentum (commodity vs equity)"
+
+      # --- F22: Duration Rotation (1 strategy) ---
+      - slug: agg-tlt-duration-rotation-v2
+        family: F22
+        mechanism: duration_rotation
+        description: "AGG/TLT ratio momentum (flattening/steepening)"
+
+      # --- F26: Dollar-Gold Regime (1 strategy) ---
+      - slug: dollar-gold-regime-v1
+        family: F26
+        mechanism: dollar_gold_regime
+        description: "UUP/GLD ratio regime (dollar strength vs gold)"
+
+  track-b:
+    pod_id: track-b
+    display_name: "Track B -- Aggressive Alpha"
+    benchmark: "100% SPY"
+    initial_capital: 100000
+    target_allocation_pct: 30
+    strategies:
+      # --- F8: Semi-Lead-Lag (1 strategy) ---
+      - slug: soxx-qqq-lead-lag
+        family: F8
+        mechanism: semi_lead_lag
+        description: "SOXX 5d return leads QQQ (high-beta tech)"
+
+      # --- F2: Pair Mean-Reversion (2 strategies) ---
+      - slug: uso-xle-mean-reversion-v2
+        family: F2
+        mechanism: pair_mean_reversion
+        description: "USO/XLE ratio z-score mean reversion"
+
+      - slug: gdx-gld-mean-reversion-v1
+        family: F2
+        mechanism: pair_mean_reversion
+        description: "GDX/GLD ratio z-score mean reversion"
+
+  track-d:
+    pod_id: track-d
+    display_name: "Track D -- Sprint Alpha"
+    benchmark: "100% TQQQ"
+    initial_capital: 100000
+    target_allocation_pct: 0  # experimental — no capital until paper gate passes
+    strategies:
+      # --- Leveraged re-expression of F6 rate momentum ---
+      - slug: tlt-tqqq-leveraged-lead-lag
+        family: F6-leveraged
+        mechanism: leveraged_rate_lead
+        description: "TLT 10d return -> TQQQ (3x leveraged QQQ), max 5d hold"
+
+  discretionary:
+    pod_id: discretionary
+    display_name: "Discretionary -- Manual Macro"
+    benchmark: "60/40 SPY/TLT"
+    initial_capital: 100000
+    target_allocation_pct: 0  # manual overlay, no systematic allocation target
+    strategies:
+      - slug: manual-macro
+        family: null
+        mechanism: discretionary
+        description: "Manual macro trades via /trade command (existing default pod)"
+
+# --- Metadata ---
+meta:
+  total_strategies: 33  # 29 Track A + 3 Track B + 1 Track D
+  total_systematic: 33
+  total_pods: 4
+  portfolio_allocation:
+    track-a: 70  # % of total capital
+    track-b: 30  # % of total capital
+    track-d: 0   # experimental, no allocation until paper gate passes
+    discretionary: 0  # manual overlay
+  last_updated: "2026-04-06"

@@ -1,19 +1,28 @@
 """Polymarket market data client — read-only, no authentication required.
 
-Supports two backends:
-  1. CLOB API (clob.polymarket.com) — full market data, geo-blocked in US
-     (previously gamma-api.polymarket.com, which returned 404 as of 2026-03-27)
-  2. Polymarket US API (api.polymarket.us) — US-regulated, limited without auth
+Supports two backends with automatic failover:
+  1. Gamma API (gamma-api.polymarket.com) — market discovery, metadata,
+     paginated listing. This is the correct API for /markets and /events.
+     Geo-blocked from US IPs since ~2025 (returns Azure Front Door 404).
+  2. Polymarket US API (api.polymarket.us) — CFTC-regulated, Ed25519 auth.
+     Returns 20 markets without API key; full access requires auth.
 
-The client tries CLOB API first and falls back to the US API on failure.
+The CLOB API (clob.polymarket.com) is for orderbook/pricing (book, price,
+midpoint, spread, tick-size, prices-history) — NOT for market discovery.
+It is also geo-blocked from US IPs.
 
-CLOB API docs: https://docs.polymarket.com/
-US API docs: https://polymarket.us/developer
+The client tries Gamma API first. If geo-blocked (404/403), it falls back
+to the US API automatically.
+
+Gamma API docs: https://docs.polymarket.com/developers/gamma-markets-api/overview
+CLOB API docs:  https://docs.polymarket.com/developers/CLOB/introduction
+US API docs:    https://polymarket.us/developer
 
 Key endpoints used:
-  CLOB:   GET /markets          — paginated list of all markets
-          GET /markets/{id}     — single market detail
-  US API: GET /v1/markets       — market listing (limited without API key)
+  Gamma:  GET /markets          — paginated list (limit, offset, active, closed)
+          GET /markets/{id}     — single market by condition ID
+          GET /events           — paginated event listing
+  US API: GET /v1/markets       — market listing (20 max without API key)
 
 NegRisk markets have is_neg_risk=True. For these, the sum of all YES
 outcome prices should equal 1.0 (one outcome must occur). When sum < 1.0,
@@ -23,6 +32,7 @@ buying all NO outcomes is profitable (buy N outcomes, collect 1 outcome).
 from __future__ import annotations
 
 import logging
+import platform
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -31,11 +41,21 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-GAMMA_BASE = "https://clob.polymarket.com"
+# -- API base URLs --
+# Gamma API: market discovery and metadata (geo-blocked from US)
+GAMMA_BASE = "https://gamma-api.polymarket.com"
+# CLOB API: orderbook, pricing, trade execution (geo-blocked from US)
+CLOB_BASE = "https://clob.polymarket.com"
+# Polymarket US: CFTC-regulated, works from US IPs
 US_API_BASE = "https://api.polymarket.us"
+
 _DEFAULT_TIMEOUT = 15  # seconds
 _PAGE_SIZE = 100
 _RATE_LIMIT_SLEEP = 0.25  # 4 req/s — well within public limits
+
+# Windows SSL certificate verification often fails with corporate/self-signed
+# certs and the bundled certifi store. Default to False on Windows.
+_DEFAULT_SSL_VERIFY = platform.system() != "Windows"
 
 
 @dataclass
@@ -87,13 +107,23 @@ class Market:
 
 
 class GammaClient:
-    """Polymarket market data client with Gamma + US API fallback."""
+    """Polymarket market data client with Gamma API + US API fallback.
+
+    Endpoint hierarchy:
+      1. Gamma API (gamma-api.polymarket.com) — full market discovery,
+         paginated, no auth. Geo-blocked from US IPs (Azure Front Door 404).
+      2. US API (api.polymarket.us) — CFTC-regulated fallback. Returns max
+         20 markets without API key auth; full access requires Ed25519 key.
+
+    On Windows, SSL verification is disabled by default to avoid certificate
+    errors with the bundled certifi store.
+    """
 
     def __init__(
         self,
         base_url: str = GAMMA_BASE,
         timeout: int = _DEFAULT_TIMEOUT,
-        ssl_verify: bool = True,
+        ssl_verify: bool = _DEFAULT_SSL_VERIFY,
         us_api_key: str | None = None,
     ) -> None:
         self._base = base_url.rstrip("/")
@@ -112,10 +142,21 @@ class GammaClient:
     # ------------------------------------------------------------------
 
     def _get(self, path: str, params: dict | None = None) -> Any:
+        """GET against Gamma API base URL."""
         url = f"{self._base}{path}"
         resp = self._session.get(
             url, params=params, timeout=self._timeout, verify=self._ssl_verify
         )
+        # Azure Front Door geo-block returns 404 with HTML, not JSON.
+        # Detect this early and raise a clear error.
+        if resp.status_code == 404:
+            ct = resp.headers.get("content-type", "")
+            if "text/html" in ct:
+                raise requests.ConnectionError(
+                    f"Gamma API geo-blocked (HTTP 404 with HTML from "
+                    f"{resp.headers.get('x-azure-ref', 'Azure Front Door')}). "
+                    f"International Polymarket APIs are blocked from US IPs."
+                )
         resp.raise_for_status()
         return resp.json()
 
@@ -160,21 +201,35 @@ class GammaClient:
         return data.get("data", data.get("markets", []))
 
     def _fetch_us_markets(self) -> list[dict]:
-        """Fetch markets from Polymarket US API (limited without auth)."""
+        """Fetch markets from Polymarket US API.
+
+        Without an API key, the US API returns at most ~20 markets (no
+        pagination/filtering). With an API key (Ed25519), full access
+        is available including offset/limit params.
+        """
         data = self._get_us("/v1/markets")
         return data.get("markets", [])
 
     def fetch_all_active_markets(self, max_markets: int = 5000) -> list[dict]:
         """Paginate through all active markets.
 
-        Tries Gamma API first; falls back to US API if Gamma is unreachable
-        (e.g. geo-blocked from US IPs).
+        Tries Gamma API first (gamma-api.polymarket.com); falls back to
+        US API (api.polymarket.us) if Gamma is geo-blocked or unreachable.
+
+        Note: The US API fallback returns limited data without an API key
+        (~20 markets). For full access from US IPs, provide a us_api_key
+        or use a non-US proxy for the Gamma API.
         """
         # Try Gamma API first
         try:
             return self._fetch_all_gamma(max_markets)
         except (requests.HTTPError, requests.ConnectionError) as exc:
-            logger.warning("Gamma API unreachable (%s), falling back to US API", exc)
+            logger.warning(
+                "Gamma API unreachable (%s), falling back to US API. "
+                "Note: gamma-api.polymarket.com is geo-blocked from US IPs. "
+                "Use a non-US proxy or provide a us_api_key for full access.",
+                exc,
+            )
 
         # Fallback: Polymarket US API
         try:
@@ -183,7 +238,11 @@ class GammaClient:
             logger.exception("Both Gamma and US APIs failed: %s", exc)
             return []
         else:
-            logger.info("Fetched %d markets from Polymarket US API", len(markets))
+            logger.info(
+                "Fetched %d markets from Polymarket US API%s",
+                len(markets),
+                " (limited — no API key)" if not self._us_api_key else "",
+            )
             return markets
 
     def _fetch_all_gamma(self, max_markets: int) -> list[dict]:
@@ -203,8 +262,19 @@ class GammaClient:
         return markets
 
     def fetch_market(self, market_id: str) -> dict:
-        """Fetch single market by ID."""
-        return self._get(f"/markets/{market_id}")
+        """Fetch single market by condition ID.
+
+        Tries Gamma API first, falls back to US API on failure.
+        """
+        try:
+            return self._get(f"/markets/{market_id}")
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            logger.warning(
+                "Gamma API failed for market %s (%s), trying US API",
+                market_id,
+                exc,
+            )
+            return self._get_us(f"/v1/markets/{market_id}")
 
     # ------------------------------------------------------------------
     # Parsing
