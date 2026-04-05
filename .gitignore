@@ -40,3 +40,4 @@ htmlcov/
 .dolt/
 *.db
 .beads-credential-key
+.prompt-language/
