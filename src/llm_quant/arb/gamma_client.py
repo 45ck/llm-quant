@@ -32,7 +32,6 @@ buying all NO outcomes is profitable (buy N outcomes, collect 1 outcome).
 from __future__ import annotations
 
 import logging
-import platform
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -53,9 +52,7 @@ _DEFAULT_TIMEOUT = 15  # seconds
 _PAGE_SIZE = 100
 _RATE_LIMIT_SLEEP = 0.25  # 4 req/s — well within public limits
 
-# Windows SSL certificate verification often fails with corporate/self-signed
-# certs and the bundled certifi store. Default to False on Windows.
-_DEFAULT_SSL_VERIFY = platform.system() != "Windows"
+_DEFAULT_SSL_VERIFY = True
 
 
 @dataclass
@@ -115,8 +112,8 @@ class GammaClient:
       2. US API (api.polymarket.us) — CFTC-regulated fallback. Returns max
          20 markets without API key auth; full access requires Ed25519 key.
 
-    On Windows, SSL verification is disabled by default to avoid certificate
-    errors with the bundled certifi store.
+    SSL verification is enabled by default. Pass ssl_verify=False explicitly
+    if you encounter certificate issues.
     """
 
     def __init__(

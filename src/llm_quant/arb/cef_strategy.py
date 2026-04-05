@@ -27,30 +27,12 @@ from datetime import date
 
 import polars as pl
 
+from llm_quant.arb.cef_data import CEF_BENCHMARK_MAP
 from llm_quant.backtest.strategy import Strategy
 from llm_quant.brain.models import Action, Conviction, TradeSignal
 from llm_quant.trading.portfolio import Portfolio
 
 logger = logging.getLogger(__name__)
-
-# CEF→benchmark mapping (duplicated from cef_data to avoid circular import)
-_CEF_BENCHMARK: dict[str, str] = {
-    "NEA": "AGG",
-    "NAD": "AGG",
-    "PDI": "HYG",
-    "PTY": "HYG",
-    "HYT": "HYG",
-    "EHI": "HYG",
-    "AWF": "AGG",
-    "BGT": "AGG",
-    "NVG": "MUB",
-    "VPV": "MUB",
-    "BLE": "MUB",
-    "MQY": "MUB",
-    "ADX": "SPY",
-    "GAM": "SPY",
-    "GDV": "SPY",
-}
 
 
 @dataclass
@@ -340,7 +322,7 @@ class CEFDiscountRegistryStrategy(Strategy):
         results: dict[str, tuple[float, list[float]]] = {}
 
         for ticker in cef_tickers:
-            benchmark = _CEF_BENCHMARK.get(ticker)
+            benchmark = CEF_BENCHMARK_MAP.get(ticker)
             if benchmark is None:
                 continue
 

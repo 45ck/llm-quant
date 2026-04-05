@@ -113,6 +113,15 @@ class ArbScanner:
             init_arb_schema(self._conn)
         return self._conn
 
+    def close(self) -> None:
+        """Close the DuckDB connection if open."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+
+    def __del__(self) -> None:
+        self.close()
+
     # ------------------------------------------------------------------
     # Main entry points
     # ------------------------------------------------------------------
@@ -235,53 +244,13 @@ class ArbScanner:
         return opps
 
     def _detect_negrisk_arb(self, market: Market) -> list[ArbOpportunity]:
-        """NegRisk: buy all NO outcomes if complement > threshold.
+        """NegRisk Buy-All-YES strategy.
 
-        Strategy: buy NO on every condition.
-        - Costs: sum(NO prices) = sum(1 - YES prices) = N - sum(YES prices)
-        - Payoff: one condition resolves YES (loser NO = 0), rest resolve NO ($1 each)
-        - Net payoff: (N-1) * $1 = N - 1
-        - Profit: (N-1) - (N - sum_yes) = sum_yes - 1
-
-        Wait — that's wrong direction. Let me recalculate:
-        sum(NO prices) = N - sum_yes. We pay that.
-        We receive: (N-1) positions pay $1 (NO wins when YES doesn't win)
-        Net = (N-1) - sum(NO prices) = (N-1) - (N - sum_yes) = sum_yes - 1
-
-        This is NEGATIVE when sum_yes < 1, meaning buying all NO LOSES money
-        when sum_yes < 1.
-
-        Correct approach from paper: BUY all YES when sum > 1 (overly priced).
-        OR: when sum < 1, buy NO on the cheapest complement.
-
-        Actually from Saguillo et al. — the dominant strategy was:
-        'NegRisk buying NO: $17.3M' — this is buying NO directly on individual
-        conditions, not the full portfolio. When sum(YES) < 1, it means each
-        YES is underpriced relative to the true probability. But NO = 1 - YES_implied
-        so NO prices being > complement implies sellers are selling YES too cheap.
-
-        The cleaner interpretation:
-        When 1 - YES_price > NO_price for any individual condition, buy YES + NO.
-        This is standard rebalancing arb applied within NegRisk structure.
-
-        Actually the paper's Figure 3 and Table 2 show the structure:
-        - When NegRisk YES sum < 1.00, buying NO on all conditions creates
-          a risk-free portfolio because exactly one YES resolves True.
-        - Cost: sum(NO_i) = N - sum(YES_i)
-        - Receive: N-1 NO payoffs (each $1) because one YES wins, so that NO=0
-        - Net profit: (N-1) - (N - sum_yes) = sum_yes - 1 < 0 [WRONG DIRECTION]
-
-        Correct understanding: when sum(YES) < 1, BUY YES on the cheapest conditions.
-        When sum(YES) > 1, BUY NO on the most expensive (selling the overpriced).
-
-        From the paper Section 3.2: 'when the sum of all YES prices < $1,
-        one can buy YES on ALL outcomes for less than $1, knowing exactly one
-        resolves to YES and pays $1.' — But that only works if outcomes are
-        mutually exclusive AND exhaustive (NegRisk guarantee).
-
-        So: buy ALL YES, pay sum(YES), receive $1.
-        Profit = 1.0 - sum(YES) when sum(YES) < 1.0. FEE: 2% on winning YES.
-        Net profit = (1 - sum_yes) - 0.02 * 1.0 = complement - 0.02
+        # NegRisk Buy-All-YES strategy:
+        # - Pay: sum(YES prices) across all mutually exclusive conditions
+        # - Receive: $1.00 from the single condition that resolves YES
+        # - Gross profit: 1.0 - sum_yes (the "complement")
+        # - Net profit: complement - 0.02 (2% winning fee on the $1 payout)
         """
         if len(market.conditions) < 2:
             return []
@@ -550,7 +519,7 @@ class ArbScanner:
                     )
                     continue
 
-                kelly = min(net_spread / (1.0 + net_spread), 0.02)
+                kelly = net_spread / (1.0 + net_spread)
 
                 opp = ArbOpportunity(
                     opp_id=str(uuid.uuid4()),

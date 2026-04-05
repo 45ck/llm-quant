@@ -101,6 +101,15 @@ class PaperArbGate:
             init_arb_schema(self._conn)
         return self._conn
 
+    def close(self) -> None:
+        """Close the DuckDB connection if open."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+
+    def __del__(self) -> None:
+        self.close()
+
     # ------------------------------------------------------------------
     # Shared stat block (single DB round-trip for scan-level numbers)
     # ------------------------------------------------------------------

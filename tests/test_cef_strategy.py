@@ -472,7 +472,7 @@ def _make_indicators_df(
     if cef_tickers is None:
         cef_tickers = ["NEA", "PDI", "NVG"]
 
-    from llm_quant.arb.cef_strategy import _CEF_BENCHMARK
+    from llm_quant.arb.cef_data import CEF_BENCHMARK_MAP
 
     start = date(2020, 1, 1)
     dates = [start + timedelta(days=i) for i in range(n_days)]
@@ -481,7 +481,7 @@ def _make_indicators_df(
     # Create benchmark data first
     benchmarks_done: set[str] = set()
     for ticker in cef_tickers:
-        bm = _CEF_BENCHMARK.get(ticker, "AGG")
+        bm = CEF_BENCHMARK_MAP.get(ticker, "AGG")
         if bm not in benchmarks_done:
             bm_prices = [100.0 * (1 + 0.04 / 252) ** i for i in range(n_days)]
             frames.append(
@@ -501,7 +501,7 @@ def _make_indicators_df(
 
     # Create CEF data with varying discounts
     for idx, ticker in enumerate(cef_tickers):
-        bm = _CEF_BENCHMARK.get(ticker, "AGG")
+        bm = CEF_BENCHMARK_MAP.get(ticker, "AGG")
         cef_prices = []
         for i in range(n_days):
             bm_price = 100.0 * (1 + 0.04 / 252) ** i
@@ -553,7 +553,7 @@ def _make_deep_discount_indicators_df(
     if cef_tickers is None:
         cef_tickers = ["NEA", "PDI", "NVG"]
 
-    from llm_quant.arb.cef_strategy import _CEF_BENCHMARK
+    from llm_quant.arb.cef_data import CEF_BENCHMARK_MAP
 
     start = date(2020, 1, 1)
     dates = [start + timedelta(days=i) for i in range(n_days)]
@@ -561,7 +561,7 @@ def _make_deep_discount_indicators_df(
 
     benchmarks_done: set[str] = set()
     for ticker in cef_tickers:
-        bm = _CEF_BENCHMARK.get(ticker, "AGG")
+        bm = CEF_BENCHMARK_MAP.get(ticker, "AGG")
         if bm not in benchmarks_done:
             bm_prices = [100.0 * (1 + 0.04 / 252) ** i for i in range(n_days)]
             frames.append(

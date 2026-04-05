@@ -31,6 +31,7 @@ from typing import Any
 import anthropic
 
 from llm_quant.arb.kalshi_client import KalshiCondition, KalshiEvent
+from llm_quant.arb.schema import init_arb_schema
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +417,7 @@ class KalshiCombinatorialDetector:
         import duckdb
 
         conn = duckdb.connect(str(self._db_path))
-        _ensure_kalshi_combinatorial_table(conn)
+        init_arb_schema(conn)
         now = datetime.now(UTC).isoformat()
 
         for r in results:
@@ -455,35 +456,3 @@ class KalshiCombinatorialDetector:
                 logger.debug("Failed to persist pair %s: %s", r.pair_id, exc)
 
         conn.close()
-
-
-# ------------------------------------------------------------------
-# Schema helper
-# ------------------------------------------------------------------
-
-
-def _ensure_kalshi_combinatorial_table(conn: Any) -> None:
-    """Create kalshi_combinatorial_pairs table if it does not exist."""
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS kalshi_combinatorial_pairs (
-            pair_id          VARCHAR PRIMARY KEY,
-            ticker_a         VARCHAR NOT NULL,
-            ticker_b         VARCHAR NOT NULL,
-            event_ticker_a   VARCHAR NOT NULL,
-            event_ticker_b   VARCHAR NOT NULL,
-            title_a          VARCHAR,
-            title_b          VARCHAR,
-            dependency_type  VARCHAR,
-            claude_confidence DOUBLE,
-            expected_direction VARCHAR,
-            price_constraint VARCHAR,
-            price_a          DOUBLE,
-            price_b          DOUBLE,
-            implied_arb_spread DOUBLE,
-            is_arb           BOOLEAN,
-            reasoning        VARCHAR,
-            detected_at      VARCHAR
-        )
-        """
-    )

@@ -93,6 +93,15 @@ class KalshiArbExecution:
         self._conn: duckdb.DuckDBPyConnection = duckdb.connect(str(self._db_path))
         init_arb_schema(self._conn)
 
+    def close(self) -> None:
+        """Close the DuckDB connection if open."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None  # type: ignore[assignment]
+
+    def __del__(self) -> None:
+        self.close()
+
     # ------------------------------------------------------------------
     # Core evaluation
     # ------------------------------------------------------------------
