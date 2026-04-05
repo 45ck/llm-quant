@@ -197,6 +197,7 @@ ignore = [
   "ARG002",  # ABC contract
   "BLE001",  # broad exception in API call
   "E501",    # long prompt strings
+  "PLR0911", # many return paths for graceful degradation
 ]
 "src/llm_quant/backtest/metrics.py" = [
   "FBT002",  # annualize=True is a clear named boolean
