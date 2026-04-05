@@ -7,11 +7,15 @@ funding reversals, and inadvertent beta exposure.
 
 Each detector follows the same interface as existing detectors:
     fn(conn, config) -> list[SurveillanceCheck]
+
+Configuration dataclasses provide sensible defaults matching the Track C
+mandate thresholds.  The detector functions accept optional config overrides.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import duckdb
@@ -23,6 +27,89 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Configuration dataclasses
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ExchangeHealthConfig:
+    """Configuration for ExchangeHealthDetector.
+
+    Attributes:
+        error_threshold: Max consecutive API errors before HALT (default 3).
+        lookback_hours: Window for counting errors (default 1 hour).
+        withdrawal_delay_lookback_hours: Window for withdrawal delay events
+            (default 24 hours).
+    """
+
+    error_threshold: int = 3
+    lookback_hours: int = 1
+    withdrawal_delay_lookback_hours: int = 24
+
+
+@dataclass
+class SpreadCompressionConfig:
+    """Configuration for SpreadCompressionDetector.
+
+    Attributes:
+        halt_ratio: HALT when 7d avg spread drops below this fraction of 30d
+            baseline (default 0.25 = 25%).
+        warn_ratio: WARNING when 7d avg approaches compression (default 0.50).
+        rolling_window_days: Short-term window for rolling average (default 7).
+        baseline_window_days: Long-term window for baseline average (default 30).
+    """
+
+    halt_ratio: float = 0.25
+    warn_ratio: float = 0.50
+    rolling_window_days: int = 7
+    baseline_window_days: int = 30
+
+
+@dataclass
+class FundingRateReversalConfig:
+    """Configuration for FundingRateReversalDetector.
+
+    Attributes:
+        halt_consecutive: HALT after this many consecutive negative 8h funding
+            periods (default 3).
+        warn_consecutive: WARNING threshold (default 2).
+    """
+
+    halt_consecutive: int = 3
+    warn_consecutive: int = 2
+
+
+@dataclass
+class BetaDriftConfig:
+    """Configuration for BetaDriftDetector.
+
+    Attributes:
+        window_days: Rolling window for beta calculation (default 30).
+        halt_beta: HALT when abs(beta) exceeds this value (default 0.15).
+        warn_beta: WARNING threshold (default 0.10).
+    """
+
+    window_days: int = 30
+    halt_beta: float = 0.15
+    warn_beta: float = 0.10
+
+
+@dataclass
+class CrossTrackCorrelationConfig:
+    """Configuration for CrossTrackCorrelationDetector.
+
+    Attributes:
+        window_days: Rolling window for correlation calc (default 30).
+        halt_corr: HALT when correlation exceeds this (default 0.30).
+        warn_corr: WARNING threshold (default 0.20).
+    """
+
+    window_days: int = 30
+    halt_corr: float = 0.30
+    warn_corr: float = 0.20
+
+
+# ---------------------------------------------------------------------------
 # Track C-1. Exchange Health — withdrawal delays and API error spikes
 # ---------------------------------------------------------------------------
 
@@ -30,13 +117,17 @@ logger = logging.getLogger(__name__)
 def check_exchange_health(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,
+    *,
+    detector_config: ExchangeHealthConfig | None = None,
 ) -> list[SurveillanceCheck]:
     """Detect exchange withdrawal delays or API error spikes.
 
-    HALT if: >3 consecutive API errors, or withdrawal delay > 24h detected.
+    HALT if: >error_threshold consecutive API errors within lookback window,
+    or any withdrawal delay event detected.
     Reads from track_c_exchange_events table if present; degrades gracefully
     if the table does not yet exist.
     """
+    cfg = detector_config or ExchangeHealthConfig()
     checks: list[SurveillanceCheck] = []
 
     # Graceful degradation — table may not exist in early deployment
@@ -66,7 +157,7 @@ def check_exchange_health(
         )
         return checks
 
-    cutoff = datetime.now(tz=UTC) - timedelta(hours=24)
+    cutoff = datetime.now(tz=UTC) - timedelta(hours=cfg.lookback_hours)
 
     # Count consecutive API errors (most recent streak)
     recent_events = conn.execute(
@@ -89,19 +180,18 @@ def check_exchange_health(
         else:
             break
 
-    halt_error_threshold = 3
-    if consecutive_errors > halt_error_threshold:
+    if consecutive_errors > cfg.error_threshold:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_exchange_health",
                 severity=SeverityLevel.HALT,
                 message=(
                     f"KILL SWITCH: {consecutive_errors} consecutive API errors "
-                    f"detected (limit {halt_error_threshold})."
+                    f"detected (limit {cfg.error_threshold})."
                 ),
                 metric_name="exchange_api_errors",
                 current_value=float(consecutive_errors),
-                threshold_value=float(halt_error_threshold),
+                threshold_value=float(cfg.error_threshold),
             )
         )
     else:
@@ -111,15 +201,19 @@ def check_exchange_health(
                 severity=SeverityLevel.OK,
                 message=(
                     f"{consecutive_errors} consecutive API errors "
-                    f"in last 24h — within limit ({halt_error_threshold})."
+                    f"in last {cfg.lookback_hours}h "
+                    f"— within limit ({cfg.error_threshold})."
                 ),
                 metric_name="exchange_api_errors",
                 current_value=float(consecutive_errors),
-                threshold_value=float(halt_error_threshold),
+                threshold_value=float(cfg.error_threshold),
             )
         )
 
-    # Check for withdrawal delay events in past 24h
+    # Check for withdrawal delay events
+    wd_cutoff = datetime.now(tz=UTC) - timedelta(
+        hours=cfg.withdrawal_delay_lookback_hours,
+    )
     withdrawal_delays = conn.execute(
         """
         SELECT COUNT(*)
@@ -127,7 +221,7 @@ def check_exchange_health(
         WHERE event_type = 'withdrawal_delay'
         AND occurred_at >= ?
         """,
-        [cutoff],
+        [wd_cutoff],
     ).fetchone()
 
     delay_count = withdrawal_delays[0] if withdrawal_delays else 0
@@ -138,7 +232,7 @@ def check_exchange_health(
                 severity=SeverityLevel.HALT,
                 message=(
                     f"KILL SWITCH: {delay_count} withdrawal delay event(s) "
-                    "detected in last 24h."
+                    f"detected in last {cfg.withdrawal_delay_lookback_hours}h."
                 ),
                 metric_name="exchange_withdrawal_delays",
                 current_value=float(delay_count),
@@ -150,7 +244,10 @@ def check_exchange_health(
             SurveillanceCheck(
                 detector="track_c_exchange_health",
                 severity=SeverityLevel.OK,
-                message="No withdrawal delays detected in last 24h.",
+                message=(
+                    "No withdrawal delays detected "
+                    f"in last {cfg.withdrawal_delay_lookback_hours}h."
+                ),
                 metric_name="exchange_withdrawal_delays",
                 current_value=0.0,
                 threshold_value=0.0,
@@ -168,12 +265,15 @@ def check_exchange_health(
 def check_spread_compression(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,
+    *,
+    detector_config: SpreadCompressionConfig | None = None,
 ) -> list[SurveillanceCheck]:
     """Detect structural arb edge compression.
 
     HALT if: rolling 7d average arb spread < 25% of 30d baseline.
     Reads from track_c_arb_spreads table if present.
     """
+    cfg = detector_config or SpreadCompressionConfig()
     checks: list[SurveillanceCheck] = []
 
     try:
@@ -203,17 +303,17 @@ def check_spread_compression(
         return checks
 
     now = datetime.now(tz=UTC)
-    cutoff_7d = now - timedelta(days=7)
-    cutoff_30d = now - timedelta(days=30)
+    cutoff_rolling = now - timedelta(days=cfg.rolling_window_days)
+    cutoff_baseline = now - timedelta(days=cfg.baseline_window_days)
 
-    # 30-day baseline average spread
+    # Baseline average spread
     baseline_row = conn.execute(
         """
         SELECT AVG(spread_bps)
         FROM track_c_arb_spreads
         WHERE recorded_at >= ? AND spread_bps IS NOT NULL
         """,
-        [cutoff_30d],
+        [cutoff_baseline],
     ).fetchone()
 
     baseline_avg = baseline_row[0] if baseline_row and baseline_row[0] else None
@@ -223,55 +323,61 @@ def check_spread_compression(
             SurveillanceCheck(
                 detector="track_c_spread_compression",
                 severity=SeverityLevel.OK,
-                message="Insufficient 30d spread history for compression check.",
+                message=(
+                    f"Insufficient {cfg.baseline_window_days}d spread history "
+                    "for compression check."
+                ),
                 metric_name="arb_spread_ratio",
             )
         )
         return checks
 
-    # Rolling 7-day average spread
+    # Rolling average spread
     rolling_row = conn.execute(
         """
         SELECT AVG(spread_bps)
         FROM track_c_arb_spreads
         WHERE recorded_at >= ? AND spread_bps IS NOT NULL
         """,
-        [cutoff_7d],
+        [cutoff_rolling],
     ).fetchone()
 
     rolling_avg = rolling_row[0] if rolling_row and rolling_row[0] else 0.0
 
     # Ratio of current to baseline
     spread_ratio = rolling_avg / baseline_avg if baseline_avg > 0 else 1.0
-    halt_threshold = 0.25  # HALT if rolling avg < 25% of baseline
 
-    if spread_ratio < halt_threshold:
+    if spread_ratio < cfg.halt_ratio:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_spread_compression",
                 severity=SeverityLevel.HALT,
                 message=(
-                    f"KILL SWITCH: Rolling 7d arb spread {rolling_avg:.1f}bps "
-                    f"is {spread_ratio:.0%} of 30d baseline {baseline_avg:.1f}bps "
-                    f"(halt below {halt_threshold:.0%})."
+                    f"KILL SWITCH: Rolling {cfg.rolling_window_days}d arb spread "
+                    f"{rolling_avg:.1f}bps "
+                    f"is {spread_ratio:.0%} of {cfg.baseline_window_days}d "
+                    f"baseline {baseline_avg:.1f}bps "
+                    f"(halt below {cfg.halt_ratio:.0%})."
                 ),
                 metric_name="arb_spread_ratio",
                 current_value=spread_ratio,
-                threshold_value=halt_threshold,
+                threshold_value=cfg.halt_ratio,
             )
         )
-    elif spread_ratio < 0.50:
+    elif spread_ratio < cfg.warn_ratio:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_spread_compression",
                 severity=SeverityLevel.WARNING,
                 message=(
-                    f"Arb spread compressing: rolling 7d {rolling_avg:.1f}bps "
-                    f"is {spread_ratio:.0%} of 30d baseline {baseline_avg:.1f}bps."
+                    f"Arb spread compressing: rolling {cfg.rolling_window_days}d "
+                    f"{rolling_avg:.1f}bps "
+                    f"is {spread_ratio:.0%} of {cfg.baseline_window_days}d "
+                    f"baseline {baseline_avg:.1f}bps."
                 ),
                 metric_name="arb_spread_ratio",
                 current_value=spread_ratio,
-                threshold_value=0.50,
+                threshold_value=cfg.warn_ratio,
             )
         )
     else:
@@ -280,12 +386,14 @@ def check_spread_compression(
                 detector="track_c_spread_compression",
                 severity=SeverityLevel.OK,
                 message=(
-                    f"Arb spread healthy: rolling 7d {rolling_avg:.1f}bps "
-                    f"({spread_ratio:.0%} of 30d baseline {baseline_avg:.1f}bps)."
+                    f"Arb spread healthy: rolling {cfg.rolling_window_days}d "
+                    f"{rolling_avg:.1f}bps "
+                    f"({spread_ratio:.0%} of {cfg.baseline_window_days}d "
+                    f"baseline {baseline_avg:.1f}bps)."
                 ),
                 metric_name="arb_spread_ratio",
                 current_value=spread_ratio,
-                threshold_value=halt_threshold,
+                threshold_value=cfg.halt_ratio,
             )
         )
 
@@ -300,12 +408,16 @@ def check_spread_compression(
 def check_funding_rate_reversal(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,
+    *,
+    detector_config: FundingRateReversalConfig | None = None,
 ) -> list[SurveillanceCheck]:
     """Detect sustained negative funding regime on tracked perpetual symbols.
 
-    HALT if: 3+ consecutive negative funding rates on any tracked symbol.
+    HALT if: halt_consecutive or more consecutive negative funding rates on
+    any tracked symbol.
     Reads from track_c_funding_rates table if present.
     """
+    cfg = detector_config or FundingRateReversalConfig()
     checks: list[SurveillanceCheck] = []
 
     try:
@@ -333,8 +445,6 @@ def check_funding_rate_reversal(
             )
         )
         return checks
-
-    halt_consecutive = 3
 
     # Get all tracked symbols
     symbols_row = conn.execute(
@@ -380,7 +490,7 @@ def check_funding_rate_reversal(
             worst_streak = consecutive_neg
             worst_symbol = symbol
 
-    if worst_streak >= halt_consecutive:
+    if worst_streak >= cfg.halt_consecutive:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_funding_rate_reversal",
@@ -388,26 +498,27 @@ def check_funding_rate_reversal(
                 message=(
                     f"KILL SWITCH: {worst_streak} consecutive negative "
                     f"8h funding periods on {worst_symbol} "
-                    f"(halt at {halt_consecutive})."
+                    f"(halt at {cfg.halt_consecutive})."
                 ),
                 metric_name="consecutive_negative_funding",
                 current_value=float(worst_streak),
-                threshold_value=float(halt_consecutive),
+                threshold_value=float(cfg.halt_consecutive),
                 details={"symbol": worst_symbol},
             )
         )
-    elif worst_streak >= 2:
+    elif worst_streak >= cfg.warn_consecutive:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_funding_rate_reversal",
                 severity=SeverityLevel.WARNING,
                 message=(
                     f"{worst_streak} consecutive negative funding periods "
-                    f"on {worst_symbol} — approaching halt threshold ({halt_consecutive})."
+                    f"on {worst_symbol} — approaching halt threshold "
+                    f"({cfg.halt_consecutive})."
                 ),
                 metric_name="consecutive_negative_funding",
                 current_value=float(worst_streak),
-                threshold_value=float(halt_consecutive),
+                threshold_value=float(cfg.halt_consecutive),
                 details={"symbol": worst_symbol},
             )
         )
@@ -422,7 +533,7 @@ def check_funding_rate_reversal(
                 ),
                 metric_name="consecutive_negative_funding",
                 current_value=float(worst_streak),
-                threshold_value=float(halt_consecutive),
+                threshold_value=float(cfg.halt_consecutive),
             )
         )
 
@@ -437,16 +548,16 @@ def check_funding_rate_reversal(
 def check_beta_drift(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,
+    *,
+    detector_config: BetaDriftConfig | None = None,
 ) -> list[SurveillanceCheck]:
     """Detect Track C portfolio beta to SPY exceeding the market-neutral mandate.
 
     HALT if: rolling 30d beta of Track C returns to SPY > 0.15.
     Computes beta from track_c_daily_returns and SPY prices in market_data_daily.
     """
+    cfg = detector_config or BetaDriftConfig()
     checks: list[SurveillanceCheck] = []
-    window_days = 30
-    halt_beta = 0.15
-    warn_beta = 0.10
 
     try:
         table_exists = conn.execute(
@@ -474,7 +585,7 @@ def check_beta_drift(
         )
         return checks
 
-    cutoff = datetime.now(tz=UTC).date() - timedelta(days=window_days + 5)
+    cutoff = datetime.now(tz=UTC).date() - timedelta(days=cfg.window_days + 5)
 
     # Fetch Track C daily returns
     tc_rows = conn.execute(
@@ -499,7 +610,7 @@ def check_beta_drift(
         [cutoff],
     ).fetchall()
 
-    if len(tc_rows) < window_days or len(spy_rows) < window_days:
+    if len(tc_rows) < cfg.window_days or len(spy_rows) < cfg.window_days:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_beta_drift",
@@ -507,7 +618,7 @@ def check_beta_drift(
                 message=(
                     f"Insufficient history for beta calculation "
                     f"({len(tc_rows)} Track C, {len(spy_rows)} SPY rows, "
-                    f"need {window_days})."
+                    f"need {cfg.window_days})."
                 ),
                 metric_name="track_c_beta_to_spy",
             )
@@ -523,9 +634,9 @@ def check_beta_drift(
             spy_dict[date_val] = (close - prev_close) / prev_close
 
     # Align on common dates, take most recent window_days
-    common_dates = sorted(set(tc_dict) & set(spy_dict))[-window_days:]
+    common_dates = sorted(set(tc_dict) & set(spy_dict))[-cfg.window_days :]
 
-    if len(common_dates) < window_days // 2:
+    if len(common_dates) < cfg.window_days // 2:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_beta_drift",
@@ -552,32 +663,34 @@ def check_beta_drift(
     spy_var = sum((r - spy_mean) ** 2 for r in spy_rets) / max(n - 1, 1)
     beta = cov / spy_var if spy_var > 0 else 0.0
 
-    if abs(beta) >= halt_beta:
+    if abs(beta) >= cfg.halt_beta:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_beta_drift",
                 severity=SeverityLevel.HALT,
                 message=(
-                    f"KILL SWITCH: Track C rolling 30d beta to SPY = {beta:.3f} "
-                    f"exceeds mandate limit {halt_beta:.2f}."
+                    f"KILL SWITCH: Track C rolling {cfg.window_days}d "
+                    f"beta to SPY = {beta:.3f} "
+                    f"exceeds mandate limit {cfg.halt_beta:.2f}."
                 ),
                 metric_name="track_c_beta_to_spy",
                 current_value=abs(beta),
-                threshold_value=halt_beta,
+                threshold_value=cfg.halt_beta,
             )
         )
-    elif abs(beta) >= warn_beta:
+    elif abs(beta) >= cfg.warn_beta:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_beta_drift",
                 severity=SeverityLevel.WARNING,
                 message=(
                     f"Track C beta to SPY = {beta:.3f} approaching "
-                    f"halt limit {halt_beta:.2f} (warn at {warn_beta:.2f})."
+                    f"halt limit {cfg.halt_beta:.2f} "
+                    f"(warn at {cfg.warn_beta:.2f})."
                 ),
                 metric_name="track_c_beta_to_spy",
                 current_value=abs(beta),
-                threshold_value=warn_beta,
+                threshold_value=cfg.warn_beta,
             )
         )
     else:
@@ -587,11 +700,12 @@ def check_beta_drift(
                 severity=SeverityLevel.OK,
                 message=(
                     f"Track C beta to SPY = {beta:.3f} — "
-                    f"within market-neutral mandate (limit {halt_beta:.2f})."
+                    f"within market-neutral mandate "
+                    f"(limit {cfg.halt_beta:.2f})."
                 ),
                 metric_name="track_c_beta_to_spy",
                 current_value=abs(beta),
-                threshold_value=halt_beta,
+                threshold_value=cfg.halt_beta,
             )
         )
 
@@ -606,6 +720,8 @@ def check_beta_drift(
 def check_cross_strategy_correlation(
     conn: duckdb.DuckDBPyConnection,
     config: AppConfig,
+    *,
+    detector_config: CrossTrackCorrelationConfig | None = None,
 ) -> list[SurveillanceCheck]:
     """Detect Track C correlation spike with Track A returns.
 
@@ -615,10 +731,8 @@ def check_cross_strategy_correlation(
     High correlation means Track C is no longer providing diversification —
     the market-neutral arb is picking up systematic beta from Track A.
     """
+    cfg = detector_config or CrossTrackCorrelationConfig()
     checks: list[SurveillanceCheck] = []
-    window_days = 30
-    warn_corr = 0.20
-    halt_corr = 0.30
 
     # Check both required tables
     for table in ("track_c_daily_returns", "portfolio_snapshots"):
@@ -648,13 +762,15 @@ def check_cross_strategy_correlation(
                 SurveillanceCheck(
                     detector="track_c_cross_strategy_correlation",
                     severity=SeverityLevel.OK,
-                    message="Cannot access tables for cross-strategy correlation check.",
+                    message=(
+                        "Cannot access tables for cross-strategy correlation check."
+                    ),
                     metric_name="track_c_vs_track_a_correlation",
                 )
             )
             return checks
 
-    cutoff = datetime.now(tz=UTC).date() - timedelta(days=window_days + 5)
+    cutoff = datetime.now(tz=UTC).date() - timedelta(days=cfg.window_days + 5)
 
     # Track C daily returns
     tc_rows = conn.execute(
@@ -678,7 +794,7 @@ def check_cross_strategy_correlation(
         [cutoff],
     ).fetchall()
 
-    if len(tc_rows) < window_days or len(ta_rows) < window_days:
+    if len(tc_rows) < cfg.window_days or len(ta_rows) < cfg.window_days:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_cross_strategy_correlation",
@@ -686,7 +802,7 @@ def check_cross_strategy_correlation(
                 message=(
                     f"Insufficient history for correlation check "
                     f"({len(tc_rows)} Track C, {len(ta_rows)} Track A rows, "
-                    f"need {window_days})."
+                    f"need {cfg.window_days})."
                 ),
                 metric_name="track_c_vs_track_a_correlation",
             )
@@ -706,9 +822,9 @@ def check_cross_strategy_correlation(
             ta_dict[date_val] = (curr_nav - prev_nav) / prev_nav
 
     # Align on common dates, take most recent window_days
-    common_dates = sorted(set(tc_dict) & set(ta_dict))[-window_days:]
+    common_dates = sorted(set(tc_dict) & set(ta_dict))[-cfg.window_days :]
 
-    if len(common_dates) < window_days // 2:
+    if len(common_dates) < cfg.window_days // 2:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_cross_strategy_correlation",
@@ -736,34 +852,35 @@ def check_cross_strategy_correlation(
     ta_std = (sum((r - ta_mean) ** 2 for r in ta_rets) / max(n - 1, 1)) ** 0.5
     corr = cov / (tc_std * ta_std) if tc_std > 0 and ta_std > 0 else 0.0
 
-    if corr > halt_corr:
+    if corr > cfg.halt_corr:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_cross_strategy_correlation",
                 severity=SeverityLevel.HALT,
                 message=(
-                    f"KILL SWITCH: Track C vs Track A 30d correlation = {corr:.3f} "
-                    f"exceeds halt threshold {halt_corr:.2f}. "
+                    f"KILL SWITCH: Track C vs Track A {cfg.window_days}d "
+                    f"correlation = {corr:.3f} "
+                    f"exceeds halt threshold {cfg.halt_corr:.2f}. "
                     "Market-neutral mandate breached."
                 ),
                 metric_name="track_c_vs_track_a_correlation",
                 current_value=corr,
-                threshold_value=halt_corr,
+                threshold_value=cfg.halt_corr,
             )
         )
-    elif corr > warn_corr:
+    elif corr > cfg.warn_corr:
         checks.append(
             SurveillanceCheck(
                 detector="track_c_cross_strategy_correlation",
                 severity=SeverityLevel.WARNING,
                 message=(
                     f"Track C vs Track A correlation = {corr:.3f} "
-                    f"exceeds warn threshold {warn_corr:.2f} "
-                    f"(halt at {halt_corr:.2f})."
+                    f"exceeds warn threshold {cfg.warn_corr:.2f} "
+                    f"(halt at {cfg.halt_corr:.2f})."
                 ),
                 metric_name="track_c_vs_track_a_correlation",
                 current_value=corr,
-                threshold_value=warn_corr,
+                threshold_value=cfg.warn_corr,
             )
         )
     else:
@@ -773,11 +890,13 @@ def check_cross_strategy_correlation(
                 severity=SeverityLevel.OK,
                 message=(
                     f"Track C vs Track A correlation = {corr:.3f} — "
-                    f"diversification intact (warn >{warn_corr:.2f}, halt >{halt_corr:.2f})."
+                    f"diversification intact "
+                    f"(warn >{cfg.warn_corr:.2f}, "
+                    f"halt >{cfg.halt_corr:.2f})."
                 ),
                 metric_name="track_c_vs_track_a_correlation",
                 current_value=corr,
-                threshold_value=warn_corr,
+                threshold_value=cfg.warn_corr,
             )
         )
 

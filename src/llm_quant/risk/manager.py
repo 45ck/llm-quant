@@ -21,6 +21,7 @@ from llm_quant.risk.limits import (
     check_atr_stop_loss,
     check_cash_reserve,
     check_drawdown_limit,
+    check_exchange_concentration,
     check_gross_exposure,
     check_net_exposure,
     check_position_size,
@@ -293,6 +294,7 @@ class RiskManager:
         db_conn: Any | None = None,
         exchange: str = "UNKNOWN",
         spy_beta: float | None = None,
+        exchange_weights: dict[str, float] | None = None,
     ) -> list[RiskCheckResult]:
         """Run **all** risk checks on a single proposed trade.
 
@@ -311,15 +313,21 @@ class RiskManager:
         track:
             Which risk-limit track to apply: ``"A"`` (default),
             ``"B"``, or ``"C"``.  Track C also runs four additional
-            structural-arb kill-switch checks.
+            structural-arb kill-switch checks plus an exchange-concentration
+            check.
         db_conn:
             Active DuckDB connection for Track C kill-switch queries.  Pass
             ``None`` to skip DB-backed checks (they default to pass).
         exchange:
-            Exchange identifier used by the Track C exchange-outage check.
+            Exchange identifier used by the Track C exchange-outage and
+            exchange-concentration checks.
         spy_beta:
             Pre-computed rolling-30d beta to SPY for the Track C beta-breach
             check.  Pass ``None`` to skip.
+        exchange_weights:
+            Current portfolio weight per exchange as fractions of NAV.  Used
+            by the Track C exchange-concentration check.  Pass ``None`` to
+            default to an empty mapping (all weight = 0).
 
         Returns
         -------
@@ -603,6 +611,25 @@ class RiskManager:
 
             # 14. Beta breach check (rolling 30d beta to SPY)
             results.append(_check_beta_breach(spy_beta, tc.max_beta_to_spy))
+
+            # 15. Exchange concentration check (buys only)
+            if is_buy:
+                results.append(
+                    check_exchange_concentration(
+                        exchange=exchange,
+                        exchange_weights=exchange_weights or {},
+                        trade_weight=additional_weight,
+                        max_exchange_concentration=tc.max_exchange_concentration,
+                    )
+                )
+            else:
+                results.append(
+                    RiskCheckResult(
+                        passed=True,
+                        rule="exchange_concentration",
+                        message="Sell/close reduces exchange concentration.",
+                    )
+                )
         else:
             # Emit pass placeholders so downstream code sees a consistent
             # result count regardless of track.
@@ -611,6 +638,7 @@ class RiskManager:
                 "tc_funding_reversal",
                 "tc_spread_collapse",
                 "tc_beta_breach",
+                "exchange_concentration",
             ):
                 results.append(
                     RiskCheckResult(
@@ -636,6 +664,7 @@ class RiskManager:
         db_conn: Any | None = None,
         exchange: str = "UNKNOWN",
         spy_beta: float | None = None,
+        exchange_weights: dict[str, float] | None = None,
     ) -> tuple[list[TradeSignal], list[tuple[TradeSignal, list[RiskCheckResult]]]]:
         """Filter a batch of signals through the risk gate.
 
@@ -657,9 +686,14 @@ class RiskManager:
         db_conn:
             Active DuckDB connection for Track C kill-switch queries.
         exchange:
-            Exchange identifier for Track C exchange-outage check.
+            Exchange identifier for Track C exchange-outage and
+            exchange-concentration checks.
         spy_beta:
             Pre-computed rolling-30d beta to SPY for Track C beta-breach check.
+        exchange_weights:
+            Current portfolio weight per exchange as fractions of NAV.
+            Forwarded to ``check_trade`` for Track C exchange-concentration
+            check.
 
         Returns
         -------
@@ -695,6 +729,7 @@ class RiskManager:
                 db_conn=db_conn,
                 exchange=exchange,
                 spy_beta=spy_beta,
+                exchange_weights=exchange_weights,
             )
             failures = [c for c in checks if not c.passed]
 

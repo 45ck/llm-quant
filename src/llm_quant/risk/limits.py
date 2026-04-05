@@ -669,6 +669,47 @@ def check_cvar_limit(
     )
 
 
+def check_exchange_concentration(
+    exchange: str,
+    exchange_weights: dict[str, float],
+    trade_weight: float,
+    max_exchange_concentration: float,
+) -> RiskCheckResult:
+    """Ensure no single exchange exceeds ``max_exchange_concentration`` of NAV.
+
+    Track C structural-arb strategies often trade across multiple venues
+    (NYSE, CME, Kalshi, crypto exchanges).  This check limits exposure to
+    any one exchange to mitigate venue-concentration risk (exchange outage,
+    counterparty failure, etc.).
+
+    Parameters
+    ----------
+    exchange:
+        Exchange identifier for the proposed trade (e.g. ``"NYSE"``,
+        ``"CME"``, ``"KALSHI"``).
+    exchange_weights:
+        Current portfolio weight per exchange as fractions of NAV.
+    trade_weight:
+        Additional weight this trade would add on the target exchange.
+    max_exchange_concentration:
+        Maximum allowed weight on a single exchange as a fraction of NAV.
+    """
+    current_weight = exchange_weights.get(exchange, 0.0)
+    projected = current_weight + trade_weight
+    passed = projected <= max_exchange_concentration
+    return RiskCheckResult(
+        passed=passed,
+        rule="exchange_concentration",
+        message=(
+            f"Exchange '{exchange}' weight after trade {projected:.2%} "
+            f"{'<=' if passed else '>'} limit {max_exchange_concentration:.2%} "
+            f"(current {current_weight:.2%})."
+        ),
+        current_value=projected,
+        limit_value=max_exchange_concentration,
+    )
+
+
 def check_drawdown_limit(
     current_nav: float,
     peak_nav: float,

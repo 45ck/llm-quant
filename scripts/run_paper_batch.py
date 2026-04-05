@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 32 strategies.
+"""Paper trading batch runner: generates daily signals for all 33 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -55,6 +55,8 @@ LEAD_LAG_PARAMS: dict[str, tuple[str, str, int, float, float, float]] = {
     "tlt-spy-rate-momentum": ("TLT", "SPY", 10, 0.01, -0.01, 0.80),
     "tlt-qqq-rate-tech": ("TLT", "QQQ", 10, 0.01, -0.01, 0.80),
     "ief-qqq-rate-tech": ("IEF", "QQQ", 10, 0.005, -0.005, 0.80),
+    # Track D: leveraged re-expression
+    "tlt-tqqq-leveraged-lead-lag": ("TLT", "TQQQ", 10, 0.01, -0.01, 0.30),
 }
 
 # All symbols needed across all strategies (union)
@@ -92,6 +94,7 @@ ALL_SYMBOLS = sorted(
         "XLY",
         "XLC",
         "XLRE",
+        "TQQQ",
     }
 )
 
@@ -128,6 +131,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "uso-xle-mean-reversion-v2": "F2",
     "gdx-gld-mean-reversion-v1": "F2",
     "dollar-gold-regime-v1": "F26",
+    "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
 }
 
 
@@ -947,7 +951,7 @@ def run_all_signals(
     dates: list,
     prices_df: pl.DataFrame,
 ) -> dict[str, dict]:
-    """Compute today's signal for all 32 strategies. Returns slug -> signal dict."""
+    """Compute today's signal for all 33 strategies. Returns slug -> signal dict."""
     results: dict[str, dict] = {}
 
     # Type 1: Lead-lag strategies
@@ -1162,7 +1166,7 @@ def main():
     latest_date = spy_dates[-1]
     logger.info("Latest data date: %s", latest_date)
 
-    # 2. Compute signals for all 32 strategies
+    # 2. Compute signals for all 33 strategies
     signals = run_all_signals(sym_data, spy_dates, prices_df)
 
     # 3. Process each strategy
