@@ -465,7 +465,7 @@ def main() -> int:
     args = parser.parse_args()
 
     router = TrackRouter.load_from_yaml()
-    track_order = ["track-a", "track-b", "track-d", "discretionary"]
+    track_order = router.track_display_order
     if args.track:
         track_order = [args.track]
 

@@ -72,6 +72,7 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "agg-tlt-duration-rotation-v2": "DIRECT",  # Direct computation (duration rotation)
     "uso-xle-mean-reversion-v2": "DIRECT",  # Direct computation (energy pair MR, Track B)
     "gdx-gld-mean-reversion-v1": "DIRECT",  # Direct computation (miners pair MR, Track B)
+    "dollar-gold-regime-v1": "DIRECT",  # Direct computation (dollar-gold regime)
 }
 
 # Mechanism family labels for context
@@ -107,6 +108,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "agg-tlt-duration-rotation-v2": "F22: Duration Rotation",
     "uso-xle-mean-reversion-v2": "F2: Mean Reversion (Energy)",
     "gdx-gld-mean-reversion-v1": "F2: Mean Reversion (Miners)",
+    "dollar-gold-regime-v1": "F26: Dollar-Gold Regime",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -141,6 +143,7 @@ TRACK_A_SLUGS: list[str] = [
     "tlt-gld-disinflation-v1",
     "dbc-spy-commodity-equity-v1",
     "agg-tlt-duration-rotation-v2",
+    "dollar-gold-regime-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -559,6 +562,8 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         return _compute_pair_mr_returns(
             data_dir, "GDX", "GLD", 0.50, 0.20, 0.35, 60, 1.0
         )
+    if slug == "dollar-gold-regime-v1":
+        return _compute_dollar_gold_regime_returns(data_dir)
     return None
 
 
@@ -1676,6 +1681,113 @@ def _compute_tlt_gld_disinflation_returns(data_dir: Path) -> dict | None:
         }
     except Exception as e:
         logger.warning("Failed to compute tlt-gld-disinflation returns: %s", e)
+        return None
+
+
+def _compute_dollar_gold_regime_returns(data_dir: Path) -> dict | None:
+    """Dollar-gold regime v1: UUP/GLD ratio momentum → SPY / GLD+DBA allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["UUP", "GLD", "SPY", "DBA"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 60
+        lookback = 30
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build UUP/GLD ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            uup = sym_data["UUP"].get(d, 0.0)
+            gld = sym_data["GLD"].get(d, 0.0)
+            ratio_series.append(uup / gld if uup > 0 and gld > 0 else 0.0)
+
+        for i in range(warmup, n):
+            if i < lookback + 1:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_now = ratio_series[i - 1]
+            ratio_lb = ratio_series[i - 1 - lookback]
+            if ratio_now <= 0 or ratio_lb <= 0:
+                daily_returns.append(0.0)
+                continue
+
+            ratio_mom = ratio_now / ratio_lb - 1
+
+            if ratio_mom > 0:
+                # Dollar strength: equity benefits
+                regime = "dollar_strength"
+                day_ret = spy_rets[i] * 0.60
+            else:
+                # Gold strength: gold + commodities
+                regime = "gold_strength"
+                day_ret = _asset_ret("GLD", i) * 0.40 + _asset_ret("DBA", i) * 0.15
+
+            if prev_regime is not None and regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.961,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute dollar-gold-regime returns: %s", e)
         return None
 
 

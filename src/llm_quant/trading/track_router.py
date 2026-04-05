@@ -186,6 +186,11 @@ class TrackRouter:
         """Return a sorted list of all known track IDs."""
         return sorted(self._tracks.keys())
 
+    @property
+    def track_display_order(self) -> list[str]:
+        """Return track IDs in YAML insertion order (for display)."""
+        return list(self._tracks.keys())
+
     def __repr__(self) -> str:
         counts = {tid: len(info.strategies) for tid, info in self._tracks.items()}
         return f"TrackRouter(tracks={counts})"

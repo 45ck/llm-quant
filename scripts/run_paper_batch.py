@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 31 strategies.
+"""Paper trading batch runner: generates daily signals for all 32 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -81,6 +81,7 @@ ALL_SYMBOLS = sorted(
         "EMB",
         "SOXX",
         "IWM",
+        "UUP",
         "GDX",
         "XLB",
         "XLF",
@@ -126,6 +127,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "agg-tlt-duration-rotation-v2": "F22",
     "uso-xle-mean-reversion-v2": "F2",
     "gdx-gld-mean-reversion-v1": "F2",
+    "dollar-gold-regime-v1": "F26",
 }
 
 
@@ -945,7 +947,7 @@ def run_all_signals(
     dates: list,
     prices_df: pl.DataFrame,
 ) -> dict[str, dict]:
-    """Compute today's signal for all 31 strategies. Returns slug -> signal dict."""
+    """Compute today's signal for all 32 strategies. Returns slug -> signal dict."""
     results: dict[str, dict] = {}
 
     # Type 1: Lead-lag strategies
@@ -1098,6 +1100,16 @@ def run_all_signals(
             {"SPY": 0.50, "GLD": 0.20},
             {"SPY": 0.80},
         ),
+        (
+            "dollar-gold-regime-v1",
+            "UUP",
+            "GLD",
+            30,
+            "dollar_strong",
+            "gold_strong",
+            {"SPY": 0.60},
+            {"GLD": 0.40, "DBA": 0.15},
+        ),
     ]
     for slug, sym_a, sym_b, lb, ra, rb, aa, ab in ratio_configs:
         try:
@@ -1150,7 +1162,7 @@ def main():
     latest_date = spy_dates[-1]
     logger.info("Latest data date: %s", latest_date)
 
-    # 2. Compute signals for all 31 strategies
+    # 2. Compute signals for all 32 strategies
     signals = run_all_signals(sym_data, spy_dates, prices_df)
 
     # 3. Process each strategy

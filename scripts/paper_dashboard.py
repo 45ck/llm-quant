@@ -400,7 +400,7 @@ def main() -> None:
 
     # Collect metrics for all strategies across all tracks
     all_strategies: list[StrategyMetrics] = []
-    track_order = ["track-a", "track-b", "track-d", "discretionary"]
+    track_order = router.track_display_order
 
     for track_id in track_order:
         if track_id not in router.track_ids:

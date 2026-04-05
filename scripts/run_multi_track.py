@@ -435,8 +435,8 @@ def main() -> int:
         ref_date=today,
     )
 
-    # Track order
-    track_order = ["track-a", "track-b", "track-d", "discretionary"]
+    # Track order (from YAML config, not hardcoded)
+    track_order = router.track_display_order
     if args.track:
         track_order = [args.track]
 
