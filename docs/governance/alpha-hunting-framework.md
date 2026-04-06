@@ -30,8 +30,9 @@ SR=1.86 — not 5.0. The simplified "N_effective" approximation is optimistic.
 | 16 | 4.00 | 2.71 | 2.09 | 1.75 | 1.33 |
 | 25 | 5.00 | 3.09 | 2.28 | 1.86 | 1.39 |
 
-**Current state (2026-04-01):** 32 strategies across 20 mechanism families, avg ρ=0.186.
-Empirical portfolio SR = **2.205** (18 cluster representatives, MaxDD=6.3%). This was
+**Current state (2026-04-06):** 34 strategies across 20 mechanism families (26 defined, 20 passing), avg ρ=0.186.
+Empirical portfolio SR = **2.205** (18 cluster representatives, MaxDD=6.3%). Track D added
+D3 TQQQ/TMF ratio MR (Sharpe=2.213, highest individual strategy ever). This was
 achieved by expanding from a credit-heavy portfolio (11 strategies, ρ=0.584, SR≈1.35)
 to a diversified multi-family portfolio. The key insight: fixed income ratio momentum
 (F14/F15), commodity cycle (F11), sector rotation (F12), volatility regime (F13),
@@ -181,7 +182,7 @@ regime detection (Mandate A) becomes the meta-strategy.
 
 ## Mechanism Diversification Checklist
 
-Strategies from 13 of 15 mechanism families now passing — well above the minimum 5
+Strategies from 20 of 26 mechanism families now passing — well above the minimum 5
 families needed for meaningful diversification.
 
 ### Family 1: Cross-Asset Information Flow
@@ -261,22 +262,76 @@ Flattening→80% SPY, Steepening→80% GLD. Near-zero corr with credit-equity. P
 Sharpe=1.313, MaxDD=13.34%. TIP/TLT price ratio 20-day momentum.
 Loosening→75% SPY, Tightening→50% GLD + 20% SHY. Clusters with F14 (ρ=0.79).
 
+### Family 16: Breakeven Inflation
+**Status: PASSING (1 strategy: breakeven-inflation-v1)**
+Sharpe=1.068, MaxDD=13.01%. TIP/IEF ratio 30-day momentum as breakeven inflation proxy.
+Rising inflation→DBA+GLD+SPY, Falling→SPY+SHY. Different from F15 (TIP/TLT=real yield level vs TIP/IEF=breakeven rate).
+
+### Family 17: Capital Flow (Global Yield)
+**Status: PASSING (1 strategy: global-yield-flow-v2)**
+Sharpe=0.900, MaxDD=10.90%. TLT/EFA ratio 30-day momentum.
+US-preferred→80% SPY, International-preferred→40% EFA + 20% GLD. 100% perturbation stability.
+
+### Family 18: Commodity Carry
+**Status: PASSING (1 strategy: commodity-carry-v2)**
+Sharpe=1.119, MaxDD=14.39%. USO/DBC 20-day ratio momentum as crude oil backwardation proxy.
+Carry→USO+GLD+SPY, Contango→SPY+SHY. Genuinely orthogonal to credit-equity.
+
+### Family 19: Disinflation Signal
+**Status: PASSING (1 strategy: tlt-gld-disinflation-v1)**
+Sharpe=1.313, MaxDD=8.48%. TLT/GLD ratio 30-day momentum.
+Disinflation→80% SPY, Inflation→GLD+DBA+SPY. 100% perturbation stability (PERFECT).
+
+### Family 20: Equity Sector Ratio
+**Status: FAILED** — XLF/XLU near-miss (DSR=0.949), others too weak.
+Equity sector ratio momentum has real signals (p=0.000) but effect size insufficient (Sharpe 0.63-0.89).
+
+### Family 21: Commodity-Equity Regime
+**Status: PASSING (1 strategy: dbc-spy-commodity-equity-v1)**
+Sharpe=0.942, MaxDD=10.7%. DBC/SPY ratio 30-day momentum.
+Commodity→GLD+DBA+SPY, Equity→SPY. Clusters with commodity/macro family.
+
+### Family 22: Duration Rotation
+**Status: PASSING (1 strategy: agg-tlt-duration-rotation-v2)**
+Sharpe=0.915, MaxDD=13.4%. AGG/TLT ratio 20-day momentum.
+Flattening→SPY+GLD, Steepening→SPY. Clusters with commodity/macro family.
+
+### Family 23: VIX Fear Gauge
+**Status: FAILED** — VIX spike contrarian has n=4 events in 5 years (too rare for systematic).
+
+### Family 24: Treasury Auction Cycle
+**Status: FAILED** — Not tested; data availability issues with auction schedules.
+
+### Family 25: Sector Dispersion MR
+**Status: FAILED** — Sector crowding signal Sharpe=0.509, p=1.0. Timing is random.
+
+### Family 26: Dollar-Gold Regime
+**Status: PASSING (1 strategy: dollar-gold-regime-v1)**
+Sharpe=0.987, MaxDD=13.9%. UUP/GLD ratio 30-day momentum as purchasing power proxy.
+Dollar-strong→60% SPY, Gold-strong→40% GLD + 15% DBA. lookback=30 critical.
+
+---
+
+**NOTE:** F11-F22 and F26 all cluster together (avg ρ=0.75-0.85). Adding more commodity/macro/inflation
+ratio momentum strategies provides redundancy but ZERO new decorrelation. New cluster representatives
+require genuinely different mechanisms — not more ratio momentum on different instrument pairs.
+
 ---
 
 ## Prioritized Research Roadmap
 
-Research phase largely complete — 13 of 15 families tested. Focus shifts to paper trading
+Research phase largely complete — 20 of 26 families tested. Focus shifts to paper trading
 validation and portfolio optimization.
 
 | Priority | Action | Expected Effort | Status |
 |----------|--------|----------------|--------|
-| 1 | Paper trading validation (23 strategies, 30-day minimum) | Ongoing | In progress |
-| 2 | HRP optimizer for production weights | 1 session | Not started |
-| 3 | Walk-forward engine for live monitoring | 1-2 sessions | Not started |
+| 1 | Paper trading validation (34 strategies, 30-day minimum) | Ongoing | In progress (day ~11 of 30) |
+| 2 | HRP optimizer for production weights | 1 session | Built (scripts/portfolio_optimizer.py) |
+| 3 | Walk-forward engine for live monitoring | 1-2 sessions | Built (--walk-forward flag) |
 | 4 | Volatility targeting overlay | 1 session | Not started |
-| 5 | F4 VIX redesign (VXX-short instead of equity timing) | 1 session | Deprioritized |
+| 5 | Track D paper trading (D1 TLT-TQQQ + D3 TQQQ/TMF) | 60 days | In progress (day 1-4) |
 | 6 | Track C (Niche Arb) production readiness | 2-3 sessions | 4/17 gates done |
-| 7 | Track D paper trading (TLT-TQQQ) | Ongoing | In progress |
+| 7 | Novel mechanism discovery (F27+) | Ongoing | Research phase |
 
 ---
 
@@ -305,8 +360,8 @@ validation and portfolio optimization.
 ## The Uncomfortable Truths
 
 1. **The credit-equity signal is real.** CPCV OOS/IS > 1.0 across 10 variants is strong
-   evidence. But the portfolio is no longer dependent on it — with 13 mechanism families,
-   credit-equity (F1) represents only ~30% of portfolio weight via clustering.
+   evidence. But the portfolio is no longer dependent on it — with 20 mechanism families,
+   credit-equity (F1) represents only ~15% of portfolio weight via clustering.
 
 2. **Daily frequency with free data has a Sharpe ceiling of ~1.5 per strategy.** Higher
    Sharpe requires higher frequency, better data, or both. This is an empirical ceiling,
@@ -356,3 +411,4 @@ See `docs/research/extreme-sharpe-playbook.md` for the full correlation mathemat
 |---------|------|--------|
 | 1.0 | 2026-03-26 | Initial framework. Covers 4-phase kill chain, 8 mechanism families, fraud detectors, real vs. fake alpha signatures. |
 | 2.0 | 2026-04-01 | Updated to 15 mechanism families (13 passing), 23 strategies, portfolio SR=2.184. Roadmap shifted from research to paper trading validation. |
+| 3.0 | 2026-04-06 | Updated to 26 mechanism families (20 passing), 34 strategies, portfolio SR=2.205. Added F16-F26 family descriptions. Track D review: D3 TQQQ/TMF (Sharpe=2.21) highest individual strategy. Commodity/macro saturation noted. |
