@@ -1,0 +1,68 @@
+# Novel Alpha Mechanism Hypotheses F27-F31
+# Generated: 2026-04-06
+# Status: Research queue — none backtested yet
+
+hypotheses:
+  - family: F27
+    name: "AAII Retail Sentiment Contrarian"
+    mechanism: "Weekly AAII bearish % reaches 80th percentile → contrarian long SPY"
+    expected_sharpe: "0.75-1.05"
+    expected_rho_to_portfolio: "0.05-0.10"
+    new_data_needed: "AAII CSV (free scraper from aaii.com)"
+    key_difference: "Survey sentiment vs price-momentum — fires when F7 VIX contrarian does NOT"
+    priority: 3
+    academic_support: "SSRN 6143986, 25+ year backtest history"
+    status: pending
+
+  - family: F28
+    name: "International Country Cross-Sectional Momentum"
+    mechanism: "Rank 8 country ETFs by 12-1 month momentum, hold top 3"
+    universe: [EWJ, VGK, EWZ, EWT, EWC, EWA, EWY, INDA]
+    expected_sharpe: "0.85-1.20"
+    expected_rho_to_portfolio: "0.10-0.20"
+    new_data_needed: "None (all yfinance)"
+    key_difference: "Cross-sectional rank vs time-series momentum (F3), geographic diversification"
+    priority: 1
+    academic_support: "Chan/Hameed/Tong 2000, Asness/Moskowitz/Pedersen 2013"
+    status: pending
+
+  - family: F29
+    name: "MOVE/VIX Bond Volatility Regime"
+    mechanism: "MOVE/VIX ratio divergence signals rate-driven equity risk"
+    expected_sharpe: "0.80-1.10"
+    expected_rho_to_portfolio: "0.05-0.15"
+    new_data_needed: "FRED BAMLMOVE (or TLT realized vol proxy)"
+    key_difference: "Bond IMPLIED vol vs equity implied vol — exactly what F4 missed in 2022"
+    priority: 4
+    academic_support: "Bekaert/Hoerova 2014, Colacito/Engle/Ghysels 2011"
+    status: pending
+
+  - family: F30
+    name: "Equity Risk Premium Valuation Regime"
+    mechanism: "ERP z-score (earnings yield - 10yr yield) timing"
+    expected_sharpe: "0.80-1.05"
+    expected_rho_to_portfolio: "0.10-0.20"
+    new_data_needed: "FRED DGS10 + CAPE"
+    key_difference: "Fundamental LEVEL signal, not rate change or credit spread"
+    priority: 5
+    academic_support: "Asness 2003 'Fight the Fed Model'"
+    status: pending
+
+  - family: F31
+    name: "Factor ETF Cross-Sectional Momentum"
+    mechanism: "Rank 7 factor ETFs by 3-6 month momentum, hold top 2"
+    universe: [VLUE, MTUM, QUAL, USMV, VTV, VUG, IWM]
+    expected_sharpe: "0.85-1.15"
+    expected_rho_to_portfolio: "0.20-0.30"
+    new_data_needed: "None (all yfinance)"
+    key_difference: "Cross-sectional factor rotation (not binary K-series timing)"
+    priority: 2
+    academic_support: "Gupta/Kelly 2019, Israel/Kelly/Richardson 2020"
+    status: pending
+
+execution_priority:
+  - "F28 — zero new data, strongest evidence, no overlap"
+  - "F31 — zero new data, fixes K-series drawdown problem"
+  - "F27 — needs one HTTP scraper, listed in H7.4 since project start"
+  - "F29 — needs FRED call, addresses F4 family total failure"
+  - "F30 — needs FRED data, sensitive to CAPE estimation"
