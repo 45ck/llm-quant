@@ -175,28 +175,36 @@ def calculate_position_size(
 class NegRiskScanner:
     """Scans Polymarket for NegRisk complement arbitrage opportunities.
 
-    Uses the Gamma API for event/market discovery and the CLOB API for
-    live orderbook prices (more accurate than Gamma's cached prices).
+    Uses the Gamma API for event/market discovery and optionally the
+    CLOB API for live orderbook prices (more accurate than Gamma's
+    cached prices, but much slower due to per-token API calls).
 
     Parameters
     ----------
     gamma_client : GammaClient
         Client for Polymarket Gamma API (market discovery).
-    clob_client : ClobClient
-        Client for Polymarket CLOB API (live prices).
+    clob_client : ClobClient or None
+        Client for Polymarket CLOB API (live prices). If None, uses
+        Gamma API prices only (faster but less accurate).
     bankroll : float
         Total bankroll for position sizing (default $100).
+    use_clob_prices : bool
+        If True and clob_client is provided, fetch live CLOB prices
+        per outcome. This is much slower (1 API call per outcome)
+        but more accurate. Default False for speed.
     """
 
     def __init__(
         self,
         gamma_client: GammaClient,
-        clob_client: ClobClient,
+        clob_client: ClobClient | None = None,
         bankroll: float = _DEFAULT_BANKROLL,
+        use_clob_prices: bool = False,
     ) -> None:
         self._gamma = gamma_client
         self._clob = clob_client
         self._bankroll = bankroll
+        self._use_clob_prices = use_clob_prices and clob_client is not None
 
     def scan_event(
         self,
@@ -264,11 +272,16 @@ class NegRiskScanner:
         events = self._gamma.fetch_all_active_events()
         logger.info("Fetched %d events total", len(events))
 
-        # Filter to NegRisk events with multiple markets
+        # Filter to NegRisk events with multiple markets.
+        # Gamma API uses both 'negRisk' (boolean) and 'enableNegRisk' (boolean)
+        # on event objects. Check all known field names for compatibility.
         negrisk_events = [
             e
             for e in events
-            if e.get("negRisk") or e.get("isNegRisk") or e.get("is_neg_risk")
+            if e.get("negRisk")
+            or e.get("enableNegRisk")
+            or e.get("isNegRisk")
+            or e.get("is_neg_risk")
         ]
         logger.info("NegRisk events: %d", len(negrisk_events))
 
@@ -291,7 +304,7 @@ class NegRiskScanner:
         logger.info("Found %d NegRisk complement arb opportunities", len(opportunities))
         return opportunities
 
-    def _analyze_event(  # noqa: PLR0911
+    def _analyze_event(  # noqa: PLR0911, C901
         self,
         event_data: dict[str, Any],
         min_profit_pct: float,
@@ -317,9 +330,13 @@ class NegRiskScanner:
         """
         event_slug = event_data.get("slug", event_data.get("id", "unknown"))
         question = event_data.get("title", event_data.get("question", ""))
-        category = event_data.get("category", "")
-        if not category:
-            category = _infer_category_from_event(event_data)
+
+        # Category extraction: try event-level tags first (preferred), then
+        # fall back to the category field, then text-based inference.
+        category = GammaClient.extract_category_from_tags(event_data)
+        if category == "other":
+            explicit_cat = event_data.get("category", "")
+            category = explicit_cat or _infer_category_from_event(event_data)
 
         # Extract markets (outcomes) from event
         markets = event_data.get("markets", [])
@@ -351,12 +368,13 @@ class NegRiskScanner:
             cond = parsed.conditions[0]
             yes_price = cond.outcome_yes
 
-            # Try to get live price from CLOB if token IDs are available
+            # Optionally fetch live CLOB price (slower but more accurate)
             if cond.clob_token_ids:
                 yes_token_id = cond.clob_token_ids[0]  # first is YES
-                live_price = self._get_clob_price(yes_token_id)
-                if live_price is not None:
-                    yes_price = live_price
+                if self._use_clob_prices:
+                    live_price = self._get_clob_price(yes_token_id)
+                    if live_price is not None:
+                        yes_price = live_price
                 token_ids.append(yes_token_id)
             else:
                 token_ids.append(cond.condition_id)

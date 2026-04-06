@@ -133,7 +133,7 @@ class GammaClient:
         timeout: int = _DEFAULT_TIMEOUT,
         ssl_verify: bool = _DEFAULT_SSL_VERIFY,
         us_api_key: str | None = None,
-        prefer_us: bool = True,
+        prefer_us: bool = False,
     ) -> None:
         self._base = base_url.rstrip("/")
         self._timeout = timeout
@@ -612,6 +612,82 @@ class GammaClient:
                 markets.append(m)
         logger.info("Parsed %d/%d markets successfully", len(markets), len(raw_list))
         return markets
+
+    @staticmethod
+    def extract_category_from_tags(event_data: dict) -> str:
+        """Extract category from event-level tags.
+
+        The Gamma API does not populate the ``category`` field on events
+        or nested markets. Instead, categories live in the ``tags`` list
+        on the event object. Each tag has a ``label`` (e.g. "Politics",
+        "Sports", "Crypto"). We map known tag labels to our internal
+        category vocabulary.
+
+        Priority order: politics > geopolitics > sports > crypto >
+        finance > science > entertainment > other.
+        """
+        tags = event_data.get("tags", [])
+        tag_labels = {t.get("label", "").lower() for t in tags if isinstance(t, dict)}
+
+        # Ordered mapping: first match wins
+        tag_to_category: list[tuple[str, set[str]]] = [
+            (
+                "politics",
+                {
+                    "politics",
+                    "elections",
+                    "us election",
+                    "us politics",
+                    "primaries",
+                    "democratic primary",
+                    "republican primary",
+                },
+            ),
+            (
+                "geopolitics",
+                {
+                    "geopolitics",
+                    "world politics",
+                    "global",
+                    "international",
+                    "ukraine",
+                    "conflict",
+                },
+            ),
+            (
+                "sports",
+                {
+                    "sports",
+                    "nba",
+                    "nfl",
+                    "mlb",
+                    "nhl",
+                    "soccer",
+                    "football",
+                    "tennis",
+                    "mma",
+                    "ufc",
+                    "golf",
+                    "f1",
+                    "motorsport",
+                },
+            ),
+            ("crypto", {"crypto", "bitcoin", "ethereum", "defi", "web3"}),
+            (
+                "finance",
+                {"finance", "economy", "stocks", "business", "fed", "markets"},
+            ),
+            ("science", {"science", "ai", "tech", "technology"}),
+            (
+                "entertainment",
+                {"entertainment", "culture", "pop culture", "movies", "music"},
+            ),
+        ]
+
+        for category, keywords in tag_to_category:
+            if tag_labels & keywords:
+                return category
+        return "other"
 
 
 # ------------------------------------------------------------------

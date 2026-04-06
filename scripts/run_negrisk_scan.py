@@ -96,6 +96,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable SSL certificate verification",
     )
+    p.add_argument(
+        "--clob-prices",
+        action="store_true",
+        help="Use CLOB API for live prices (slower but more accurate)",
+    )
     return p.parse_args()
 
 
@@ -166,11 +171,12 @@ def main() -> int:
     print("=" * 90 + "\n")
 
     gamma = GammaClient(ssl_verify=ssl_verify)
-    clob = ClobClient(ssl_verify=ssl_verify)
+    clob = ClobClient(ssl_verify=ssl_verify) if args.clob_prices else None
     scanner = NegRiskScanner(
         gamma_client=gamma,
         clob_client=clob,
         bankroll=args.bankroll,
+        use_clob_prices=args.clob_prices,
     )
 
     # Single event scan
