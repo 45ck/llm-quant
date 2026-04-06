@@ -26,7 +26,7 @@ The objective function: **maximize CAGR via leveraged re-expression of proven Tr
 - **Holding period**: max 5 calendar days per position — beta decay and volatility drag accelerate beyond this
 - **Key risks**: beta decay (3x ETF returns diverge from 3x index over multi-day holds), volatility drag (variance kills compounding), path dependency (sequential drawdowns are asymmetrically destructive), liquidity risk on TLTW/SOXL
 - **VIX crash filter**: CRITICAL — all Track D strategies must include VIX>30 risk-off override (D3 with filter: Sharpe=2.21; without: Sharpe=0.08)
-- **Status**: 2 strategies passing (D1 TLT-TQQQ, D3 TQQQ/TMF ratio MR). Active research on D10-D13. Credit lead signals don't survive 3x leverage — only rate momentum and ratio MR work.
+- **Status**: 7 strategies passing — D1 TLT-TQQQ (1.03), D3 TQQQ/TMF ratio MR (2.21), D10 XLK/XLE→SOXL (1.17), D11 SOXX→SOXL (0.82), D12 TIP/TLT→UPRO (0.90), D13 TSMOM→UPRO (1.35), IEF-TQQQ, VCIT-TQQQ. All ready for paper trading. Credit lead signals don't survive 3x leverage — only rate momentum, ratio MR, and sector rotation work.
 - **Key insight**: Rate momentum signals survive 3x leverage; credit lead-lag signals do NOT. Leverage multiplies noise faster than signal for weak signals.
 
 ### Track C — Structural Arbitrage (SECONDARY RESEARCH FOCUS)
@@ -179,13 +179,17 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (7 questions, stop at first "no")
 
-**Track D status (2026-04-06) — ACTIVE RESEARCH:**
-- D1 TLT-TQQQ: Sharpe=1.030, CAGR=12.4% at w=0.30 (PASSING — needs higher weight for CAGR target)
-- D3 TQQQ/TMF ratio MR: Sharpe=2.213 (HIGHEST EVER), CAGR=34.5%, MaxDD=12.8% (PASSING — paper ready)
-- D10-D13: Active research — XLK/XLE→SOXL, SOXX→SOXL, TIP/TLT→UPRO, TSMOM→UPRO
-- Key insight: Rate momentum and ratio MR survive 3x leverage. Credit lead-lag does NOT.
+**Track D status (2026-04-06) — 7 STRATEGIES PASSING:**
+- D1 TLT-TQQQ: Sharpe=1.030, CAGR=12.4% (rate momentum → TQQQ)
+- D3 TQQQ/TMF ratio MR: Sharpe=2.213, CAGR=34.5% (HIGHEST INDIVIDUAL SHARPE EVER)
+- D10 XLK/XLE→SOXL: Sharpe=1.171, CAGR=27.7% (sector rotation → SOXL)
+- D11 SOXX→SOXL: Sharpe=0.818, CAGR=25.1% (semi lead-lag → SOXL, marginal p=0.048)
+- D12 TIP/TLT→UPRO: Sharpe=0.895, CAGR=9.7% (real yield → UPRO, DSR=0.9998 highest ever)
+- D13 TSMOM→UPRO: Sharpe=1.345, CAGR=20.1% (skip-month → UPRO, 100% perturbation stability)
+- IEF-TQQQ + VCIT-TQQQ: Also passing
+- Key insight: Rate momentum, ratio MR, sector rotation, and TSMOM survive 3x leverage. Credit lead-lag does NOT.
 - VIX crash filter is MANDATORY for all Track D strategies.
-- D2 BTC-momentum, D4-D6 credit-lead: ALL REJECTED (leverage multiplies noise > signal)
+- D2 BTC-momentum, D4-D6 credit-lead: ALL REJECTED
 
 **Track A status (BACKLOG — research complete):**
 - 35 strategies passing across 21 families, portfolio SR=2.205, MaxDD=6.3%
