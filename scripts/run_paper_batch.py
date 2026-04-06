@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 35 strategies.
+"""Paper trading batch runner: generates daily signals for all 36 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -143,6 +143,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "gdx-gld-mean-reversion-v1": "F2",
     "dollar-gold-regime-v1": "F26",
     "erp-regime-v1": "F30",
+    "reit-divergence-v2": "F33",
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
     "d3-tqqq-tmf-ratio-mr": "D3",
 }
@@ -997,6 +998,77 @@ def signal_erp_regime(
     }
 
 
+def signal_reit_divergence_v2(sym_data: dict[str, dict], dates: list) -> dict:
+    """F33 REIT Divergence v2: XLRE/SPY ratio z-score + 15d momentum.
+
+    EASING (z > 0.5 AND mom > 0): 80% SPY + 10% QQQ + 10% GLD
+    TIGHTENING (z < -0.5 AND mom < 0): 40% GLD + 30% SHY + 30% SPY
+    NEUTRAL: 50% SPY + 40% SHY + 10% GLD
+    """
+    n = len(dates)
+    zscore_window = 60
+    mom_window = 15
+    min_data = zscore_window + mom_window + 2
+    if n < min_data:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Build XLRE/SPY ratio series (causal: through yesterday)
+    ratios = []
+    for i in range(n):
+        xlre = get_close(sym_data, "XLRE", dates[i])
+        spy = get_close(sym_data, "SPY", dates[i])
+        if xlre > 0 and spy > 0:
+            ratios.append(xlre / spy)
+        else:
+            ratios.append(None)
+
+    # Use yesterday's values (causal)
+    idx = n - 2  # yesterday
+
+    # Compute z-score of ratio
+    window_vals = [
+        ratios[j]
+        for j in range(idx - zscore_window + 1, idx + 1)
+        if ratios[j] is not None
+    ]
+    if len(window_vals) < zscore_window // 2:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    mean_r = sum(window_vals) / len(window_vals)
+    var_r = sum((v - mean_r) ** 2 for v in window_vals) / len(window_vals)
+    std_r = var_r**0.5
+    if std_r < 1e-10:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    z = (ratios[idx] - mean_r) / std_r if ratios[idx] is not None else 0.0
+
+    # Compute momentum
+    if ratios[idx] is not None and ratios[idx - mom_window] is not None:
+        mom = ratios[idx] / ratios[idx - mom_window] - 1
+    else:
+        mom = 0.0
+
+    # Regime classification
+    if z > 0.5 and mom > 0:
+        regime = "easing"
+        alloc = {"SPY": 0.80, "QQQ": 0.10, "GLD": 0.10}
+    elif z < -0.5 and mom < 0:
+        regime = "tightening"
+        alloc = {"GLD": 0.40, "SHY": 0.30, "SPY": 0.30}
+    else:
+        regime = "neutral"
+        alloc = {"SPY": 0.50, "SHY": 0.40, "GLD": 0.10}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": z,
+        "signal_desc": f"XLRE/SPY z={z:+.2f} mom={mom:+.4f}",
+        "allocation": alloc,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Compute today's daily return for a signal
 # ---------------------------------------------------------------------------
@@ -1175,6 +1247,7 @@ def run_all_signals(
         ("xlk-xle-sector-rotation-v1", signal_xlk_xle_sector_rotation),
         ("vol-regime-v2", signal_vol_regime_v2),
         ("dba-commodity-cycle-v1", signal_dba_commodity_cycle),
+        ("reit-divergence-v2", signal_reit_divergence_v2),
     ]
     for slug, fn in regime_configs:
         try:
