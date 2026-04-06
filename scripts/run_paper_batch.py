@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 33 strategies.
+"""Paper trading batch runner: generates daily signals for all 34 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -59,6 +59,14 @@ LEAD_LAG_PARAMS: dict[str, tuple[str, str, int, float, float, float]] = {
     "tlt-tqqq-leveraged-lead-lag": ("TLT", "TQQQ", 10, 0.01, -0.01, 0.30),
 }
 
+# D3 TQQQ/TMF ratio z-score mean-reversion parameters
+D3_PARAMS = {
+    "lookback_days": 60,
+    "z_threshold": 1.0,
+    "target_weight": 0.30,
+    "vix_crash_threshold": 30.0,
+}
+
 # All symbols needed across all strategies (union)
 ALL_SYMBOLS = sorted(
     {
@@ -95,6 +103,8 @@ ALL_SYMBOLS = sorted(
         "XLC",
         "XLRE",
         "TQQQ",
+        "TMF",
+        "VIX",
     }
 )
 
@@ -132,6 +142,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "gdx-gld-mean-reversion-v1": "F2",
     "dollar-gold-regime-v1": "F26",
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
+    "d3-tqqq-tmf-ratio-mr": "D3",
 }
 
 
@@ -835,6 +846,87 @@ def signal_pair_mr(
     }
 
 
+def signal_d3_tqqq_tmf_ratio_mr(
+    sym_data: dict[str, dict],
+    dates: list,
+) -> dict:
+    """D3 TQQQ/TMF ratio z-score mean-reversion with VIX crash filter.
+
+    Signal: TQQQ/TMF 60-day ratio z-score.
+    Z < -1 (TMF cheap): 30% TMF, 70% SHY.
+    Z > 1 (TQQQ cheap): 30% TQQQ, 70% SHY.
+    Neutral: 15% TQQQ + 15% TMF + 70% SHY.
+    VIX > 30: 100% SHY (crash filter).
+    """
+    lb = D3_PARAMS["lookback_days"]
+    z_thresh = D3_PARAMS["z_threshold"]
+    tw = D3_PARAMS["target_weight"]
+    vix_crash = D3_PARAMS["vix_crash_threshold"]
+
+    n = len(dates)
+    if n < lb + 10:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # VIX crash filter (as of yesterday)
+    yesterday = dates[-2]
+    vix_price = get_close(sym_data, "VIX", yesterday)
+    if vix_price > vix_crash:
+        return {
+            "position": "crash_protection",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > {vix_crash} -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    # Build TQQQ/TMF ratio series up to yesterday
+    ratio_series = []
+    for i in range(n - 1):
+        d = dates[i]
+        tqqq = get_close(sym_data, "TQQQ", d)
+        tmf = get_close(sym_data, "TMF", d)
+        if tqqq > 0 and tmf > 0:
+            ratio_series.append(tqqq / tmf)
+        else:
+            ratio_series.append(0.0)
+
+    if len(ratio_series) < lb:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Compute z-score
+    window = ratio_series[-lb:]
+    sma = sum(window) / len(window)
+    std = (sum((x - sma) ** 2 for x in window) / len(window)) ** 0.5
+    if std <= 0:
+        return {"position": "flat", "regime": "no_vol", "weight": 0.0}
+
+    z = (ratio_series[-1] - sma) / std
+
+    if z < -z_thresh:
+        # TMF cheap relative to TQQQ -> buy TMF
+        regime = "long_tmf"
+        alloc = {"TMF": tw, "SHY": 1.0 - tw}
+    elif z > z_thresh:
+        # TQQQ cheap relative to TMF -> buy TQQQ
+        regime = "long_tqqq"
+        alloc = {"TQQQ": tw, "SHY": 1.0 - tw}
+    else:
+        # Neutral: split
+        half = tw / 2
+        regime = "neutral"
+        alloc = {"TQQQ": half, "TMF": half, "SHY": 1.0 - tw}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": z,
+        "signal_desc": f"TQQQ/TMF z={z:+.2f} (thresh=+/-{z_thresh}), VIX={vix_price:.1f}",
+        "allocation": alloc,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Compute today's daily return for a signal
 # ---------------------------------------------------------------------------
@@ -951,7 +1043,7 @@ def run_all_signals(
     dates: list,
     prices_df: pl.DataFrame,
 ) -> dict[str, dict]:
-    """Compute today's signal for all 33 strategies. Returns slug -> signal dict."""
+    """Compute today's signal for all 34 strategies. Returns slug -> signal dict."""
     results: dict[str, dict] = {}
 
     # Type 1: Lead-lag strategies
@@ -1138,6 +1230,17 @@ def run_all_signals(
         except Exception as e:
             logger.warning("Error computing %s: %s", slug, e)
             results[slug] = {"position": "error", "regime": str(e), "weight": 0.0}
+
+    # Track D: D3 TQQQ/TMF ratio z-score MR
+    try:
+        results["d3-tqqq-tmf-ratio-mr"] = signal_d3_tqqq_tmf_ratio_mr(sym_data, dates)
+    except Exception as e:
+        logger.warning("Error computing d3-tqqq-tmf-ratio-mr: %s", e)
+        results["d3-tqqq-tmf-ratio-mr"] = {
+            "position": "error",
+            "regime": str(e),
+            "weight": 0.0,
+        }
 
     return results
 
