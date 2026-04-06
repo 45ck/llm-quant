@@ -133,11 +133,13 @@ class GammaClient:
         timeout: int = _DEFAULT_TIMEOUT,
         ssl_verify: bool = _DEFAULT_SSL_VERIFY,
         us_api_key: str | None = None,
+        prefer_us: bool = True,
     ) -> None:
         self._base = base_url.rstrip("/")
         self._timeout = timeout
         self._ssl_verify = ssl_verify
         self._us_api_key = us_api_key
+        self._prefer_us = prefer_us
         self._session = requests.Session()
         self._session.headers.update({"User-Agent": "llm-quant-arb-scanner/1.0"})
         if not ssl_verify:
@@ -303,14 +305,44 @@ class GammaClient:
     def fetch_all_active_markets(self, max_markets: int = 5000) -> list[dict]:
         """Paginate through all active markets.
 
-        Tries Gamma API first (gamma-api.polymarket.com); falls back to
-        US API (api.polymarket.us) if Gamma is geo-blocked or unreachable.
+        When prefer_us=True (default), tries the US API first to avoid
+        ~45s of timeout retries on the geo-blocked Gamma API. Falls back
+        to Gamma API if US API fails.
 
-        Note: The US API fallback returns limited data without an API key
-        (~20 markets). For full access from US IPs, provide a us_api_key
-        or use a non-US proxy for the Gamma API.
+        When prefer_us=False, tries Gamma API first (original behavior).
+
+        Note: The US API returns limited data without an API key (~20
+        markets). For full access from US IPs, provide a us_api_key.
         """
-        # Try Gamma API first
+        if self._prefer_us:
+            return self._fetch_us_first(max_markets)
+        return self._fetch_gamma_first(max_markets)
+
+    def _fetch_us_first(self, max_markets: int) -> list[dict]:
+        """Try US API first (fast for US IPs), fall back to Gamma."""
+        try:
+            markets = self._fetch_us_markets()
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            logger.warning(
+                "US API failed (%s), trying Gamma API",
+                exc,
+            )
+        else:
+            logger.info(
+                "Fetched %d markets from Polymarket US API%s",
+                len(markets),
+                " (limited -- no API key)" if not self._us_api_key else "",
+            )
+            return markets
+
+        try:
+            return self._fetch_all_gamma(max_markets)
+        except (requests.HTTPError, requests.ConnectionError) as exc:
+            logger.exception("Both US and Gamma APIs failed: %s", exc)
+            return []
+
+    def _fetch_gamma_first(self, max_markets: int) -> list[dict]:
+        """Try Gamma API first, fall back to US API (original behavior)."""
         try:
             return self._fetch_all_gamma(max_markets)
         except (requests.HTTPError, requests.ConnectionError) as exc:
@@ -321,7 +353,6 @@ class GammaClient:
                 exc,
             )
 
-        # Fallback: Polymarket US API
         try:
             markets = self._fetch_us_markets()
         except (requests.HTTPError, requests.ConnectionError) as exc:
@@ -354,17 +385,28 @@ class GammaClient:
     def fetch_market(self, market_id: str) -> dict:
         """Fetch single market by condition ID.
 
-        Tries Gamma API first, falls back to US API on failure.
+        Respects prefer_us setting for API ordering.
         """
-        try:
-            return self._get(f"/markets/{market_id}")
-        except (requests.HTTPError, requests.ConnectionError) as exc:
-            logger.warning(
-                "Gamma API failed for market %s (%s), trying US API",
-                market_id,
-                exc,
-            )
-            return self._get_us(f"/v1/markets/{market_id}")
+        if self._prefer_us:
+            try:
+                return self._get_us(f"/v1/markets/{market_id}")
+            except (requests.HTTPError, requests.ConnectionError) as exc:
+                logger.warning(
+                    "US API failed for market %s (%s), trying Gamma API",
+                    market_id,
+                    exc,
+                )
+                return self._get(f"/markets/{market_id}")
+        else:
+            try:
+                return self._get(f"/markets/{market_id}")
+            except (requests.HTTPError, requests.ConnectionError) as exc:
+                logger.warning(
+                    "Gamma API failed for market %s (%s), trying US API",
+                    market_id,
+                    exc,
+                )
+                return self._get_us(f"/v1/markets/{market_id}")
 
     # ------------------------------------------------------------------
     # Events

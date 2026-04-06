@@ -357,7 +357,8 @@ class TestGammaClientHTTP:
             assert len(result[0]["markets"]) == 1
 
     def test_fetch_all_active_markets_pagination(self, gamma):
-        """Should paginate through multiple pages."""
+        """Should paginate through multiple pages (Gamma-first path)."""
+        gamma._prefer_us = False  # test Gamma pagination path
         page1 = [{"id": str(i)} for i in range(100)]
         page2 = [{"id": str(i)} for i in range(100, 150)]
 
@@ -376,10 +377,18 @@ class TestGammaClientHTTP:
             assert call_count == 2
 
     def test_fetch_all_active_markets_empty(self, gamma):
-        """Empty first page should return empty list."""
+        """Empty first page should return empty list (Gamma-first path)."""
+        gamma._prefer_us = False  # test Gamma path
         with patch.object(gamma, "fetch_markets_page", return_value=[]):
             result = gamma.fetch_all_active_markets()
             assert len(result) == 0
+
+    def test_fetch_all_active_markets_us_first(self, gamma):
+        """With prefer_us=True (default), should try US API first."""
+        mock_markets = [{"id": "1"}, {"id": "2"}]
+        with patch.object(gamma, "_fetch_us_markets", return_value=mock_markets):
+            result = gamma.fetch_all_active_markets()
+            assert len(result) == 2
 
     def test_fetch_market_single(self, gamma):
         """fetch_market should return single market dict."""

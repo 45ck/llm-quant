@@ -2,6 +2,32 @@
 
 Thanks for your interest in contributing to llm-quant! This document covers the development workflow and standards.
 
+## Current Focus
+
+**Track D (Sprint Alpha)** is the primary research focus — leveraged re-expression of proven signals using 3x ETFs (TQQQ/UPRO/SOXL/TMF) targeting 50%+ CAGR.
+
+**Track C (Structural Arbitrage)** is the secondary focus — Polymarket/Kalshi arb, CEF discount capture, crypto funding rates.
+
+### What Needs Work
+
+| Area | Status | Priority |
+|------|--------|----------|
+| **Track D research** | Active — D10-D13 candidates in pipeline | P0 |
+| **Track C Polymarket** | Infrastructure built, needs live scanning | P1 |
+| **Track A paper trading** | 35 strategies validated, need 30-day paper runs | P4 (backlog) |
+| **Track A deployment** | Vol-target scaling, production infra | P4 (backlog) |
+| **Track A new mechanisms** | Research complete, diminishing returns | P4 (backlog) |
+
+### Track D Research Candidates
+
+Proven Track A signals that need leveraged re-expression testing:
+- Rate momentum signals (TLT→TQQQ proven, IEF→TQQQ, SOXX→SOXL)
+- Ratio mean-reversion (TQQQ/TMF proven at Sharpe=2.21)
+- Sector rotation (XLK/XLE→SOXL)
+- TSMOM→UPRO, TIP/TLT→UPRO
+
+Key constraint: all Track D strategies MUST include a VIX>30 crash filter.
+
 ## Getting Started
 
 ### Prerequisites
@@ -85,7 +111,7 @@ src/llm_quant/
   surveillance/ # Post-trade governance monitoring
   data/         # Market data pipeline (yfinance -> Polars -> DuckDB)
   db/           # DuckDB schema + hash chain integrity
-  arb/          # Track C structural arbitrage
+  arb/          # Track C structural arbitrage (Polymarket, CEF, funding rates)
   nlp/          # NLP signal pipeline
   regime/       # Regime detection (HMM, inflation)
   signals/      # Signal generators (TSMOM, etc.)
@@ -111,6 +137,19 @@ Key principles:
 - **Every backtest increments the trial counter** -- more trials raise the DSR bar
 - **Robustness is a gate, not a heuristic** -- DSR, CPCV, perturbation analysis required
 - **Persist everything** -- all artifacts on disk with hashes
+- **VIX crash filter** -- mandatory for all Track D leveraged strategies
+
+## Track D Gate Criteria
+
+| Gate | Threshold | Notes |
+|------|-----------|-------|
+| Sharpe | >= 0.80 | Lower than Track A (leverage multiplies noise) |
+| MaxDD | < 40% | Accepts large drawdowns for extreme returns |
+| DSR | >= 0.90 | Slightly relaxed vs Track A's 0.95 |
+| CPCV OOS/IS | > 0 | Non-negotiable integrity gate |
+| Perturbation | >= 40% | Lower bar than Track A's 60% |
+| Shuffled p | < 0.05 | Signal must beat random |
+| VIX filter | Required | VIX>30 = 100% cash/SHY |
 
 ## Reporting Issues
 
