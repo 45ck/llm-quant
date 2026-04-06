@@ -564,7 +564,7 @@ def check_cvar_limit(
 ) -> RiskCheckResult:
     """Check CVaR constraint using Filtered Historical Simulation.
 
-    Runs :class:`~llm_quant.risk.cvar.FhsCvarEstimator` on the portfolio
+    Runs :class:`~llm_quant.risk.cvar.SingleAssetFhsCvar` on the portfolio
     return series and returns a scaling recommendation when CVaR exceeds
     the configured limit.
 
@@ -593,7 +593,7 @@ def check_cvar_limit(
     """
     import polars as pl
 
-    from llm_quant.risk.cvar import CvarConfig, FhsCvarEstimator
+    from llm_quant.risk.cvar import CvarConfig, SingleAssetFhsCvar
 
     if not isinstance(portfolio_returns, pl.Series) or len(portfolio_returns) < 30:
         return RiskCheckResult(
@@ -609,7 +609,7 @@ def check_cvar_limit(
 
     try:
         config = CvarConfig()
-        estimator = FhsCvarEstimator(config)
+        estimator = SingleAssetFhsCvar(config)
         result = estimator.estimate(portfolio_returns)
     except Exception:
         logger.warning("CVaR estimation failed — check skipped.", exc_info=True)
