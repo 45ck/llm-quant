@@ -456,8 +456,16 @@ class TestNegRiskScanner:
             opp = scanner.scan_event("single-outcome")
             assert opp is None
 
-    def test_scan_event_uses_clob_prices(self, scanner):
-        """Scanner should prefer CLOB prices over Gamma prices."""
+    def test_scan_event_uses_clob_prices(self):
+        """Scanner should prefer CLOB prices over Gamma prices when enabled."""
+        gamma = GammaClient(ssl_verify=False)
+        clob = ClobClient(ssl_verify=False)
+        clob_scanner = NegRiskScanner(
+            gamma_client=gamma,
+            clob_client=clob,
+            bankroll=100.0,
+            use_clob_prices=True,
+        )
         event = _make_event_data(
             prices=[0.30, 0.30, 0.30],  # Gamma: sum=0.90
             category="politics",
@@ -469,10 +477,10 @@ class TestNegRiskScanner:
             return clob_prices.get(token_id)
 
         with (
-            patch.object(scanner._gamma, "fetch_event", return_value=event),
-            patch.object(scanner._clob, "get_price", side_effect=mock_clob_price),
+            patch.object(clob_scanner._gamma, "fetch_event", return_value=event),
+            patch.object(clob_scanner._clob, "get_price", side_effect=mock_clob_price),
         ):
-            opp = scanner.scan_event("clob-test")
+            opp = clob_scanner.scan_event("clob-test")
 
         assert opp is not None
         # CLOB prices: 0.32 + 0.31 + 0.29 = 0.92 (not 0.90 from Gamma)

@@ -384,7 +384,8 @@ class TestGammaClientHTTP:
             assert len(result) == 0
 
     def test_fetch_all_active_markets_us_first(self, gamma):
-        """With prefer_us=True (default), should try US API first."""
+        """With prefer_us=True, should try US API first."""
+        gamma._prefer_us = True  # explicitly enable US-first path
         mock_markets = [{"id": "1"}, {"id": "2"}]
         with patch.object(gamma, "_fetch_us_markets", return_value=mock_markets):
             result = gamma.fetch_all_active_markets()
