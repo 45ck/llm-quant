@@ -1,0 +1,83 @@
+---
+# F32-F36: Novel Mechanism Family Hypotheses (Batch 10)
+# Generated 2026-04-06
+# Priority: F35 > F32 > F36 > F33 > F34
+
+families:
+  F32:
+    name: Growth-Value Rotation
+    signal: IWM/QQQ price ratio 20d momentum + 40d SMA crossover
+    mechanism: Equity style rotation captures market preference shifts between rate-sensitive growth and earnings-driven value
+    symbols: [IWM, QQQ, DIA, SPY, SHY]
+    allocation:
+      value_regime: {IWM: 0.50, DIA: 0.30, SHY: 0.20}
+      growth_regime: {QQQ: 0.70, SPY: 0.20}
+      neutral: {SPY: 0.45, SHY: 0.45}
+    expected_rho: 0.15
+    p_pass: 0.375
+    status: NOT_TESTED
+
+  F33:
+    name: REIT Divergence Financial Conditions
+    signal: XLRE/SPY 60d z-score + 10d ratio momentum
+    mechanism: REITs as early warning of financial conditions tightening — hit first due to leverage and rate sensitivity
+    symbols: [XLRE, SPY, GLD, SHY]
+    allocation:
+      easing: {SPY: 0.80}
+      tightening: {GLD: 0.60, SHY: 0.30}
+      neutral: {SPY: 0.50, SHY: 0.40}
+    expected_rho: 0.15
+    p_pass: 0.325
+    status: NOT_TESTED
+
+  F34:
+    name: Intraday Range Compression Regime
+    signal: SPY (high-low)/close percentile rank (60d) + 50d SMA trend
+    mechanism: Range compression precedes directional breakouts — volatility clustering applied to daily range data
+    symbols: [SPY, QQQ, GLD, SHY]
+    allocation:
+      compressed: {SPY: 0.70, QQQ: 0.20}
+      expanding_bullish: {SPY: 0.80}
+      expanding_bearish: {GLD: 0.50, SHY: 0.40}
+      normal: {SPY: 0.50, SHY: 0.40}
+    expected_rho: 0.10
+    p_pass: 0.275
+    status: NOT_TESTED
+    notes: First strategy using OHLCV range data (not just close prices)
+
+  F35:
+    name: Cyclical-Defensive Sector Breadth
+    signal: XLY/XLP 20d ratio momentum + 40d SMA + XLI 20d momentum as dual confirmation
+    mechanism: Consumer discretionary/staples ratio as real-economy expansion/contraction proxy
+    symbols: [XLY, XLP, XLI, SPY, GLD, TLT, SHY]
+    allocation:
+      expansion: {SPY: 0.80}
+      contraction: {GLD: 0.40, TLT: 0.40, SHY: 0.10}
+      transition: {SPY: 0.50, GLD: 0.30, SHY: 0.10}
+    expected_rho: 0.12
+    p_pass: 0.425
+    status: NOT_TESTED
+    notes: Highest probability. Well-documented business cycle indicator (Stovall sector rotation model)
+
+  F36:
+    name: VIX Term Structure Momentum
+    signal: VIX3M/VIX ratio 10d momentum + 30d z-score
+    mechanism: Rate of change of VIX term structure captures institutional hedging flow shifts
+    symbols: [VIX, VIX3M, SPY, GLD, SHY, TLT]
+    allocation:
+      hedging_rising: {GLD: 0.40, SHY: 0.40, TLT: 0.20}
+      hedging_receding: {SPY: 0.85}
+      normal: {SPY: 0.55, SHY: 0.35}
+    expected_rho: 0.10
+    p_pass: 0.325
+    status: NOT_TESTED
+    notes: Rehabilitates volatility channel (F4/F7 failed) with momentum-of-slope instead of level
+
+testing_order: [F35, F32, F36, F33, F34]
+
+key_differences_from_existing:
+  - No commodity/macro ratio momentum (avoids F11-F22 saturation)
+  - No credit bond lead-lag (avoids F1 saturation)
+  - F34 uses OHLCV range data (novel data source within yfinance)
+  - F35 and F32 use within-equity rotation (orthogonal to cross-asset signals)
+  - F36 uses options-implied term structure momentum (different from F4 level-based approach)
