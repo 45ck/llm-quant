@@ -73,6 +73,8 @@ STRATEGY_EXPERIMENTS: dict[str, str] = {
     "uso-xle-mean-reversion-v2": "DIRECT",  # Direct computation (energy pair MR, Track B)
     "gdx-gld-mean-reversion-v1": "DIRECT",  # Direct computation (miners pair MR, Track B)
     "dollar-gold-regime-v1": "DIRECT",  # Direct computation (dollar-gold regime)
+    "reit-divergence-v2": "DIRECT",  # Direct computation (REIT rate canary)
+    "dividend-yield-regime-v1": "DIRECT",  # Direct computation (dividend yield regime)
 }
 
 # Mechanism family labels for context
@@ -109,6 +111,8 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "uso-xle-mean-reversion-v2": "F2: Mean Reversion (Energy)",
     "gdx-gld-mean-reversion-v1": "F2: Mean Reversion (Miners)",
     "dollar-gold-regime-v1": "F26: Dollar-Gold Regime",
+    "reit-divergence-v2": "F33: REIT Divergence",
+    "dividend-yield-regime-v1": "F42: Dividend Yield Regime",
 }
 
 TRADING_DAYS_PER_YEAR = 252
@@ -144,6 +148,8 @@ TRACK_A_SLUGS: list[str] = [
     "dbc-spy-commodity-equity-v1",
     "agg-tlt-duration-rotation-v2",
     "dollar-gold-regime-v1",
+    "reit-divergence-v2",
+    "dividend-yield-regime-v1",
 ]
 
 TRACK_B_SLUGS: list[str] = [
@@ -528,7 +534,7 @@ def vol_target_weights(
 # ---------------------------------------------------------------------------
 
 
-def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
+def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:  # noqa: PLR0912
     """Compute daily returns directly for strategies that bypass the engine."""
     if slug == "credit-spread-regime-v1":
         return _compute_credit_spread_regime_returns(data_dir)
@@ -564,6 +570,10 @@ def _load_direct_returns(slug: str, data_dir: Path) -> dict | None:
         )
     if slug == "dollar-gold-regime-v1":
         return _compute_dollar_gold_regime_returns(data_dir)
+    if slug == "reit-divergence-v2":
+        return _compute_reit_divergence_v2_returns(data_dir)
+    if slug == "dividend-yield-regime-v1":
+        return _compute_dividend_yield_regime_returns(data_dir)
     return None
 
 
@@ -2122,6 +2132,294 @@ def _compute_pair_mr_returns(
         }
     except Exception as e:
         logger.warning("Failed to compute %s/%s pair MR returns: %s", sym_a, sym_b, e)
+        return None
+
+
+def _compute_reit_divergence_v2_returns(data_dir: Path) -> dict | None:  # noqa: PLR0912
+    """REIT Divergence v2: XLRE/SPY ratio z-score + 15d momentum → SPY/GLD/SHY."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["XLRE", "SPY", "QQQ", "GLD", "SHY"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 80
+        z_window = 60
+        mom_window = 15
+        rebalance_freq = 5
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build XLRE/SPY ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            xlre = sym_data["XLRE"].get(d, 0.0)
+            spy = sym_data["SPY"].get(d, 0.0)
+            ratio_series.append(xlre / spy if xlre > 0 and spy > 0 else 0.0)
+
+        rebal_counter = 0
+        current_regime = "neutral"
+
+        for i in range(warmup, n):
+            if i < z_window + mom_window + 1:
+                daily_returns.append(0.0)
+                continue
+
+            rebal_counter += 1
+            if rebal_counter >= rebalance_freq:
+                rebal_counter = 0
+
+                # Z-score of ratio
+                window = ratio_series[i - 1 - z_window : i - 1]
+                valid = [x for x in window if x > 0]
+                if len(valid) < z_window // 2:
+                    daily_returns.append(0.0)
+                    continue
+                sma = sum(valid) / len(valid)
+                std = (sum((x - sma) ** 2 for x in valid) / len(valid)) ** 0.5
+                z = (ratio_series[i - 1] - sma) / std if std > 0 else 0.0
+
+                # 15-day momentum of ratio
+                r_now = ratio_series[i - 1]
+                r_lb = ratio_series[i - 1 - mom_window]
+                mom = (r_now / r_lb - 1) if r_lb > 0 and r_now > 0 else 0.0
+
+                # Regime classification
+                if z > 0.5 and mom > 0:
+                    current_regime = "easing"
+                elif z < -0.5 and mom < 0:
+                    current_regime = "tightening"
+                else:
+                    current_regime = "neutral"
+
+            # Compute return based on current regime
+            if current_regime == "easing":
+                day_ret = (
+                    spy_rets[i] * 0.80
+                    + _asset_ret("QQQ", i) * 0.10
+                    + _asset_ret("GLD", i) * 0.10
+                )
+            elif current_regime == "tightening":
+                day_ret = (
+                    _asset_ret("GLD", i) * 0.40
+                    + _asset_ret("SHY", i) * 0.30
+                    + spy_rets[i] * 0.30
+                )
+            else:
+                day_ret = (
+                    spy_rets[i] * 0.50
+                    + _asset_ret("SHY", i) * 0.40
+                    + _asset_ret("GLD", i) * 0.10
+                )
+
+            if prev_regime is not None and current_regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = current_regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.972,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute REIT divergence v2 returns: %s", e)
+        return None
+
+
+def _compute_dividend_yield_regime_returns(data_dir: Path) -> dict | None:  # noqa: PLR0912
+    """Dividend Yield Regime v1: SPYD/SPY ratio momentum + SMA → regime allocation."""
+    try:
+        import polars as pl
+
+        from llm_quant.data.fetcher import fetch_ohlcv
+
+        symbols = ["SPYD", "SPY", "QQQ", "GLD", "SHY", "TLT"]
+        prices = fetch_ohlcv(symbols, lookback_days=5 * 365)
+
+        spy_df = prices.filter(pl.col("symbol") == "SPY").sort("date")
+        dates = spy_df["date"].to_list()
+        spy_close = spy_df["close"].to_list()
+        n = len(dates)
+
+        sym_data: dict[str, dict] = {}
+        for sym in symbols:
+            sdf = prices.filter(pl.col("symbol") == sym).sort("date")
+            sym_data[sym] = dict(
+                zip(sdf["date"].to_list(), sdf["close"].to_list(), strict=False)
+            )
+
+        spy_rets = [0.0] + [
+            (spy_close[i] / spy_close[i - 1] - 1) if spy_close[i - 1] > 0 else 0
+            for i in range(1, n)
+        ]
+
+        def _asset_ret(sym, i):
+            d, dp = dates[i], dates[i - 1]
+            data = sym_data[sym]
+            if d in data and dp in data and data[dp] > 0:
+                return data[d] / data[dp] - 1
+            return 0.0
+
+        warmup = 70
+        mom_lookback = 20
+        sma_period = 40
+        rebalance_freq = 5
+        daily_returns = []
+        prev_regime = None
+        cost_per_switch = 0.0003
+
+        # Build SPYD/SPY ratio series
+        ratio_series = []
+        for i in range(n):
+            d = dates[i]
+            spyd = sym_data["SPYD"].get(d, 0.0)
+            spy = sym_data["SPY"].get(d, 0.0)
+            ratio_series.append(spyd / spy if spyd > 0 and spy > 0 else 0.0)
+
+        rebal_counter = 0
+        current_regime = "neutral"
+
+        for i in range(warmup, n):
+            if i < sma_period + mom_lookback + 2:
+                daily_returns.append(0.0)
+                continue
+
+            rebal_counter += 1
+            if rebal_counter >= rebalance_freq:
+                rebal_counter = 0
+
+                # Momentum
+                r_now = ratio_series[i - 1]
+                r_lb = ratio_series[i - 1 - mom_lookback]
+                if r_now > 0 and r_lb > 0:
+                    mom = r_now / r_lb - 1
+                else:
+                    daily_returns.append(0.0)
+                    continue
+
+                # SMA
+                window = ratio_series[i - 1 - sma_period : i - 1]
+                valid = [x for x in window if x > 0]
+                if len(valid) < sma_period // 2:
+                    daily_returns.append(0.0)
+                    continue
+                sma = sum(valid) / len(valid)
+
+                # Regime classification
+                if mom > 0 and r_now > sma:
+                    current_regime = "income_preference"
+                elif mom < 0 and r_now < sma:
+                    current_regime = "growth_preference"
+                else:
+                    current_regime = "neutral"
+
+            # Compute return based on current regime
+            if current_regime == "income_preference":
+                day_ret = (
+                    spy_rets[i] * 0.20
+                    + _asset_ret("GLD", i) * 0.40
+                    + _asset_ret("SHY", i) * 0.20
+                    + _asset_ret("TLT", i) * 0.20
+                )
+            elif current_regime == "growth_preference":
+                day_ret = (
+                    spy_rets[i] * 0.70
+                    + _asset_ret("QQQ", i) * 0.15
+                    + _asset_ret("SHY", i) * 0.15
+                )
+            else:
+                day_ret = (
+                    spy_rets[i] * 0.50
+                    + _asset_ret("SHY", i) * 0.30
+                    + _asset_ret("GLD", i) * 0.10
+                    + _asset_ret("TLT", i) * 0.10
+                )
+
+            if prev_regime is not None and current_regime != prev_regime:
+                day_ret -= cost_per_switch
+            prev_regime = current_regime
+            daily_returns.append(day_ret)
+
+        if len(daily_returns) < 60:
+            return None
+
+        mean = sum(daily_returns) / len(daily_returns)
+        std = (sum((r - mean) ** 2 for r in daily_returns) / len(daily_returns)) ** 0.5
+        sharpe = (mean / std * math.sqrt(252)) if std > 0 else 0.0
+
+        nav = [1.0]
+        for r in daily_returns:
+            nav.append(nav[-1] * (1.0 + r))
+        peak = nav[0]
+        max_dd = 0.0
+        for v in nav:
+            peak = max(peak, v)
+            dd = (peak - v) / peak
+            max_dd = max(max_dd, dd)
+
+        return {
+            "daily_returns": daily_returns,
+            "sharpe": sharpe,
+            "sortino": 0.0,
+            "max_drawdown": max_dd,
+            "total_return": nav[-1] / nav[0] - 1.0,
+            "dsr": 0.994,
+            "start_date": str(dates[warmup]),
+            "end_date": str(dates[-1]),
+        }
+    except Exception as e:
+        logger.warning("Failed to compute dividend-yield-regime returns: %s", e)
         return None
 
 
