@@ -16,6 +16,7 @@ YAHOO_SYMBOL_MAP: dict[str, str] = {
     "VIX": "^VIX",
     "VIX3M": "^VIX3M",
     "SKEW": "^SKEW",
+    "TNX": "^TNX",
 }
 
 # Reverse map: Yahoo ticker -> internal symbol (for tagging stored rows).

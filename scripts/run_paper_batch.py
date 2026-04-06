@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 34 strategies.
+"""Paper trading batch runner: generates daily signals for all 35 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -105,6 +105,7 @@ ALL_SYMBOLS = sorted(
         "TQQQ",
         "TMF",
         "VIX",
+        "TNX",
     }
 )
 
@@ -141,6 +142,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "uso-xle-mean-reversion-v2": "F2",
     "gdx-gld-mean-reversion-v1": "F2",
     "dollar-gold-regime-v1": "F26",
+    "erp-regime-v1": "F30",
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
     "d3-tqqq-tmf-ratio-mr": "D3",
 }
@@ -927,6 +929,74 @@ def signal_d3_tqqq_tmf_ratio_mr(
     }
 
 
+def signal_erp_regime(
+    sym_data: dict[str, dict],
+    dates: list,
+) -> dict:
+    """F30 ERP Valuation Regime: SPY 1yr return minus TNX yield, 252d z-score.
+
+    EQUITY_CHEAP (z > 1.0): 70% SPY + 10% TLT + 10% GLD + 10% SHY
+    EQUITY_EXPENSIVE (z < -1.0): 20% SPY + 30% TLT + 30% GLD + 20% SHY
+    NEUTRAL: 50% SPY + 20% TLT + 15% GLD + 15% SHY
+    """
+    n = len(dates)
+    spy_lookback = 252
+    zscore_lookback = 252
+    min_data = spy_lookback + zscore_lookback + 2
+    if n < min_data:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Build ERP proxy series up to yesterday (causal)
+    erp_series = []
+    for i in range(spy_lookback, n - 1):
+        d = dates[i]
+        d_lb = dates[i - spy_lookback]
+        spy_now = get_close(sym_data, "SPY", d)
+        spy_lb = get_close(sym_data, "SPY", d_lb)
+        tnx = get_close(sym_data, "TNX", d)
+        if spy_now <= 0 or spy_lb <= 0 or tnx <= 0:
+            erp_series.append(None)
+            continue
+        spy_1y_ret = spy_now / spy_lb - 1
+        tnx_yield = tnx / 100.0  # TNX is in percentage points
+        erp = spy_1y_ret - tnx_yield
+        erp_series.append(erp)
+
+    # Filter valid entries for z-score
+    valid_erp = [x for x in erp_series if x is not None]
+    if len(valid_erp) < zscore_lookback:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Z-score of most recent ERP value against trailing window
+    window = valid_erp[-zscore_lookback:]
+    current = valid_erp[-1]
+    mean = sum(window) / len(window)
+    std = (sum((x - mean) ** 2 for x in window) / len(window)) ** 0.5
+    if std <= 0:
+        return {"position": "flat", "regime": "no_vol", "weight": 0.0}
+
+    z = (current - mean) / std
+
+    if z > 1.0:
+        regime = "equity_cheap"
+        alloc = {"SPY": 0.70, "TLT": 0.10, "GLD": 0.10, "SHY": 0.10}
+    elif z < -1.0:
+        regime = "equity_expensive"
+        alloc = {"SPY": 0.20, "TLT": 0.30, "GLD": 0.30, "SHY": 0.20}
+    else:
+        regime = "neutral"
+        alloc = {"SPY": 0.50, "TLT": 0.20, "GLD": 0.15, "SHY": 0.15}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": z,
+        "signal_desc": f"ERP z={z:+.2f} (erp={current:+.4f}, spy_1y_ret-tnx_yield)",
+        "allocation": alloc,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Compute today's daily return for a signal
 # ---------------------------------------------------------------------------
@@ -1043,7 +1113,7 @@ def run_all_signals(
     dates: list,
     prices_df: pl.DataFrame,
 ) -> dict[str, dict]:
-    """Compute today's signal for all 34 strategies. Returns slug -> signal dict."""
+    """Compute today's signal for all 35 strategies. Returns slug -> signal dict."""
     results: dict[str, dict] = {}
 
     # Type 1: Lead-lag strategies
@@ -1242,6 +1312,17 @@ def run_all_signals(
             "weight": 0.0,
         }
 
+    # F30: ERP Valuation Regime
+    try:
+        results["erp-regime-v1"] = signal_erp_regime(sym_data, dates)
+    except Exception as e:
+        logger.warning("Error computing erp-regime-v1: %s", e)
+        results["erp-regime-v1"] = {
+            "position": "error",
+            "regime": str(e),
+            "weight": 0.0,
+        }
+
     return results
 
 
@@ -1269,7 +1350,7 @@ def main():
     latest_date = spy_dates[-1]
     logger.info("Latest data date: %s", latest_date)
 
-    # 2. Compute signals for all 33 strategies
+    # 2. Compute signals for all 35 strategies
     signals = run_all_signals(sym_data, spy_dates, prices_df)
 
     # 3. Process each strategy

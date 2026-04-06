@@ -178,19 +178,22 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - Real alpha vs. fake alpha signatures
 - One-page decision framework (7 questions, stop at first "no")
 
-**Current status (2026-04-06):** 20 of 26 mechanism families with passing strategies.
-- 34 strategies passing all gates across 20 families (F1-F3, F5-F9, F11-F22, F26, plus Track D)
+**Current status (2026-04-06):** 21 of 31 mechanism families with passing strategies.
+- 35 strategies passing all gates across 21 families (F1-F3, F5-F9, F11-F22, F26, F30, plus Track D)
 - 18 cluster representatives after hierarchical clustering (threshold=0.70)
-- 6 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity), F20 (Equity Sector Ratio),
-  F23 (VIX Fear Gauge), F24 (Treasury Auction Cycle), F25 (Sector Dispersion MR)
+- 10 families tested but failed: F4 (Volatility Risk Premium), F10 (Liquidity), F20 (Equity Sector Ratio),
+  F23 (VIX Fear Gauge), F24 (Treasury Auction Cycle), F25 (Sector Dispersion MR),
+  F27 (AAII Sentiment — not tested), F28 (Country XS Momentum — rejected), F29 (Bond Vol Regime — rejected),
+  F31 (Factor XS Momentum — rejected)
 - Track B: 3 strategies (SOXX-QQQ, USO/XLE energy MR, GDX/GLD miners MR)
 - Track D: 3 strategies passing — D1 TLT-TQQQ (Sharpe=1.030), D2 BTC-momentum (marginal), D3 TQQQ/TMF ratio MR (Sharpe=2.213, HIGHEST EVER)
 - Track D review: data/strategies/sprint-alpha/track-d-review.yaml
-- Key families by Sharpe: D3 TQQQ/TMF (2.213), F12 XLK-XLE (1.525), F3 TSMOM (1.331), F15 TIP/TLT (1.313),
-  F19 TLT/GLD disinflation (1.313), F13 vol-regime (1.270), F1 LQD-SPY (1.250),
-  F2 GLD-SLV (1.197), F18 commodity-carry (1.119), F16 breakeven (1.068),
-  F11 DBA commodity (1.010), F26 dollar-gold (0.987), F21 DBC/SPY (0.942),
-  F22 AGG/TLT duration (0.915), F17 global-yield-flow (0.900)
+- Key families by Sharpe: D3 TQQQ/TMF (2.213), F30 ERP regime (1.566), F12 XLK-XLE (1.525),
+  F3 TSMOM (1.331), F15 TIP/TLT (1.313), F19 TLT/GLD disinflation (1.313),
+  F13 vol-regime (1.270), F1 LQD-SPY (1.250), F2 GLD-SLV (1.197),
+  F18 commodity-carry (1.119), F16 breakeven (1.068), F11 DBA commodity (1.010),
+  F26 dollar-gold (0.987), F21 DBC/SPY (0.942), F22 AGG/TLT duration (0.915),
+  F17 global-yield-flow (0.900)
 
 **Portfolio SR (measured, not estimated):**
 - Empirical portfolio SR = **2.205** (18 cluster reps, equal-weight, daily returns)
@@ -204,7 +207,7 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 - 5-fold anchored expanding window: avg OOS SR=1.810, avg IS SR=1.134
 - OOS/IS ratio = 1.597 (no overfitting — OOS exceeds IS)
 - Realized vol = 3.8%, vol target scale = 2.64x to reach 10%
-- Paper trading batch runner: `scripts/run_paper_batch.py` generates daily signals for all 34 strategies
+- Paper trading batch runner: `scripts/run_paper_batch.py` generates daily signals for all 35 strategies
 
 **Tier assessment:** Operating solidly in Tier 2 (SR 1.0-2.0 range for small funds)
 without leverage. Achieved via decorrelation across 20 mechanism families. Next phase:
