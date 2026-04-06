@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Paper trading batch runner: generates daily signals for all 36 strategies.
+"""Paper trading batch runner: generates daily signals for all 37 strategies.
 
 Fetches OHLCV data once (shared across all strategies), computes today's signal
 for each strategy, appends to paper-trading.yaml, and prints a summary table.
@@ -102,6 +102,7 @@ ALL_SYMBOLS = sorted(
         "XLY",
         "XLC",
         "XLRE",
+        "SPYD",
         "TQQQ",
         "TMF",
         "VIX",
@@ -144,6 +145,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "dollar-gold-regime-v1": "F26",
     "erp-regime-v1": "F30",
     "reit-divergence-v2": "F33",
+    "dividend-yield-regime-v1": "F42",
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
     "d3-tqqq-tmf-ratio-mr": "D3",
 }
@@ -1069,6 +1071,75 @@ def signal_reit_divergence_v2(sym_data: dict[str, dict], dates: list) -> dict:
     }
 
 
+def signal_dividend_yield_regime(sym_data: dict[str, dict], dates: list) -> dict:
+    """F42 Dividend Yield Regime: SPYD/SPY ratio 20d momentum + 40d SMA.
+
+    INCOME_PREFERENCE (mom > 0 AND ratio > SMA): 40% GLD + 20% SHY + 20% TLT + 20% SPY
+    GROWTH_PREFERENCE (mom < 0 AND ratio < SMA): 70% SPY + 15% QQQ + 15% SHY
+    NEUTRAL: 50% SPY + 30% SHY + 10% GLD + 10% TLT
+    """
+    n = len(dates)
+    mom_lookback = 20
+    sma_period = 40
+    min_data = sma_period + mom_lookback + 2
+    if n < min_data:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Build SPYD/SPY ratio series
+    ratios: list[float | None] = []
+    for i in range(n):
+        spyd = get_close(sym_data, "SPYD", dates[i])
+        spy = get_close(sym_data, "SPY", dates[i])
+        if spyd > 0 and spy > 0:
+            ratios.append(spyd / spy)
+        else:
+            ratios.append(None)
+
+    # Use yesterday's values (causal)
+    idx = n - 2
+
+    # Compute 20-day momentum
+    if (
+        ratios[idx] is not None
+        and idx >= mom_lookback
+        and ratios[idx - mom_lookback] is not None
+        and ratios[idx - mom_lookback] > 0
+    ):
+        mom = ratios[idx] / ratios[idx - mom_lookback] - 1
+    else:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Compute 40-day SMA of ratio
+    window_vals = [
+        ratios[j] for j in range(idx - sma_period + 1, idx + 1) if ratios[j] is not None
+    ]
+    if len(window_vals) < sma_period // 2:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    sma = sum(window_vals) / len(window_vals)
+    current_ratio = ratios[idx]
+
+    # Regime classification
+    if mom > 0 and current_ratio > sma:
+        regime = "income_preference"
+        alloc = {"SPY": 0.20, "GLD": 0.40, "SHY": 0.20, "TLT": 0.20}
+    elif mom < 0 and current_ratio < sma:
+        regime = "growth_preference"
+        alloc = {"SPY": 0.70, "QQQ": 0.15, "SHY": 0.15}
+    else:
+        regime = "neutral"
+        alloc = {"SPY": 0.50, "SHY": 0.30, "GLD": 0.10, "TLT": 0.10}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": mom,
+        "signal_desc": f"SPYD/SPY mom={mom:+.4f} ratio={current_ratio:.4f} sma={sma:.4f}",
+        "allocation": alloc,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Compute today's daily return for a signal
 # ---------------------------------------------------------------------------
@@ -1248,6 +1319,7 @@ def run_all_signals(
         ("vol-regime-v2", signal_vol_regime_v2),
         ("dba-commodity-cycle-v1", signal_dba_commodity_cycle),
         ("reit-divergence-v2", signal_reit_divergence_v2),
+        ("dividend-yield-regime-v1", signal_dividend_yield_regime),
     ]
     for slug, fn in regime_configs:
         try:
