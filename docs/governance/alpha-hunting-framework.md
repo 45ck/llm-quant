@@ -312,16 +312,39 @@ Dollar-strong→60% SPY, Gold-strong→40% GLD + 15% DBA. lookback=30 critical.
 
 ---
 
+### Family 27: AAII Retail Sentiment Contrarian
+**Status: NOT TESTED** — Requires external data pipeline (AAII CSV scraper). Weekly AAII
+bearish % contrarian signal. Expected Sharpe 0.75-1.05 based on academic literature.
+
+### Family 28: International Country Cross-Sectional Momentum
+**Status: REJECTED** — Sharpe=0.584, MaxDD=22.2%, DSR=0.877, shuffled p=0.142.
+Country ETF momentum (EWJ/VGK/EWZ/EWT/EWC/EWA/EWY/INDA, 12-1 month, top 3) fails
+4/6 gates. Signal barely improves on random country selection in synchronized global macro.
+
+### Family 29: Bond Volatility Regime (MOVE/VIX)
+**Status: TESTING** — TLT/SPY realized vol ratio regime timing. In progress.
+
+### Family 30: Equity Risk Premium Valuation Regime
+**Status: TESTING** — SPY 1y return minus TNX yield z-score regime timing. In progress.
+
+### Family 31: Factor ETF Cross-Sectional Momentum
+**Status: REJECTED** — Sharpe=0.525, MaxDD=20.4%, DSR=0.867, shuffled p=0.000.
+Signal is REAL (p=0.000, CPCV OOS/IS=1.021) but too weak. Factor ETFs within same
+market have high pairwise correlation limiting cross-sectional alpha. 3/6 gates FAIL.
+
 **NOTE:** F11-F22 and F26 all cluster together (avg ρ=0.75-0.85). Adding more commodity/macro/inflation
 ratio momentum strategies provides redundancy but ZERO new decorrelation. New cluster representatives
 require genuinely different mechanisms — not more ratio momentum on different instrument pairs.
+
+F28 and F31 demonstrate that cross-sectional momentum within a single asset class (countries or factors)
+does not generate sufficient alpha for Track A gates — intra-class correlation too high.
 
 ---
 
 ## Prioritized Research Roadmap
 
-Research phase largely complete — 20 of 26 families tested. Focus shifts to paper trading
-validation and portfolio optimization.
+Research phase largely complete — 20 of 31 families tested (20 passing). Focus shifts to
+paper trading validation and portfolio optimization.
 
 | Priority | Action | Expected Effort | Status |
 |----------|--------|----------------|--------|
@@ -331,7 +354,7 @@ validation and portfolio optimization.
 | 4 | Volatility targeting overlay | 1 session | Not started |
 | 5 | Track D paper trading (D1 TLT-TQQQ + D3 TQQQ/TMF) | 60 days | In progress (day 1-4) |
 | 6 | Track C (Niche Arb) production readiness | 2-3 sessions | 4/17 gates done |
-| 7 | Novel mechanism discovery (F27+) | Ongoing | Research phase |
+| 7 | Novel mechanism discovery (F27-F31) | Ongoing | F28/F31 rejected, F29/F30 testing |
 
 ---
 
