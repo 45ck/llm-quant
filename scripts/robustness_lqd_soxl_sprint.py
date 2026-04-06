@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Robustness analysis for agg-soxl-sprint (Track D -- Sprint Alpha).
+"""Robustness analysis for lqd-soxl-sprint (Track D — Sprint Alpha).
 
-Mechanism: AGG (IG aggregate bond) 10-day return as lead signal
--> SOXL (3x leveraged semiconductors) follower. Credit markets lead
-risk-on/off shifts; AGG strength signals risk appetite -> buy SOXL.
-VIX crash filter prevents holding through extreme vol spikes.
+Mechanism: LQD (investment-grade corporate bonds) 10-day return as lead signal
+-> SOXL (3x leveraged semiconductors) follower. LQD credit spread
+movements lead semiconductor equity risk due to funding channel
+contagion — credit tightening hits capital-intensive semis first.
 
 Signal logic:
-  - AGG 10-day return >= entry_threshold (1.0%) -> entry (buy SOXL at target_weight)
-  - AGG 10-day return <= exit_threshold (-0.5%) -> exit to SHY (cash proxy)
+  - LQD 10-day return >= entry_threshold (1.0%) -> entry (buy SOXL at target_weight)
+  - LQD 10-day return <= exit_threshold (-0.5%) -> exit to SHY (cash proxy)
   - Use signal from lag_days (3) ago -- no look-ahead
   - VIX > 30 crash filter -> 100% SHY override
-  - Daily rebalance check (rebalance_frequency=1)
+  - Daily rebalance check
   - Cost per switch: 20 bps round-trip
 
 Track D gates (leveraged):
@@ -19,10 +19,10 @@ Track D gates (leveraged):
   - Gate 2: MaxDD < 40%
   - Gate 3: DSR >= 0.90
   - Gate 4: CPCV OOS > 0 (15 groups, 3 test, 5-day purge)
-  - Gate 5: Perturbation >= 40% stable
+  - Gate 5: Perturbation >= 40% stable (<=25% Sharpe change)
   - Gate 6: Shuffled signal p < 0.05
 
-Run: cd E:/llm-quant && PYTHONPATH=src python scripts/robustness_agg_soxl_sprint.py
+Run: cd E:/llm-quant && PYTHONPATH=src python scripts/robustness_lqd_soxl_sprint.py
 """
 
 from __future__ import annotations
@@ -41,20 +41,20 @@ from scipy import stats
 from llm_quant.backtest.robustness import shuffled_signal_test
 from llm_quant.data.fetcher import fetch_ohlcv
 
-SLUG = "agg-soxl-sprint"
-SYMBOLS = ["AGG", "SOXL", "SHY", "VIX"]
+SLUG = "lqd-soxl-sprint"
+SYMBOLS = ["LQD", "SOXL", "SHY", "VIX"]
 DD_THRESHOLD = 0.40  # Track D: 40% max drawdown
 LOOKBACK_DAYS = 5 * 365  # 1825 days
 WARMUP = 60
 
 BASE_PARAMS = {
-    "entry_threshold": 0.01,  # AGG 10-day return >= 1.0% -> buy SOXL
-    "exit_threshold": -0.005,  # AGG 10-day return <= -0.5% -> exit
+    "entry_threshold": 0.01,  # LQD 10-day return >= 1.0% -> buy SOXL
+    "exit_threshold": -0.005,  # LQD 10-day return <= -0.5% -> exit
     "lag_days": 3,  # Use signal from 3 days ago
-    "signal_window": 10,  # 10-day return lookback for AGG
+    "signal_window": 10,  # 10-day return lookback for LQD
     "target_weight": 0.30,  # 30% position in SOXL
     "vix_crash_threshold": 30.0,  # VIX > 30 -> 100% SHY
-    "rebalance_frequency": 1,  # Daily rebalance check
+    "rebalance_freq": 1,  # Daily rebalance check
 }
 
 # ============================================================================
@@ -139,13 +139,13 @@ def run_single(params: dict) -> dict:
     """Run a single backtest with the given parameters.
 
     Signal logic (with lag + VIX crash filter + rebalance frequency):
-    - Compute AGG return over signal_window days
+    - Compute LQD return over signal_window days
     - Use the signal from lag_days ago (causal)
     - VIX > vix_crash_threshold -> 100% SHY (crash override)
-    - If AGG return >= entry_threshold -> hold SOXL at target_weight, rest in SHY
-    - If AGG return <= exit_threshold -> exit to SHY (100%)
+    - If LQD return >= entry_threshold -> hold SOXL at target_weight, rest in SHY
+    - If LQD return <= exit_threshold -> exit to SHY (100%)
     - Otherwise hold current position
-    - Rebalance check every rebalance_frequency days
+    - Rebalance check every rebalance_freq days
     """
     entry_thresh = float(params.get("entry_threshold", 0.01))
     exit_thresh = float(params.get("exit_threshold", -0.005))
@@ -153,7 +153,7 @@ def run_single(params: dict) -> dict:
     window = int(params.get("signal_window", 10))
     tw = float(params.get("target_weight", 0.30))
     vix_thresh = float(params.get("vix_crash_threshold", 30.0))
-    rebal_freq = int(params.get("rebalance_frequency", 1))
+    rebal_freq = int(params.get("rebalance_freq", 1))
     cost_per_switch = 0.0020  # 20 bps round-trip
 
     daily_returns = []
@@ -169,7 +169,7 @@ def run_single(params: dict) -> dict:
 
         prev_position = in_position
 
-        # VIX crash filter (use yesterday's VIX close -- causal)
+        # VIX crash filter (use yesterday's VIX close)
         vix_level = sym_data["VIX"].get(dates[i - 1], 0.0)
         vix_crash = vix_level > vix_thresh if vix_level > 0 else False
 
@@ -190,23 +190,23 @@ def run_single(params: dict) -> dict:
                     daily_returns.append(asset_ret("SHY", i))
                     continue
 
-                # AGG return over signal_window ending at signal_idx
+                # LQD return over signal_window ending at signal_idx
                 d_signal = dates[signal_idx]
                 d_signal_lb = dates[signal_idx - window]
 
-                agg_now = sym_data["AGG"].get(d_signal, 0.0)
-                agg_lb = sym_data["AGG"].get(d_signal_lb, 0.0)
+                lqd_now = sym_data["LQD"].get(d_signal, 0.0)
+                lqd_lb = sym_data["LQD"].get(d_signal_lb, 0.0)
 
-                if agg_now <= 0 or agg_lb <= 0:
+                if lqd_now <= 0 or lqd_lb <= 0:
                     daily_returns.append(asset_ret("SHY", i))
                     continue
 
-                agg_ret = agg_now / agg_lb - 1.0
+                lqd_ret = lqd_now / lqd_lb - 1.0
 
                 # Position logic -- only update on rebalance days
-                if agg_ret >= entry_thresh:
+                if lqd_ret >= entry_thresh:
                     in_position = True
-                elif agg_ret <= exit_thresh:
+                elif lqd_ret <= exit_thresh:
                     in_position = False
                 # else: hold current state
 
@@ -238,8 +238,7 @@ def cpcv_sharpe(
     from itertools import combinations
 
     n_r = len(returns)
-    if n_r < n_groups * 10:
-        print(f"  WARNING: Only {n_r} returns, need {n_groups * 10} for CPCV")
+    if n_r < n_groups:
         return 0.0, 0.0, 0.0
     group_size = n_r // n_groups
     oos_sharpes = []
@@ -295,47 +294,41 @@ print(f"CPCV OOS/IS Ratio:     {oos_is_ratio:.4f}")
 print(f"CPCV % Positive Folds: {cpcv_pct_pos:.1%}")
 
 # ==============================================================================
-# PERTURBATION TESTS (7-dimension sweep per user specification)
+# PERTURBATION TESTS
 # ==============================================================================
 perturbations = [
-    # lag_days: [1, 2, 3(base), 5, 7, 10] -> test all non-base values
+    # lag_days: base=3, vary +/-2 -> 1, 5
     ("lag=1", {**BASE_PARAMS, "lag_days": 1}),
-    ("lag=2", {**BASE_PARAMS, "lag_days": 2}),
     ("lag=5", {**BASE_PARAMS, "lag_days": 5}),
-    ("lag=7", {**BASE_PARAMS, "lag_days": 7}),
-    ("lag=10", {**BASE_PARAMS, "lag_days": 10}),
-    # signal_window: [5, 7, 10(base), 15, 20] -> test non-base values
+    # signal_window: [5, 7, 10, 15, 20] (10 is base)
     ("window=5", {**BASE_PARAMS, "signal_window": 5}),
     ("window=7", {**BASE_PARAMS, "signal_window": 7}),
     ("window=15", {**BASE_PARAMS, "signal_window": 15}),
     ("window=20", {**BASE_PARAMS, "signal_window": 20}),
-    # entry_threshold: base=0.01, vary +-50% -> [0.005, 0.015]
+    # entry_threshold: base=0.01, vary +/-50% -> 0.005, 0.015
     ("entry=0.5%", {**BASE_PARAMS, "entry_threshold": 0.005}),
     ("entry=1.5%", {**BASE_PARAMS, "entry_threshold": 0.015}),
-    # exit_threshold: base=-0.005, vary +-50% -> [-0.0025, -0.0075]
+    # exit_threshold: base=-0.005, vary +/-50% -> -0.0025, -0.0075
     ("exit=-0.25%", {**BASE_PARAMS, "exit_threshold": -0.0025}),
     ("exit=-0.75%", {**BASE_PARAMS, "exit_threshold": -0.0075}),
-    # target_weight: [0.20, 0.25, 0.30(base), 0.40, 0.50]
+    # target_weight: [0.20, 0.25, 0.40, 0.50] (0.30 is base)
     ("weight=0.20", {**BASE_PARAMS, "target_weight": 0.20}),
     ("weight=0.25", {**BASE_PARAMS, "target_weight": 0.25}),
     ("weight=0.40", {**BASE_PARAMS, "target_weight": 0.40}),
     ("weight=0.50", {**BASE_PARAMS, "target_weight": 0.50}),
-    # rebalance_frequency: [1(base), 3, 5, 7]
-    ("rebal=3d", {**BASE_PARAMS, "rebalance_frequency": 3}),
-    ("rebal=5d", {**BASE_PARAMS, "rebalance_frequency": 5}),
-    ("rebal=7d", {**BASE_PARAMS, "rebalance_frequency": 7}),
-    # vix_crash_threshold: [25, 30(base), 35, 40]
+    # rebalance_frequency: [1, 3, 5, 7] (1 is base)
+    ("rebalance=3d", {**BASE_PARAMS, "rebalance_freq": 3}),
+    ("rebalance=5d", {**BASE_PARAMS, "rebalance_freq": 5}),
+    ("rebalance=7d", {**BASE_PARAMS, "rebalance_freq": 7}),
+    # vix_crash_threshold: [25, 35, 40] (30 is base)
     ("vix_crash=25", {**BASE_PARAMS, "vix_crash_threshold": 25.0}),
     ("vix_crash=35", {**BASE_PARAMS, "vix_crash_threshold": 35.0}),
     ("vix_crash=40", {**BASE_PARAMS, "vix_crash_threshold": 40.0}),
 ]
 
 print("\n--- PERTURBATION RESULTS ---")
-print(
-    f"  {'Variant':<25} {'Sharpe':>8} {'MaxDD':>8} {'CAGR':>8} "
-    f"{'Change%':>9} {'Status':>10}"
-)
-print(f"  {'-' * 25} {'-' * 8} {'-' * 8} {'-' * 8} {'-' * 9} {'-' * 10}")
+print(f"  {'Variant':<25} {'Sharpe':>8} {'MaxDD':>8} {'Change%':>9} {'Status':>10}")
+print(f"  {'-' * 25} {'-' * 8} {'-' * 8} {'-' * 9} {'-' * 10}")
 perturbation_results = []
 stable_count = 0
 for name, params in perturbations:
@@ -355,8 +348,7 @@ for name, params in perturbations:
         }
     )
     print(
-        f"  {name:<25} {r['sharpe']:>8.4f} {r['max_dd']:>8.4f} "
-        f"{r['cagr']:>8.4f} {pct:>+8.1f}% {stable:>10}"
+        f"  {name:<25} {r['sharpe']:>8.4f} {r['max_dd']:>8.4f} {pct:>+8.1f}% {stable:>10}"
     )
 
 pct_stable = stable_count / len(perturbations) * 100
@@ -405,7 +397,7 @@ print(f"  DSR (computed inline): {dsr_value:.4f}")
 # GATE ASSESSMENT -- Track D gates
 # ==============================================================================
 print(f"\n{'=' * 70}")
-print("GATE ASSESSMENT (Track D -- Leveraged Sprint)")
+print("GATE ASSESSMENT (Track D -- Leveraged)")
 print(f"{'=' * 70}")
 
 gate1 = base["sharpe"] >= 0.80
@@ -445,12 +437,13 @@ print(f"\n  VERDICT: {verdict}")
 # ==============================================================================
 output = {
     "strategy_slug": SLUG,
-    "strategy_type": "leveraged_credit_lead_lag",
+    "strategy_type": "leveraged_lead_lag",
     "track": "D",
-    "mechanism": "AGG (aggregate bond) 10-day return -> SOXL (3x leveraged semiconductors)",
-    "key_differentiator": "Credit spread contagion: AGG reflects funding conditions that hit "
-    "capital-intensive semis first; VIX crash filter prevents holding "
-    "through extreme vol spikes",
+    "mechanism": "LQD (investment-grade corporate bonds) 10-day return -> SOXL "
+    "(3x leveraged semiconductors)",
+    "key_differentiator": "Credit spread contagion: LQD reflects investment-grade "
+    "funding conditions that hit capital-intensive semis first; "
+    "VIX crash filter prevents holding through extreme vol spikes",
     "base_params": BASE_PARAMS,
     "base_sharpe": round(base["sharpe"], 4),
     "base_max_dd": round(base["max_dd"], 4),

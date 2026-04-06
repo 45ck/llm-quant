@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Robustness analysis for tlt-soxl-sprint (Track D -- Sprint Alpha).
 
-Mechanism: TLT (20-year Treasury) 10-day return as lead signal
+Mechanism: TLT (20+ year Treasury) 10-day return as lead signal
 -> SOXL (3x leveraged semiconductors) follower. TLT rate sensitivity
-creates a 3-day lagged signal for semiconductor sector direction.
+creates a 3-day lagged signal for semiconductor sector direction via
+the duration-growth channel.
 
 Signal logic:
   - TLT 10-day return >= entry_threshold (1.0%) -> entry (buy SOXL at target_weight)
   - TLT 10-day return <= exit_threshold (-0.5%) -> exit to SHY (cash proxy)
   - Use signal from lag_days (3) ago -- no look-ahead
-  - Daily rebalancing (check signal every day)
-  - VIX > 30 crash filter -> 100% cash override
+  - Daily rebalancing (rebalance_frequency=1)
+  - VIX > 30 crash filter -> 100% SHY override
   - Cost per switch: 20 bps round-trip
 
 Track D gates (leveraged):
@@ -43,19 +44,19 @@ from llm_quant.data.fetcher import fetch_ohlcv
 
 SLUG = "tlt-soxl-sprint"
 SYMBOLS = ["TLT", "SOXL", "SHY"]
-VIX_SYMBOL = "^VIX"
 DD_THRESHOLD = 0.40  # Track D: 40% max drawdown
-LOOKBACK_DAYS = 5 * 365  # 1825 days
+LOOKBACK_DAYS = 5 * 365
 WARMUP = 60
 
+# Parameters from frozen research-spec.yaml and experiment-registry.jsonl
 BASE_PARAMS = {
     "entry_threshold": 0.01,  # TLT 10-day return >= 1.0% -> buy SOXL
     "exit_threshold": -0.005,  # TLT 10-day return <= -0.5% -> exit
-    "lag_days": 3,  # 3-day lag
+    "lag_days": 3,  # Use signal from 3 days ago
     "signal_window": 10,  # 10-day return lookback for TLT
     "target_weight": 0.30,  # 30% position in SOXL
-    "vix_crash": 30,  # VIX > 30 -> 100% cash
-    "rebalance": 5,  # Rebalance every 5 trading days
+    "rebalance_frequency": 1,  # Daily rebalancing
+    "vix_crash_threshold": 30,  # VIX > 30 -> 100% SHY
 }
 
 # ==============================================================================
@@ -90,7 +91,6 @@ for sym in SYMBOLS:
 vix_sym_name = "VIX"
 vix_sdf = vix_prices.filter(pl.col("symbol") == vix_sym_name).sort("date")
 if len(vix_sdf) == 0:
-    # Try the raw ticker name
     vix_sym_name = "^VIX"
     vix_sdf = vix_prices.filter(pl.col("symbol") == vix_sym_name).sort("date")
 vix_data: dict = dict(
@@ -159,7 +159,7 @@ def run_single(params: dict) -> dict:
     - Compute TLT return over signal_window days
     - Use the signal from lag_days ago (causal)
     - Only act on rebalance days (every N trading days)
-    - VIX > vix_crash -> force exit to cash (100% SHY)
+    - VIX > vix_crash_threshold -> force exit to 100% SHY
     - If TLT return >= entry_threshold -> hold SOXL at target_weight, rest in SHY
     - If TLT return <= exit_threshold -> exit to SHY (100%)
     - Otherwise hold current position
@@ -169,9 +169,9 @@ def run_single(params: dict) -> dict:
     lag = int(params.get("lag_days", 3))
     window = int(params.get("signal_window", 10))
     tw = float(params.get("target_weight", 0.30))
-    vix_crash_level = float(params.get("vix_crash", 30))
-    rebalance_days = int(params.get("rebalance", 5))
-    cost_per_switch = 0.0020  # 20 bps round-trip
+    vix_thresh = float(params.get("vix_crash_threshold", 30))
+    rebal_freq = int(params.get("rebalance_frequency", 1))
+    cost_per_switch = 0.0020  # 20 bps round-trip for leveraged ETFs
 
     daily_returns = []
     in_position = False
@@ -186,41 +186,34 @@ def run_single(params: dict) -> dict:
 
         prev_position = in_position
 
-        # VIX crash filter -- check current VIX level
+        # VIX crash filter -- check every day regardless of rebalance schedule
         current_vix = vix_data.get(dates[i], 0.0)
-        if current_vix > vix_crash_level:
+        if current_vix > vix_thresh:
             in_position = False
         else:
             # Determine if this is a rebalance day
             day_counter += 1
-            is_rebal_day = day_counter % rebalance_days == 0
+            is_rebal_day = rebal_freq <= 1 or (day_counter % rebal_freq == 0)
 
             if is_rebal_day:
                 # Signal date: lag_days ago
                 signal_idx = i - lag
-                if signal_idx < window:
-                    daily_returns.append(asset_ret("SHY", i))
-                    continue
+                if signal_idx >= window:
+                    d_signal = dates[signal_idx]
+                    d_signal_lb = dates[signal_idx - window]
 
-                # TLT return over signal_window ending at signal_idx
-                d_signal = dates[signal_idx]
-                d_signal_lb = dates[signal_idx - window]
+                    tlt_now = sym_data["TLT"].get(d_signal, 0.0)
+                    tlt_lb = sym_data["TLT"].get(d_signal_lb, 0.0)
 
-                tlt_now = sym_data["TLT"].get(d_signal, 0.0)
-                tlt_lb = sym_data["TLT"].get(d_signal_lb, 0.0)
+                    if tlt_now > 0 and tlt_lb > 0:
+                        tlt_ret = tlt_now / tlt_lb - 1.0
 
-                if tlt_now <= 0 or tlt_lb <= 0:
-                    daily_returns.append(asset_ret("SHY", i))
-                    continue
-
-                tlt_ret = tlt_now / tlt_lb - 1.0
-
-                # Position logic -- only update on rebalance days
-                if tlt_ret >= entry_thresh:
-                    in_position = True
-                elif tlt_ret <= exit_thresh:
-                    in_position = False
-                # else: hold current state
+                        # Position logic -- only update on rebalance days
+                        if tlt_ret >= entry_thresh:
+                            in_position = True
+                        elif tlt_ret <= exit_thresh:
+                            in_position = False
+                        # else: hold current state
 
         # Compute daily return based on current position
         if in_position:
@@ -241,16 +234,17 @@ def run_single(params: dict) -> dict:
 
 
 def cpcv_sharpe(
-    returns: list[float], n_groups: int = 15, k: int = 2, purge: int = 5
+    returns: list[float], n_groups: int = 15, k: int = 3, purge: int = 5
 ) -> tuple[float, float, float]:
     """Combinatorial Purged Cross-Validation (inline implementation).
 
-    Uses 15 groups, 2 test groups, 5-day purge as specified.
+    Uses 15 groups, 3 test groups, 5-day purge per standard config.
     """
     from itertools import combinations
 
     n_r = len(returns)
-    if n_r < n_groups:
+    if n_r < n_groups * 10:
+        print(f"  WARNING: Only {n_r} returns, need {n_groups * 10} for CPCV")
         return 0.0, 0.0, 0.0
     group_size = n_r // n_groups
     oos_sharpes = []
@@ -293,12 +287,12 @@ print(f"Base CAGR:    {base['cagr']:.4f}")
 print(f"Trades:       {base['n_trades']}")
 
 # ==============================================================================
-# CPCV (15 groups, 2 test, 5-day purge)
+# CPCV (15 groups, 3 test, 5-day purge)
 # ==============================================================================
 print("\n--- CPCV (Combinatorial Purged Cross-Validation) ---")
-print("  Config: n_groups=15, k=2, purge=5")
+print("  Config: n_groups=15, k=3, purge=5")
 cpcv_mean, cpcv_std, cpcv_pct_pos = cpcv_sharpe(
-    base["daily_returns"], n_groups=15, k=2, purge=5
+    base["daily_returns"], n_groups=15, k=3, purge=5
 )
 oos_is_ratio = cpcv_mean / base["sharpe"] if base["sharpe"] != 0 else 0.0
 print(f"CPCV OOS Mean Sharpe:  {cpcv_mean:.4f} +/- {cpcv_std:.4f}")
@@ -308,36 +302,44 @@ print(f"CPCV % Positive Folds: {cpcv_pct_pos:.1%}")
 # ==============================================================================
 # PERTURBATION TESTS
 # ==============================================================================
+# Per specification:
+#   lag_days: [1, 2, 3, 7, 10] -- base is 3, so test 1, 2, 7, 10
+#   signal_window: [5, 7, 15, 20] -- base is 10
+#   entry_threshold: +/- 50% from base (0.01) -> 0.005, 0.015
+#   exit_threshold: +/- 50% from base (-0.005) -> -0.0025, -0.0075
+#   target_weight: [0.20, 0.25, 0.40, 0.50] -- base is 0.30
+#   rebalance_frequency: [1, 3, 5, 7] -- base is 1, so test 3, 5, 7
+#   vix_crash_threshold: [25, 35, 40] -- base is 30
 perturbations = [
-    # lag_days: 1, 2, 5, 7
+    # lag_days variations (base=3)
     ("lag=1", {**BASE_PARAMS, "lag_days": 1}),
     ("lag=2", {**BASE_PARAMS, "lag_days": 2}),
-    ("lag=5", {**BASE_PARAMS, "lag_days": 5}),
     ("lag=7", {**BASE_PARAMS, "lag_days": 7}),
-    # signal_window: 5, 7, 15, 20
+    ("lag=10", {**BASE_PARAMS, "lag_days": 10}),
+    # signal_window variations (base=10)
     ("window=5", {**BASE_PARAMS, "signal_window": 5}),
     ("window=7", {**BASE_PARAMS, "signal_window": 7}),
     ("window=15", {**BASE_PARAMS, "signal_window": 15}),
     ("window=20", {**BASE_PARAMS, "signal_window": 20}),
-    # entry_threshold: 0.005, 0.007, 0.015, 0.02
+    # entry_threshold variations (base=0.01, +/-50%)
     ("entry=0.5%", {**BASE_PARAMS, "entry_threshold": 0.005}),
-    ("entry=0.7%", {**BASE_PARAMS, "entry_threshold": 0.007}),
     ("entry=1.5%", {**BASE_PARAMS, "entry_threshold": 0.015}),
-    ("entry=2.0%", {**BASE_PARAMS, "entry_threshold": 0.02}),
-    # exit_threshold: -0.003, -0.007, -0.01
-    ("exit=-0.3%", {**BASE_PARAMS, "exit_threshold": -0.003}),
-    ("exit=-0.7%", {**BASE_PARAMS, "exit_threshold": -0.007}),
-    ("exit=-1.0%", {**BASE_PARAMS, "exit_threshold": -0.01}),
-    # target_weight: 0.20, 0.40
+    # exit_threshold variations (base=-0.005, +/-50%)
+    ("exit=-0.25%", {**BASE_PARAMS, "exit_threshold": -0.0025}),
+    ("exit=-0.75%", {**BASE_PARAMS, "exit_threshold": -0.0075}),
+    # target_weight variations (base=0.30)
     ("weight=0.20", {**BASE_PARAMS, "target_weight": 0.20}),
+    ("weight=0.25", {**BASE_PARAMS, "target_weight": 0.25}),
     ("weight=0.40", {**BASE_PARAMS, "target_weight": 0.40}),
-    # vix_crash: 25, 35
-    ("vix_crash=25", {**BASE_PARAMS, "vix_crash": 25}),
-    ("vix_crash=35", {**BASE_PARAMS, "vix_crash": 35}),
-    # rebalance: 3, 7, 10
-    ("rebalance=3", {**BASE_PARAMS, "rebalance": 3}),
-    ("rebalance=7", {**BASE_PARAMS, "rebalance": 7}),
-    ("rebalance=10", {**BASE_PARAMS, "rebalance": 10}),
+    ("weight=0.50", {**BASE_PARAMS, "target_weight": 0.50}),
+    # rebalance_frequency variations (base=1)
+    ("rebal=3", {**BASE_PARAMS, "rebalance_frequency": 3}),
+    ("rebal=5", {**BASE_PARAMS, "rebalance_frequency": 5}),
+    ("rebal=7", {**BASE_PARAMS, "rebalance_frequency": 7}),
+    # vix_crash_threshold variations (base=30)
+    ("vix_crash=25", {**BASE_PARAMS, "vix_crash_threshold": 25}),
+    ("vix_crash=35", {**BASE_PARAMS, "vix_crash_threshold": 35}),
+    ("vix_crash=40", {**BASE_PARAMS, "vix_crash_threshold": 40}),
 ]
 
 print("\n--- PERTURBATION RESULTS ---")
@@ -453,8 +455,8 @@ output = {
     "strategy_slug": SLUG,
     "strategy_type": "leveraged_lead_lag",
     "track": "D",
-    "mechanism": "TLT (20-year Treasury) 10-day return -> SOXL (3x leveraged semiconductors)",
-    "key_differentiator": "TLT rate sensitivity creates 3-day lagged signal for semiconductor sector; VIX crash filter for tail risk",
+    "mechanism": "TLT (20+ yr Treasury) 10-day return -> SOXL (3x leveraged semiconductors)",
+    "key_differentiator": "TLT duration-growth channel: rate moves lead semiconductor capex/demand cycle via SOXL 3x leverage; VIX crash filter for tail risk",
     "base_params": BASE_PARAMS,
     "base_sharpe": round(base["sharpe"], 4),
     "base_max_dd": round(base["max_dd"], 4),
@@ -463,7 +465,7 @@ output = {
     "n_trades": base["n_trades"],
     "dsr": round(dsr_value, 4),
     "cpcv": {
-        "config": "n_groups=15, k=2, purge=5",
+        "config": "n_groups=15, k=3, purge=5",
         "oos_mean_sharpe": round(cpcv_mean, 4),
         "oos_std": round(cpcv_std, 4),
         "oos_is_ratio": round(oos_is_ratio, 4),
