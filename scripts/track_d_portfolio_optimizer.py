@@ -1305,12 +1305,13 @@ def main():  # noqa: PLR0912
         print(f"  Backtest Length: {best_metrics['n_days']} days")
 
         # Print pairwise correlations within the optimal combo
+        all_streams = {**return_streams, **high_streams}
         print("\n  Pairwise correlations within optimal portfolio:")
         for i, s1 in enumerate(best_combo):
             for j, s2 in enumerate(best_combo):
-                if i < j:
-                    corr = compute_correlation(return_streams[s1], return_streams[s2])
-                    print(f"    {s1[:15]} x {s2[:15]}: {corr:.3f}")
+                if i < j and s1 in all_streams and s2 in all_streams:
+                    corr = compute_correlation(all_streams[s1], all_streams[s2])
+                    print(f"    {s1} x {s2}: {corr:.3f}")
     else:
         print("\nNo combination found meeting MaxDD < 40% constraint.")
 
@@ -1327,6 +1328,17 @@ def main():  # noqa: PLR0912
         print(f"    CAGR ratio (portfolio/TQQQ): {cagr_ratio:.2f}x")
         print(f"    MaxDD ratio (portfolio/TQQQ): {dd_ratio:.2f}x")
 
+    print("\n" + "=" * 80)
+    print("D3 TQQQ/TMF RATIO MR -- INVESTIGATION NOTE")
+    print("=" * 80)
+    print("  The D3 robustness file claims Sharpe=2.21, but independent replication")
+    print("  shows negative returns (Sharpe=-1.08). The original backtest engine")
+    print("  (tqqq-tmf-ratio-reversion via PairsRatioStrategy) also shows")
+    print("  Sharpe=0.08, MaxDD=43.5% -- all gates FAIL. The D3 robustness data")
+    print("  is likely from an ad-hoc calculation with a signal direction bug.")
+    print()
+    print("  RECOMMENDATION: D3 should be RETIRED. Do not include in Track D")
+    print("  portfolio until the signal is independently validated.")
     print("\n" + "=" * 80)
 
 
