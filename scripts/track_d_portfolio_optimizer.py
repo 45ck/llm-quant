@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""Track D Portfolio Optimizer — Combine ALL passing Track D strategies.
+"""Track D Portfolio Optimizer — Combine ALL 14 passing Track D strategies.
 
-Reconstructs daily returns for all 12 Track D strategies, computes correlations,
+Reconstructs daily returns for all 14 Track D strategies, computes correlations,
 and optimizes portfolio weights using HRP and Monte Carlo to maximize CAGR
 while keeping MaxDD < 40%.
 
-Strategies (9 confirmed + 3 untested but promising):
-  1. TLT-TQQQ Sprint (lead_lag)       7. IEF-TQQQ Sprint (lead_lag)
-  2. AGG-TQQQ Sprint (lead_lag)       8. VCIT-TQQQ Sprint (lead_lag)
-  3. D3 TQQQ/TMF Ratio MR             9. TLT-UPRO Sprint (lead_lag)
-  4. D10 XLK-XLE-SOXL Rotation       10. AGG-SOXL Sprint (lead_lag)
-  5. D11 SOXX-SOXL Lead-Lag          11. TLT-SOXL Sprint (lead_lag)
-  6. D12 TIP/TLT-UPRO Real Yield     12. D13 TSMOM-UPRO Trend
+Strategies (all 14 passing all 6 Track D gates):
+   1. TLT-TQQQ Sprint (lead_lag)        8. AGG-TQQQ Sprint (lead_lag)
+   2. D10 XLK-XLE-SOXL Rotation         9. AGG-UPRO Sprint (lead_lag)
+   3. D11 SOXX-SOXL Lead-Lag           10. LQD-TQQQ Sprint (lead_lag)
+   4. D12 TIP/TLT-UPRO Real Yield      11. IEF-TQQQ Sprint (lead_lag)
+   5. D13 TSMOM-UPRO Trend             12. VCIT-TQQQ Sprint (lead_lag)
+   6. TLT-UPRO Sprint (lead_lag)       13. D14 Disinflation-TQQQ
+   7. TLT-SOXL Sprint (lead_lag)       14. D15 Vol-Regime-TQQQ
 
 Key question: "What is the maximum CAGR achievable while keeping MaxDD under 40%?"
 
@@ -49,13 +50,13 @@ ALL_SYMBOLS = sorted(
         "DBA",
         "GLD",
         "IEF",
+        "LQD",
         "SHY",
         "SOXX",
         "SOXL",
         "SPY",
         "TIP",
         "TLT",
-        "TMF",
         "TQQQ",
         "UPRO",
         "VCIT",
@@ -565,6 +566,175 @@ def backtest_d13_tsmom_upro(
     return daily_returns
 
 
+def backtest_d14_disinflation_tqqq(
+    sym_data: dict,
+    dates: list,
+    target_weight: float = 0.50,
+) -> list[float]:
+    """D14: TLT/GLD 30-day ratio momentum -> TQQQ in disinflation, defensive in inflation."""
+    lookback = 30
+    rebalance_days = 5
+    gld_inflation_w = 0.40
+    dba_inflation_w = 0.10
+
+    daily_returns: list[float] = []
+    prev_regime = "cash"
+    current_regime = "cash"
+    days_since_rebal = 0
+    warmup = max(60, lookback + 5)
+
+    for i in range(warmup, len(dates)):
+        d = dates[i]
+        prev_d = dates[i - 1]
+
+        days_since_rebal += 1
+        is_rebal_day = days_since_rebal >= rebalance_days
+
+        if is_rebal_day:
+            days_since_rebal = 0
+            prev_regime = current_regime
+
+            # VIX crash filter
+            vix = _get_close(sym_data, "VIX", d)
+            if vix > VIX_CRASH_THRESHOLD:
+                current_regime = "cash"
+            else:
+                # TLT/GLD ratio momentum
+                lb_idx = i - lookback
+                if lb_idx >= 0:
+                    tlt_now = _get_close(sym_data, "TLT", d)
+                    gld_now = _get_close(sym_data, "GLD", d)
+                    tlt_lb = _get_close(sym_data, "TLT", dates[lb_idx])
+                    gld_lb = _get_close(sym_data, "GLD", dates[lb_idx])
+
+                    if tlt_now > 0 and gld_now > 0 and tlt_lb > 0 and gld_lb > 0:
+                        ratio_now = tlt_now / gld_now
+                        ratio_lb = tlt_lb / gld_lb
+                        ratio_mom = ratio_now / ratio_lb - 1.0
+
+                        if ratio_mom > 0:
+                            current_regime = "disinflation"
+                        else:
+                            current_regime = "inflation"
+
+        # Compute daily return based on current regime
+        if current_regime == "disinflation":
+            r = _get_return(sym_data, "TQQQ", d, prev_d) * target_weight + _get_return(
+                sym_data, "SHY", d, prev_d
+            ) * (1.0 - target_weight)
+        elif current_regime == "inflation":
+            shy_w = 1.0 - gld_inflation_w - dba_inflation_w
+            r = (
+                _get_return(sym_data, "GLD", d, prev_d) * gld_inflation_w
+                + _get_return(sym_data, "DBA", d, prev_d) * dba_inflation_w
+                + _get_return(sym_data, "SHY", d, prev_d) * shy_w
+            )
+        else:  # cash
+            r = _get_return(sym_data, "SHY", d, prev_d)
+
+        if current_regime != prev_regime:
+            r -= COST_PER_SWITCH
+        prev_regime = current_regime
+        daily_returns.append(r)
+
+    return daily_returns
+
+
+def backtest_d15_vol_regime_tqqq(
+    sym_data: dict,
+    dates: list,
+    target_weight: float = 0.50,
+) -> list[float]:
+    """D15: SPY/GLD realized vol regime -> TQQQ.
+
+    When GLD vol > SPY vol (commodity stress / equity calm) -> risk-on (TQQQ).
+    When SPY vol > GLD vol (equity stress) -> defensive (GLD+TLT+SHY).
+    """
+    vol_window = 30
+    rebalance_days = 5
+    gld_def_w = 0.40
+    tlt_def_w = 0.30
+    shy_def_w = 0.30
+
+    # Precompute daily returns for SPY and GLD
+    spy_rets_list: list[float] = [0.0]
+    gld_rets_list: list[float] = [0.0]
+    for i in range(1, len(dates)):
+        spy_rets_list.append(_get_return(sym_data, "SPY", dates[i], dates[i - 1]))
+        gld_rets_list.append(_get_return(sym_data, "GLD", dates[i], dates[i - 1]))
+
+    daily_returns: list[float] = []
+    prev_regime = "cash"
+    current_regime: str | None = None
+    days_since_rebal = 0
+    warmup = max(60, vol_window + 5)
+
+    for i in range(warmup, len(dates)):
+        d = dates[i]
+        prev_d = dates[i - 1]
+
+        days_since_rebal += 1
+        evaluate_signal = (days_since_rebal >= rebalance_days) or (
+            current_regime is None
+        )
+
+        if evaluate_signal:
+            days_since_rebal = 0
+
+            # VIX crash filter
+            vix = _get_close(sym_data, "VIX", d)
+            if vix > VIX_CRASH_THRESHOLD:
+                current_regime = "crash"
+            else:
+                # Compute realized vol for SPY and GLD using returns ending yesterday
+                spy_window = spy_rets_list[i - vol_window : i]
+                gld_window = gld_rets_list[i - vol_window : i]
+
+                if len(spy_window) >= vol_window and len(gld_window) >= vol_window:
+                    spy_mean = sum(spy_window) / vol_window
+                    spy_std = (
+                        sum((r - spy_mean) ** 2 for r in spy_window) / vol_window
+                    ) ** 0.5
+                    spy_vol = spy_std * math.sqrt(252)
+
+                    gld_mean = sum(gld_window) / vol_window
+                    gld_std = (
+                        sum((r - gld_mean) ** 2 for r in gld_window) / vol_window
+                    ) ** 0.5
+                    gld_vol = gld_std * math.sqrt(252)
+
+                    if gld_vol > spy_vol:
+                        current_regime = "risk_on"
+                    else:
+                        current_regime = "defensive"
+
+        if current_regime is None:
+            current_regime = "crash"
+
+        # Compute daily return based on current regime
+        if current_regime == "crash":
+            r = _get_return(sym_data, "SHY", d, prev_d)
+        elif current_regime == "risk_on":
+            r = _get_return(sym_data, "TQQQ", d, prev_d) * target_weight + _get_return(
+                sym_data, "SHY", d, prev_d
+            ) * (1.0 - target_weight)
+        elif current_regime == "defensive":
+            r = (
+                _get_return(sym_data, "GLD", d, prev_d) * gld_def_w
+                + _get_return(sym_data, "TLT", d, prev_d) * tlt_def_w
+                + _get_return(sym_data, "SHY", d, prev_d) * shy_def_w
+            )
+        else:
+            r = _get_return(sym_data, "SHY", d, prev_d)
+
+        if prev_regime is not None and current_regime != prev_regime:
+            r -= COST_PER_SWITCH
+        prev_regime = current_regime
+        daily_returns.append(r)
+
+    return daily_returns
+
+
 def backtest_tqqq_buyhold(sym_data: dict, dates: list) -> list[float]:
     """TQQQ buy-and-hold benchmark."""
     daily_returns: list[float] = []
@@ -805,7 +975,7 @@ def main():  # noqa: PLR0912
     print("=" * 100)
     print("  TRACK D PORTFOLIO OPTIMIZER")
     print(
-        "  Combining 12 Track D strategies | Objective: max CAGR | Constraint: MaxDD < 40%"
+        "  Combining 14 Track D strategies | Objective: max CAGR | Constraint: MaxDD < 40%"
     )
     print("=" * 100)
 
@@ -839,7 +1009,25 @@ def main():  # noqa: PLR0912
     STRATEGY_DEFS: dict[str, tuple] = {
         # name -> (type, *args)
         "TLT-TQQQ": ("lead_lag", "TLT", "TQQQ", {}),
+        "D10-XLK/SOXL": ("d10",),
+        "D11-SOXX/SOXL": ("d11",),
+        "D12-TIP/UPRO": ("d12",),
+        "D13-TSMOM/UPRO": ("d13",),
+        "TLT-UPRO": ("lead_lag", "TLT", "UPRO", {}),
+        "TLT-SOXL": ("lead_lag", "TLT", "SOXL", {}),
         "AGG-TQQQ": ("lead_lag", "AGG", "TQQQ", {}),
+        "AGG-UPRO": ("lead_lag", "AGG", "UPRO", {}),
+        "LQD-TQQQ": (
+            "lead_lag",
+            "LQD",
+            "TQQQ",
+            {
+                "lag_days": 3,
+                "signal_window": 10,
+                "entry_thresh": 0.01,
+                "exit_thresh": -0.005,
+            },
+        ),
         "IEF-TQQQ": (
             "lead_lag",
             "IEF",
@@ -852,14 +1040,8 @@ def main():  # noqa: PLR0912
             "TQQQ",
             {"lag_days": 3, "entry_thresh": 0.005, "exit_thresh": -0.003},
         ),
-        "TLT-UPRO": ("lead_lag", "TLT", "UPRO", {}),
-        "AGG-SOXL": ("lead_lag", "AGG", "SOXL", {}),
-        "TLT-SOXL": ("lead_lag", "TLT", "SOXL", {}),
-        "D3-TQQQ/TMF": ("d3",),
-        "D10-XLK/SOXL": ("d10",),
-        "D11-SOXX/SOXL": ("d11",),
-        "D12-TIP/UPRO": ("d12",),
-        "D13-TSMOM/UPRO": ("d13",),
+        "D14-Disinfl/TQQQ": ("d14",),
+        "D15-VolReg/TQQQ": ("d15",),
     }
 
     return_streams: dict[str, list[float]] = {}
@@ -883,8 +1065,6 @@ def main():  # noqa: PLR0912
                 target_weight=0.30,
                 **kwargs,
             )
-        elif spec[0] == "d3":
-            rets = backtest_d3_tqqq_tmf(sym_data, dates, 0.30)
         elif spec[0] == "d10":
             rets = backtest_d10_xlk_xle_soxl(sym_data, dates, 0.40)
         elif spec[0] == "d11":
@@ -893,6 +1073,10 @@ def main():  # noqa: PLR0912
             rets = backtest_d12_tip_tlt_upro(sym_data, dates, 0.35)
         elif spec[0] == "d13":
             rets = backtest_d13_tsmom_upro(sym_data, dates, 0.40)
+        elif spec[0] == "d14":
+            rets = backtest_d14_disinflation_tqqq(sym_data, dates, 0.50)
+        elif spec[0] == "d15":
+            rets = backtest_d15_vol_regime_tqqq(sym_data, dates, 0.50)
         else:
             continue
 
@@ -1000,7 +1184,7 @@ def main():  # noqa: PLR0912
     # All 12
     all_combined = combine_equal_weight(return_streams, strategy_names)
     all_m = compute_metrics(all_combined)
-    print_portfolio_line("All-12 EW", all_m)
+    print_portfolio_line("All-14 EW", all_m)
 
     # Curated low-correlation combos
     print("\n  Curated low-correlation combinations:")
@@ -1090,11 +1274,12 @@ def main():  # noqa: PLR0912
 
     WEIGHT_TESTS = {
         "TLT-TQQQ": [0.50, 0.70, 0.90],
-        "D3-TQQQ/TMF": [0.50, 0.70],
         "D10-XLK/SOXL": [0.50, 0.60],
         "D11-SOXX/SOXL": [0.30, 0.70],
         "D12-TIP/UPRO": [0.45, 0.55],
         "D13-TSMOM/UPRO": [0.50, 0.60],
+        "D14-Disinfl/TQQQ": [0.40, 0.60],
+        "D15-VolReg/TQQQ": [0.40, 0.60],
     }
 
     high_streams: dict[str, list[float]] = {}
@@ -1114,8 +1299,6 @@ def main():  # noqa: PLR0912
                 rets = _backtest_lead_lag(
                     sym_data, dates, leader, follower, target_weight=w, **kwargs
                 )
-            elif spec[0] == "d3":
-                rets = backtest_d3_tqqq_tmf(sym_data, dates, w)
             elif spec[0] == "d10":
                 rets = backtest_d10_xlk_xle_soxl(sym_data, dates, w)
             elif spec[0] == "d11":
@@ -1124,6 +1307,10 @@ def main():  # noqa: PLR0912
                 rets = backtest_d12_tip_tlt_upro(sym_data, dates, w)
             elif spec[0] == "d13":
                 rets = backtest_d13_tsmom_upro(sym_data, dates, w)
+            elif spec[0] == "d14":
+                rets = backtest_d14_disinflation_tqqq(sym_data, dates, w)
+            elif spec[0] == "d15":
+                rets = backtest_d15_vol_regime_tqqq(sym_data, dates, w)
             else:
                 continue
 
@@ -1238,14 +1425,14 @@ def main():  # noqa: PLR0912
     # Collect all tested configs
     candidates: list[tuple[str, dict, dict[str, float] | None]] = []
 
-    # All-12 EW
-    candidates.append(("All-12 EW @30%", all_m, None))
+    # All-14 EW
+    candidates.append(("All-14 EW @30%", all_m, None))
 
     # HRP all-12
     hrp_all_w = hrp_weights(return_streams, strategy_names)
     hrp_all_rets = combine_weighted(return_streams, hrp_all_w)
     hrp_all_m = compute_metrics(hrp_all_rets)
-    candidates.append(("HRP All-12", hrp_all_m, hrp_all_w))
+    candidates.append(("HRP All-14", hrp_all_m, hrp_all_w))
 
     # Top-5 EW
     top5 = ranked_names[:5]

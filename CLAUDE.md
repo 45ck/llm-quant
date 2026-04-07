@@ -25,9 +25,9 @@ The objective function: **maximize CAGR via leveraged re-expression of proven Tr
 - **Position sizing**: max 30-50% per position — leveraged ETFs require concentration to overcome drag
 - **Holding period**: max 5 calendar days per position — beta decay and volatility drag accelerate beyond this
 - **Key risks**: beta decay (3x ETF returns diverge from 3x index over multi-day holds), volatility drag (variance kills compounding), path dependency (sequential drawdowns are asymmetrically destructive), liquidity risk on TLTW/SOXL
-- **VIX crash filter**: CRITICAL — all Track D strategies must include VIX>30 risk-off override (D3 with filter: Sharpe=2.21; without: Sharpe=0.08)
-- **Status**: 7 strategies passing — D1 TLT-TQQQ (1.03), D3 TQQQ/TMF ratio MR (2.21), D10 XLK/XLE→SOXL (1.17), D11 SOXX→SOXL (0.82), D12 TIP/TLT→UPRO (0.90), D13 TSMOM→UPRO (1.35), IEF-TQQQ, VCIT-TQQQ. All ready for paper trading. Credit lead signals don't survive 3x leverage — only rate momentum, ratio MR, and sector rotation work.
-- **Key insight**: Rate momentum signals survive 3x leverage; credit lead-lag signals do NOT. Leverage multiplies noise faster than signal for weak signals.
+- **VIX crash filter**: CRITICAL — all Track D strategies must include VIX>30 risk-off override
+- **Status**: 14 strategies passing all 6 gates (as of 2026-04-06). Top CAGR: D10 XLK-SOXL (27.7%), D13 TSMOM-UPRO (20.1%), TLT-SOXL (16.6%), D15 Vol-Regime-TQQQ (15.3%). Optimal 2-strat: XLK-SOXL@60% + TLT-TQQQ@70% = CAGR 42.8%. D3 TQQQ/TMF RETIRED (independent replication shows Sharpe=-1.08).
+- **Key insight**: Rate momentum (TLT) survives ALL 3x vehicles; IG credit (AGG,LQD) survives TQQQ but NOT SOXL; commodity carry has NO causal link to semis (FALSIFIED).
 
 ### Track C — Structural Arbitrage (SECONDARY RESEARCH FOCUS)
 The objective function: **capture market-neutral returns from structural pricing inefficiencies — PM arb, CEF discount capture, and funding rate strategies.**
@@ -181,7 +181,7 @@ See `docs/governance/alpha-hunting-framework.md` for the full Ruthless Alpha Hun
 
 **Track D status (2026-04-06) — 7 STRATEGIES PASSING:**
 - D1 TLT-TQQQ: Sharpe=1.030, CAGR=12.4% (rate momentum → TQQQ)
-- D3 TQQQ/TMF ratio MR: Sharpe=2.213, CAGR=34.5% (HIGHEST INDIVIDUAL SHARPE EVER)
+- D3 TQQQ/TMF ratio MR: RETIRED (Sharpe=-1.08 on independent replication; original 2.21 was signal bug)
 - D10 XLK/XLE→SOXL: Sharpe=1.171, CAGR=27.7% (sector rotation → SOXL)
 - D11 SOXX→SOXL: Sharpe=0.818, CAGR=25.1% (semi lead-lag → SOXL, marginal p=0.048)
 - D12 TIP/TLT→UPRO: Sharpe=0.895, CAGR=9.7% (real yield → UPRO, DSR=0.9998 highest ever)

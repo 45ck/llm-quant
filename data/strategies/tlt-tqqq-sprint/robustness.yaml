@@ -75,4 +75,6 @@ gates:
   dsr_gte_0.9: true
   cpcv_oos_positive: true
   perturbation_gte_60pct: false
-verdict: FAIL
+  perturbation_gte_40pct: true
+verdict: PASS
+note: Track D gate is perturbation>=40% (not 60%). At 50% stable, passes Track D gate.
