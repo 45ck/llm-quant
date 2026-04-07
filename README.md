@@ -320,6 +320,28 @@ This is a live paper trading system. Every trade decision is:
 
 The system benchmarks against a passive 60/40 SPY/TLT portfolio. All performance metrics are computed from raw trade data, not self-reported.
 
+## Future Direction: Community Quant Research Lab
+
+The long-term goal is to evolve llm-quant from a solo research program into an **open community-driven quant research lab** — where independent researchers contribute hypotheses, share reproducible evaluations, and build on each other's work.
+
+**What this looks like:**
+
+- **Open research contributions** — Anyone can submit a strategy hypothesis through a standardized template. Contributions go through the same 6-gate robustness pipeline that internal strategies use.
+- **Shared evaluation infrastructure** — Reproducible backtests, robustness checks, and walk-forward validation available to all contributors.
+- **Paper-trading leaderboards** — Public rankings of strategies in paper trading, scored by risk-adjusted performance over time.
+- **Contribution scoring** — Merit-based reputation system that tracks research quality (pass rate, signal novelty, peer review quality), not capital.
+- **Agent-assisted review** — Claude-powered review workflows that check submissions for look-ahead bias, overfitting signatures, and methodology gaps before human review.
+
+**What this does NOT mean:**
+
+- No pooled capital. Paper trading only until governance, legal, and audit infrastructure is mature.
+- No "hedge fund" structure. This is a research lab — contributors share knowledge, not P&L.
+- No timeline promises. Phase 4 (any form of structured deployment) has explicit prerequisites, not a date.
+
+The existing infrastructure — formal lifecycle gates, integrity checks (DSR, CPCV), spec-freeze-before-backtest discipline, append-only experiment registries, and hash-chain auditability — provides the foundation that makes community research trustworthy by default.
+
+See [Community Lab Roadmap](docs/governance/community-lab-roadmap.md) for the full four-phase plan.
+
 ## Quick Start
 
 ### Prerequisites
