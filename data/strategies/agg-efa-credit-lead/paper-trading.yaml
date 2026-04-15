@@ -5,11 +5,11 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 99113.06
+  current_nav: 99753.18
   peak_nav: 100000.0
-  current_sharpe: -15.8745
-  current_drawdown: 0.0089
-  total_return: -0.8869
+  current_sharpe: -2.0296
+  current_drawdown: 0.0025
+  total_return: -0.2468
   total_trades: 1
 gate_criteria:
   min_days: 30
@@ -47,6 +47,16 @@ daily_log:
   signal_desc: AGG 5d ret=+0.0052 (entry>=+0.0030, exit<=-0.0030)
   allocation:
     EFA: 0.8
+- date: '2026-04-14'
+  day_number: 3
+  position: long_efa
+  regime: risk_on
+  nav: 99753.18
+  daily_pnl: 640.12
+  daily_return_pct: 0.6459
+  signal_desc: AGG 5d ret=+0.0047 (entry>=+0.0030, exit<=-0.0030)
+  allocation:
+    EFA: 0.8
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -56,4 +66,4 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-08'
+updated_at: '2026-04-15'

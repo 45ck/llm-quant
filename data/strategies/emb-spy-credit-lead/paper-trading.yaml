@@ -5,11 +5,11 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 99336.25
-  peak_nav: 100000.0
-  current_sharpe: -15.8745
-  current_drawdown: 0.0066
-  total_return: -0.6637
+  current_nav: 100304.57
+  peak_nav: 100304.57
+  current_sharpe: 2.4454
+  current_drawdown: 0.0
+  total_return: 0.3046
   total_trades: 1
 gate_criteria:
   min_days: 30
@@ -47,6 +47,16 @@ daily_log:
   signal_desc: EMB 5d ret=+0.0107 (entry>=+0.0050, exit<=-0.0050)
   allocation:
     SPY: 0.8
+- date: '2026-04-14'
+  day_number: 3
+  position: long_spy
+  regime: risk_on
+  nav: 100304.57
+  daily_pnl: 968.32
+  daily_return_pct: 0.9748
+  signal_desc: EMB 5d ret=+0.0222 (entry>=+0.0050, exit<=-0.0050)
+  allocation:
+    SPY: 0.8
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -56,4 +66,4 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-08'
+updated_at: '2026-04-15'

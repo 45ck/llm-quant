@@ -5,11 +5,11 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 99155.64
-  peak_nav: 100000.0
-  current_sharpe: -15.8745
-  current_drawdown: 0.0084
-  total_return: -0.8444
+  current_nav: 100505.92
+  peak_nav: 100505.92
+  current_sharpe: 3.0123
+  current_drawdown: 0.0
+  total_return: 0.5059
   total_trades: 1
 gate_criteria:
   min_days: 30
@@ -47,6 +47,16 @@ daily_log:
   signal_desc: HYG 5d ret=+0.0124 (entry>=+0.0050, exit<=-0.0050)
   allocation:
     QQQ: 0.75
+- date: '2026-04-14'
+  day_number: 3
+  position: long_qqq
+  regime: risk_on
+  nav: 100505.92
+  daily_pnl: 1350.28
+  daily_return_pct: 1.3618
+  signal_desc: HYG 5d ret=+0.0070 (entry>=+0.0050, exit<=-0.0050)
+  allocation:
+    QQQ: 0.75
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -56,4 +66,4 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-08'
+updated_at: '2026-04-15'
