@@ -11,15 +11,17 @@ Target: 15-25% CAGR            Target: 40-80% CAGR
 MaxDD gate: < 15%              MaxDD gate: < 30%
 Sharpe gate: > 0.80            Sharpe gate: > 1.0
 Portfolio weight: 70%          Portfolio weight: 30%
-Status: 29 strategies paper    Status: 3 strategies paper
+Status: 19 strategies paper    Status: 3 strategies paper
+(research complete, backlog)
 
 Track C — Structural Arb       Track D — Sprint Alpha
 ─────────────────────────      ────────────────────────────
-Target: risk-free + alpha      Target: 60-120% CAGR
+Target: risk-free + alpha      Target: 50-120% CAGR
 MaxDD gate: < 10%              MaxDD gate: < 40%
 Sharpe gate: > 1.50            Sharpe gate: > 0.80
 Benchmark: T-bills             Benchmark: 100% TQQQ
-Status: research (4/17 gates)  Status: 1/6 tested passing
+Status: infra built, scanning  Status: 14 strategies passing
+                               (PRIMARY RESEARCH FOCUS)
 ```
 
 **Integrity gates are the same on all tracks** — DSR >= 0.95, CPCV OOS/IS > 0. These are
@@ -45,11 +47,18 @@ This system runs a **200+ hypothesis quantitative research lab** across 15 mecha
 ### The Funnel (All Tracks)
 
 ```
-220+ hypotheses tested (across 26 mechanism families)
-100+ strategy variants with full robustness analysis (5-year window, 2021-2026)
- 32  passed robustness gates — now in paper trading        (~30% pass rate)
+250+ hypotheses tested (across 48+ candidate mechanism families)
+ 22  mechanism families yielded at least one passing strategy
+ 36  strategies passed all 6 robustness gates — now in paper trading
   0  promoted to live capital (requires 30+ day track record)
 ```
+
+Falsification is as productive as discovery: 18+ mechanism families were tested and
+rejected outright (F4, F10, F20, F23-F25, F28-F29, F31-F32, F34-F41). Recent
+falsifications include F37 volume-price divergence (Sharpe=-0.93), F38 vol-transmission,
+F41 FX-carry risk appetite, and the retirement of D3 TQQQ/TMF ratio MR after independent
+replication showed Sharpe=-1.08 (the original 2.21 was a signal bug that passed initial
+gates). This kind of rigorous replication discipline is what the integrity gates are for.
 
 ### Gate Comparison by Track
 
@@ -246,30 +255,98 @@ Higher drawdown tolerance (30%) for stronger signals. Zero equity exposure in pa
 | USO/XLE energy MR v2 | 1.012 | 22.5% | 0.962 | 1.038 | Energy pair z-score |
 | GDX/GLD miners MR v1 | 1.025 | 26.4% | 0.963 | 0.918 | Gold miners pair z-score |
 
-**Track D — Sprint Alpha** (1 strategy)
+**Family 30 — ERP Valuation Regime** (1 strategy, NEW 2026-04)
 
-Leveraged re-expression of rate momentum via 3x ETFs. 4 additional hypotheses tested (D3-D6), all rejected — credit lead signals don't survive 3x leverage.
+Equity Risk Premium (SPY 1-year return minus ^TNX yield, 252-day z-score) drives rotation between stocks and bonds/gold. Institutional capital allocation channel — different from rate momentum (F6) or curve shape (F14).
 
 | Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
 |----------|--------|-------|-----|-------------|--------|
-| TLT-TQQQ leveraged lead-lag | 1.030 | 10.2% | 0.965 | 0.913 | TLT rate → 3x QQQ |
+| ERP regime v1 | **1.566** | **8.8%** | **0.9963** | 0.954 | SPY-TNX z-score regime |
 
-### Portfolio Construction
+**Family 33 — REIT Divergence** (1 strategy, NEW 2026-04)
 
-32 strategies cluster into 18 groups (complete linkage, threshold=0.70). The optimized 18-representative portfolio:
+XLRE/SPY ratio z-score + momentum as financial conditions canary. REITs are rate-sensitive so their relative performance leads tightening/easing regimes.
 
-| Metric | All 32 equal-weight | Optimized 18-rep |
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| REIT divergence v2 | 1.075 | 13.3% | 0.972 | 1.291 | XLRE/SPY z-score + mom |
+
+**Family 42 — Dividend Yield Regime** (1 strategy, NEW 2026-04)
+
+SPYD/SPY ratio momentum captures bond-proxy equity rotation (utilities, REITs, staples) vs growth. **100% perturbation stability — most robust strategy ever tested.**
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| Dividend yield regime v1 | 1.159 | 13.8% | 0.9943 | 1.052 | SPYD/SPY ratio regime |
+
+**Track B — Aggressive Alpha** (3 strategies)
+
+Higher drawdown tolerance (30%) for stronger signals. Zero equity exposure in pair trades.
+
+| Strategy | Sharpe | MaxDD | DSR | CPCV OOS/IS | Signal |
+|----------|--------|-------|-----|-------------|--------|
+| SOXX-QQQ lead-lag | 0.861 | 14.4% | 0.960 | 0.819 | Semis → Nasdaq lead-lag |
+| USO/XLE energy MR v2 | 1.012 | 22.5% | 0.962 | 1.038 | Energy pair z-score |
+| GDX/GLD miners MR v1 | 1.025 | 26.4% | 0.963 | 0.918 | Gold miners pair z-score |
+
+**Track D — Sprint Alpha** (14 strategies, PRIMARY RESEARCH FOCUS)
+
+Leveraged re-expression of proven signals via 3x ETFs (TQQQ, UPRO, SOXL). Every
+strategy must include a VIX>30 crash filter and maximum 5-day holding period to manage
+beta decay and volatility drag. Key finding: **rate momentum (TLT) survives all 3x
+vehicles; credit lead-lag survives TQQQ but NOT SOXL; commodity carry has no causal
+link to semis (FALSIFIED as D16).**
+
+| Strategy | Sharpe | CAGR | MaxDD | DSR | Follower | Note |
+|----------|--------|------|-------|-----|----------|------|
+| **D13 TSMOM-UPRO** | **1.345** | 20.1% | 15.9% | 0.971 | UPRO | Highest Track D Sharpe, 100% perturb |
+| **D10 XLK-XLE-SOXL** | 1.171 | **27.7%** | 22.6% | 0.975 | SOXL | Highest Track D CAGR, sector rotation |
+| AGG-TQQQ | 1.079 | 10.9% | 10.6% | 0.969 | TQQQ | Credit lead → 3x tech |
+| TLT-TQQQ | 1.030 | 12.4% | 10.2% | 0.965 | TQQQ | Rate momentum → 3x tech |
+| D15 Vol-Regime-TQQQ | 0.978 | 15.3% | 19.9% | 0.964 | TQQQ | SPY/GLD vol regime |
+| TLT-SOXL | 0.936 | 16.6% | 17.1% | 0.955 | SOXL | Rate momentum → 3x semis |
+| TLT-UPRO | 0.903 | 7.4% | 12.9% | 0.951 | UPRO | Rate momentum → 3x S&P |
+| **D12 TIP-UPRO** | 0.895 | 9.7% | 16.7% | **0.9998** | UPRO | Real yield → UPRO, **highest DSR ever** |
+| D14 Disinflation-TQQQ | 0.883 | 12.6% | 19.5% | 0.953 | TQQQ | TLT/GLD ratio → TQQQ |
+| VCIT-TQQQ | 0.880 | 11.5% | 18.6% | 0.948 | TQQQ | Corp credit → TQQQ |
+| IEF-TQQQ | 0.852 | 11.1% | 11.0% | 0.944 | TQQQ | 10yr rate → TQQQ |
+| **AGG-UPRO** | 0.841 | 6.1% | **7.4%** | 0.942 | UPRO | **Lowest Track D MaxDD** |
+| D11 SOXX-SOXL | 0.818 | 25.1% | 37.2% | 0.966 | SOXL | Semi lead-lag → SOXL (marginal, p=0.048) |
+| LQD-TQQQ | 0.803 | 8.8% | 12.6% | 0.936 | TQQQ | IG credit → TQQQ |
+
+**Track D optimal 2-strategy portfolio** (walk-forward validated):
+XLK-SOXL @ 60% weight + TLT-TQQQ @ 70% weight = **CAGR 42.8%, MaxDD 22.8%, Sharpe 1.533**.
+5.6x the CAGR of TQQQ buy-and-hold at 0.28x the drawdown.
+
+**Track D retirements / falsifications**:
+- **D3 TQQQ/TMF ratio MR — RETIRED**. Original backtest showed Sharpe=2.21. Independent replication showed Sharpe=-1.08. Signal direction bug. Do not trust marketed numbers without independent replication.
+- **D16 commodity-carry-SOXL — FALSIFIED**. Sharpe=-0.358, MaxDD=61.5%. Energy backwardation has no causal link to semiconductor returns. Signal and vehicle must share a causal mechanism.
+- **D2 BTC-momentum, D4-D6 credit-SOXL variants — all REJECTED**. Credit lead-lag does NOT survive 3x SOXL leverage.
+
+**Track C — Structural Arbitrage** (infrastructure built, live scanning)
+
+- Polymarket NegRisk complement arb scanner (7 opportunities found in last live scan)
+- Kalshi client with bulk-fetch + per-event fallback
+- Closed-end fund (CEF) discount mean-reversion with TLT rate hedge
+- Crypto perpetual funding rate pipeline (Binance/OKX/Bybit)
+- 351/351 arb tests passing. First live paper trade pending execution bridge validation.
+
+### Portfolio Construction (Track A/B research portfolio)
+
+36 strategies cluster into 18 groups (complete linkage, threshold=0.70). The optimized 18-representative portfolio:
+
+| Metric | All 36 equal-weight | Optimized 18-rep |
 |--------|---------------------|-----------------|
 | Empirical portfolio Sharpe | ~2.1 | **2.205** |
 | Max drawdown | ~6% | **6.3%** |
 | Average pairwise correlation | ~0.25 | **0.186** |
-| Mechanism families represented | 20 | 18 |
+| Mechanism families represented | 22 | 18 |
 
-Walk-forward HRP validation (5-fold anchored expanding window): OOS/IS ratio = **1.60** (no overfitting detected — OOS Sharpe exceeds IS Sharpe). Volatility targeting: realized vol 3.8%, scale factor 2.64x to reach 10% target.
+Walk-forward HRP validation (5-fold anchored expanding window): OOS/IS ratio = **1.597** (no overfitting detected — OOS Sharpe exceeds IS Sharpe). Volatility targeting: realized vol 3.8%, scale factor 2.64x to reach 10% target.
 
 The portfolio Sharpe formula with correlation: **SR_P = SR_i x sqrt(N / (1 + (N-1) x rho))**
 
-At avg rho=0.186 with 18 representatives at avg SR=1.087, the formula yields SR≈2.26 — matching the empirical 2.205. The key to reaching SR 2.0+ was reducing avg rho from 0.584 (credit-heavy) to 0.186 by adding genuinely orthogonal mechanism families (F9, F11-F22, F26).
+At avg rho=0.186 with 18 representatives at avg SR=1.087, the formula yields SR≈2.26 — matching the empirical 2.205. The key to reaching SR 2.0+ was reducing avg rho from 0.584 (credit-heavy) to 0.186 by adding genuinely orthogonal mechanism families (F9, F11-F22, F26, F30, F33, F42). Track A research is now considered **complete** — the commodity/macro mechanism space is saturated; further research effort goes to Track D and Track C.
 
 ### What Gets Rejected and Why
 
@@ -285,19 +362,36 @@ At avg rho=0.186 with 18 representatives at avg SR=1.087, the formula yields SR�
 
 ## Live Portfolio Performance
 
-| Metric | Value | Track A Target | Track B Target |
-|--------|-------|---------------|---------------|
-| NAV | $100,527 | — | — |
-| Total Return | +0.53% | 15-25% ann. | 40-80% ann. |
-| Sharpe Ratio | — | > 0.80 | > 1.00 |
-| Sortino Ratio | — | > 1.00 | > 1.50 |
-| Max Drawdown | — | < 15% | < 30% |
-| Benchmark | 60/40 SPY/TLT | beat it | beat SPY |
-| Positions | 19 | — | — |
-| Cash | 51% | >= 5% | >= 3% |
+Data through 2026-04-16 (23 calendar days since inception 2026-03-24).
+
+| Metric | Value | Note |
+|--------|-------|------|
+| NAV | **$101,268.55** | +1.27% since inception |
+| SPY total return (same period) | +7.42% | — |
+| 60/40 SPY/TLT (same period) | +4.58% | — |
+| Alpha vs SPY | **-6.15%** | Materially behind |
+| Alpha vs 60/40 | **-3.31%** | Behind |
+| Max Drawdown (realized) | -0.04% | Effectively none |
+| Cash | 61% | Deployed only 39% of capital |
+| Positions | 14 | All green (no stops triggered) |
+| Total trades | 54 | 34 buys, 5 sells, 15 closes |
+
+**Honest assessment**: the research portfolio has an empirical Sharpe of 2.205, but the
+live paper book is underperforming benchmarks by ~6% because it stayed 33-69% in cash
+through a risk-on rally. A mass-close event on 2026-04-01 (QQQ, XLF, XLRE, XLC, XLI,
+SOL-USD) locked in losses right before a rebound — a visible whipsaw the rules engine
+needs to resolve. Max drawdown is effectively zero, but that is a symptom of
+under-deployment rather than strategy strength. **The gap between research quality and
+live execution is the most important item on the current work backlog.**
+
+**Paper trading is early**: 37 of 45 research strategies are logging paper NAV, but
+most have only 2-5 days of data — reported Sharpe values are annualizations of tiny
+samples and are statistically meaningless until 30+ days accumulate. No strategy has
+reached the 30-day gate for promotion yet. SOXX-QQQ lead-lag is the current leader at
+5 days.
 
 > Updated daily via [automated reports](reports/).
-> Research lab results updated 2026-04-01.
+> Research lab results updated 2026-04-17.
 
 ## Reports
 
