@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 100540.86
+  current_nav: 100510.7
   peak_nav: 100540.86
-  current_sharpe: 3.0255
-  current_drawdown: 0.0
-  total_return: 0.5409
-  total_trades: 1
+  current_sharpe: 2.4632
+  current_drawdown: 0.0003
+  total_return: 0.5107
+  total_trades: 2
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -57,6 +57,15 @@ daily_log:
   signal_desc: LQD 5d ret=+0.0061 (entry>=+0.0050, exit<=-0.0050)
   allocation:
     QQQ: 0.8
+- date: '2026-04-16'
+  day_number: 4
+  position: hold_prev
+  regime: neutral
+  nav: 100510.7
+  daily_pnl: -30.16
+  daily_return_pct: -0.03
+  signal_desc: LQD 5d ret=+0.0041 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -66,4 +75,4 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-15'
+updated_at: '2026-04-17'
