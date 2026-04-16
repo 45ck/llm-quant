@@ -59,6 +59,16 @@ LEAD_LAG_PARAMS: dict[str, tuple[str, str, int, float, float, float]] = {
     "tlt-tqqq-leveraged-lead-lag": ("TLT", "TQQQ", 10, 0.01, -0.01, 0.30),
     # Track D Sprint Alpha: TLT->TQQQ with frozen spec params (exit_threshold=-0.005)
     "tlt-tqqq-sprint": ("TLT", "TQQQ", 10, 0.01, -0.005, 0.30),
+    # Track D Sprint Alpha batch (llm-quant-e6ju) — frozen spec params
+    # Rate-momentum sprints
+    "tlt-soxl-sprint": ("TLT", "SOXL", 10, 0.01, -0.005, 0.30),
+    "tlt-upro-sprint": ("TLT", "UPRO", 10, 0.01, -0.005, 0.30),
+    "ief-tqqq-sprint": ("IEF", "TQQQ", 10, 0.005, -0.003, 0.30),
+    # Credit-lead sprints (IG credit into TQQQ/UPRO)
+    "agg-tqqq-sprint": ("AGG", "TQQQ", 10, 0.01, -0.005, 0.30),
+    "agg-upro-sprint": ("AGG", "UPRO", 10, 0.01, -0.005, 0.30),
+    "vcit-tqqq-sprint": ("VCIT", "TQQQ", 10, 0.005, -0.003, 0.30),
+    "lqd-tqqq-sprint": ("LQD", "TQQQ", 10, 0.01, -0.005, 0.30),
 }
 
 # D3 TQQQ/TMF ratio z-score mean-reversion parameters
@@ -109,6 +119,9 @@ ALL_SYMBOLS = sorted(
         "TMF",
         "VIX",
         "TNX",
+        # Track D leveraged universe (llm-quant-e6ju)
+        "SOXL",
+        "UPRO",
     }
 )
 
@@ -151,6 +164,28 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
     "tlt-tqqq-sprint": "F6-D",
     "d3-tqqq-tmf-ratio-mr": "D3",
+    # Track D Sprint Alpha batch (llm-quant-e6ju)
+    # F6 rate-momentum leveraged variants
+    "tlt-soxl-sprint": "F6-D",
+    "tlt-upro-sprint": "F6-D",
+    "ief-tqqq-sprint": "F6-D",
+    # F1 credit lead-lag leveraged variants
+    "agg-tqqq-sprint": "F1-D",
+    "agg-upro-sprint": "F1-D",
+    "vcit-tqqq-sprint": "F1-D",
+    "lqd-tqqq-sprint": "F1-D",
+    # F8 lead-lag (semis) leveraged variant (D11)
+    "soxx-soxl-lead-lag-v1": "F8-D",
+    # F12 sector rotation leveraged variant (D10)
+    "xlk-xle-soxl-rotation-v1": "F12-D",
+    # F13 vol-regime leveraged variant (D15)
+    "d15-vol-regime-tqqq": "F13-D",
+    # F15 real-yield leveraged variant (D12)
+    "tip-tlt-upro-real-yield-v1": "F15-D",
+    # F19 disinflation leveraged variant (D14)
+    "d14-disinflation-tqqq": "F19-D",
+    # F3 TSMOM leveraged variant (D13)
+    "tsmom-upro-trend-v1": "F3-D",
 }
 
 
@@ -1144,6 +1179,345 @@ def signal_dividend_yield_regime(sym_data: dict[str, dict], dates: list) -> dict
 
 
 # ---------------------------------------------------------------------------
+# Track D regime/rotation signals — new in llm-quant-e6ju registration batch
+# All include mandatory VIX > threshold crash filter (-> 100% SHY).
+# ---------------------------------------------------------------------------
+
+
+def _vix_crash(
+    sym_data: dict[str, dict], dates: list, threshold: float = 30.0
+) -> float | None:
+    """Return yesterday's VIX close if VIX > threshold, else None.
+
+    Used as shared risk-off override for all Track D regime strategies.
+    """
+    if len(dates) < 2:
+        return None
+    vix = get_close(sym_data, "VIX", dates[-2])
+    if vix > threshold:
+        return vix
+    return None
+
+
+def signal_d10_xlk_xle_soxl_rotation(sym_data: dict[str, dict], dates: list) -> dict:
+    """D10: XLK/XLE ratio momentum + SMA -> SOXL (3x semis) for growth regime.
+
+    Frozen params from research-spec.yaml:
+      lookback=40, sma_period=20, growth_soxl=0.40, growth_shy=0.10,
+      inflation_gld=0.30, inflation_dba=0.20, neutral_upro=0.25,
+      neutral_shy=0.25, vix_crash=30.
+    """
+    vix_price = _vix_crash(sym_data, dates, 30.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 30 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    ratio_mom = _ratio_momentum(sym_data, dates, "XLK", "XLE", 40)
+    ratio_sma = _ratio_vs_sma(sym_data, dates, "XLK", "XLE", 20)
+    if ratio_mom is None or ratio_sma is None:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    if ratio_mom > 0 and ratio_sma > 0:
+        regime = "growth"
+        alloc = {"SOXL": 0.40, "SHY": 0.10}
+    elif ratio_mom < 0 and ratio_sma < 0:
+        regime = "inflation"
+        alloc = {"GLD": 0.30, "DBA": 0.20}
+    else:
+        regime = "neutral"
+        alloc = {"UPRO": 0.25, "SHY": 0.25}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": ratio_mom,
+        "signal_desc": f"XLK/XLE mom(40d)={ratio_mom:+.4f}, "
+        f"vs_sma(20d)={ratio_sma:+.4f}",
+        "allocation": alloc,
+    }
+
+
+def signal_d11_soxx_soxl(sym_data: dict[str, dict], dates: list) -> dict:
+    """D11: SOXX 7-day return leads SOXL (3x semis), with VIX>35 crash filter.
+
+    Frozen params (v2 post-scan): signal_window=7, entry_threshold=0.03,
+    exit_threshold=-0.01, soxl_weight=0.50, shy_weight_risk_on=0.50,
+    vix_crash_threshold=35.
+    """
+    vix_price = _vix_crash(sym_data, dates, 35.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 35 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    n = len(dates)
+    window = 7
+    if n < window + 2:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    yesterday = dates[-2]
+    lookback = dates[-2 - window]
+    soxx_now = get_close(sym_data, "SOXX", yesterday)
+    soxx_lb = get_close(sym_data, "SOXX", lookback)
+    if soxx_now <= 0 or soxx_lb <= 0:
+        return {"position": "flat", "regime": "missing_data", "weight": 0.0}
+
+    soxx_ret = soxx_now / soxx_lb - 1
+
+    if soxx_ret >= 0.03:
+        regime = "risk_on"
+        alloc = {"SOXL": 0.50, "SHY": 0.50}
+    elif soxx_ret <= -0.01:
+        regime = "risk_off"
+        alloc = {"SHY": 1.00}
+    else:
+        regime = "neutral"
+        alloc = {"SHY": 1.00}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": soxx_ret,
+        "signal_desc": f"SOXX 7d ret={soxx_ret:+.4f} (entry>=0.030, exit<=-0.010)",
+        "allocation": alloc,
+    }
+
+
+def signal_d12_tip_tlt_upro(sym_data: dict[str, dict], dates: list) -> dict:
+    """D12: TIP/TLT 15-day ratio momentum -> UPRO real-yield regime.
+
+    Loosening (ratio_mom >= 0): 35% UPRO + 65% SHY.
+    Tightening (ratio_mom < 0): 40% GLD + 10% TLT + 50% SHY.
+    VIX > 30 crash filter -> 100% SHY.
+    """
+    vix_price = _vix_crash(sym_data, dates, 30.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 30 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    ratio_mom = _ratio_momentum(sym_data, dates, "TIP", "TLT", 15)
+    if ratio_mom is None:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    if ratio_mom >= 0:
+        regime = "loosening"
+        alloc = {"UPRO": 0.35, "SHY": 0.65}
+    else:
+        regime = "tightening"
+        alloc = {"GLD": 0.40, "TLT": 0.10, "SHY": 0.50}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": ratio_mom,
+        "signal_desc": f"TIP/TLT mom(15d)={ratio_mom:+.4f}",
+        "allocation": alloc,
+    }
+
+
+def signal_d13_tsmom_upro(sym_data: dict[str, dict], dates: list) -> dict:
+    """D13: Skip-month TSMOM on SPY -> UPRO (3x SPY).
+
+    Frozen params: momentum_lookback=252, skip_period=21,
+    base_upro_weight=0.40, vol_target=0.15, vol_window=20,
+    vix_crash_threshold=25 (best variant per backtest_results.yaml),
+    shy_bullish=0.10, gld_bearish=0.30, tlt_bearish=0.30, shy_bearish=0.40.
+    """
+    vix_price = _vix_crash(sym_data, dates, 25.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 25 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    n = len(dates)
+    lookback = 252
+    skip = 21
+    if n < lookback + skip + 3:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    # Skip-month momentum: return from (t-lookback) to (t-skip), causal as of yesterday
+    idx_end = n - 2 - skip
+    idx_start = n - 2 - lookback
+    if idx_start < 0:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    spy_end = get_close(sym_data, "SPY", dates[idx_end])
+    spy_start = get_close(sym_data, "SPY", dates[idx_start])
+    if spy_start <= 0 or spy_end <= 0:
+        return {"position": "flat", "regime": "missing_data", "weight": 0.0}
+
+    mom = spy_end / spy_start - 1
+
+    # Vol-scaling: scale UPRO weight by vol_target / realized_vol
+    vol_window = 20
+    rets = [
+        get_return(sym_data, "SPY", dates[i], dates[i - 1])
+        for i in range(max(1, n - 1 - vol_window), n - 1)
+    ]
+    if len(rets) >= 10:
+        mean = sum(rets) / len(rets)
+        std = (sum((r - mean) ** 2 for r in rets) / len(rets)) ** 0.5
+        ann_vol = std * math.sqrt(252)
+        if ann_vol > 0:
+            vol_scale = min(0.15 / ann_vol, 1.25)
+        else:
+            vol_scale = 1.0
+    else:
+        vol_scale = 1.0
+
+    base_upro = 0.40
+    max_upro = 0.50
+    scaled_upro = min(base_upro * vol_scale, max_upro)
+
+    if mom > 0:
+        regime = "bullish"
+        alloc = {"UPRO": round(scaled_upro, 3), "SHY": round(1.0 - scaled_upro, 3)}
+    else:
+        regime = "bearish"
+        alloc = {"GLD": 0.30, "TLT": 0.30, "SHY": 0.40}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": mom,
+        "signal_desc": f"SPY skip-mom(252-21)={mom:+.4f}, vol_scale={vol_scale:.2f}",
+        "allocation": alloc,
+    }
+
+
+def signal_d14_disinflation_tqqq(sym_data: dict[str, dict], dates: list) -> dict:
+    """D14: TLT/GLD 30-day ratio momentum -> TQQQ disinflation regime.
+
+    Disinflation (ratio_mom > 0): 50% TQQQ + 50% SHY.
+    Inflation (ratio_mom < 0): 40% GLD + 10% DBA + 50% SHY.
+    VIX > 30 crash filter -> 100% SHY.
+    Frozen params: lookback=30, target_weight=0.50, vix_crash=30,
+    gld_inflation=0.40, dba_inflation=0.10, rebalance_days=5.
+    """
+    vix_price = _vix_crash(sym_data, dates, 30.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 30 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    ratio_mom = _ratio_momentum(sym_data, dates, "TLT", "GLD", 30)
+    if ratio_mom is None:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    if ratio_mom > 0:
+        regime = "disinflation"
+        alloc = {"TQQQ": 0.50, "SHY": 0.50}
+    else:
+        regime = "inflation"
+        alloc = {"GLD": 0.40, "DBA": 0.10, "SHY": 0.50}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": ratio_mom,
+        "signal_desc": f"TLT/GLD mom(30d)={ratio_mom:+.4f}",
+        "allocation": alloc,
+    }
+
+
+def signal_d15_vol_regime_tqqq(sym_data: dict[str, dict], dates: list) -> dict:
+    """D15: SPY/GLD realized vol regime -> TQQQ (3x Nasdaq).
+
+    Frozen params (phase2 recentered): vol_window=45, target_weight=0.50,
+    vix_crash=30, gld_defensive=0.40, tlt_defensive=0.30, shy_defensive=0.30,
+    rebalance_days=5.
+
+    Equity calm (GLD vol > SPY vol): 50% TQQQ + 50% SHY.
+    Equity stress (SPY vol > GLD vol): 40% GLD + 30% TLT + 30% SHY.
+    """
+    vix_price = _vix_crash(sym_data, dates, 30.0)
+    if vix_price is not None:
+        return {
+            "position": "vix_crash",
+            "regime": "vix_crash",
+            "weight": 1.0,
+            "signal_value": vix_price,
+            "signal_desc": f"VIX={vix_price:.1f} > 30 -> 100% SHY",
+            "allocation": {"SHY": 1.0},
+        }
+
+    n = len(dates)
+    vol_window = 45
+    if n < vol_window + 2:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    spy_rets, gld_rets = [], []
+    for i in range(max(1, n - 1 - vol_window), n - 1):
+        spy_rets.append(get_return(sym_data, "SPY", dates[i], dates[i - 1]))
+        gld_rets.append(get_return(sym_data, "GLD", dates[i], dates[i - 1]))
+
+    if len(spy_rets) < vol_window or len(gld_rets) < vol_window:
+        return {"position": "flat", "regime": "insufficient_data", "weight": 0.0}
+
+    def _ann_vol(rets: list[float]) -> float:
+        m = sum(rets) / len(rets)
+        s = (sum((r - m) ** 2 for r in rets) / len(rets)) ** 0.5
+        return s * math.sqrt(252)
+
+    spy_vol = _ann_vol(spy_rets[-vol_window:])
+    gld_vol = _ann_vol(gld_rets[-vol_window:])
+
+    if gld_vol <= 0:
+        return {"position": "flat", "regime": "missing_data", "weight": 0.0}
+
+    vol_ratio = spy_vol / gld_vol
+
+    if vol_ratio <= 1.0:
+        regime = "equity_calm"
+        alloc = {"TQQQ": 0.50, "SHY": 0.50}
+    else:
+        regime = "equity_stress"
+        alloc = {"GLD": 0.40, "TLT": 0.30, "SHY": 0.30}
+
+    return {
+        "position": regime,
+        "regime": regime,
+        "weight": sum(alloc.values()),
+        "signal_value": vol_ratio,
+        "signal_desc": f"SPY vol(45d)={spy_vol:.1%}, "
+        f"GLD vol(45d)={gld_vol:.1%}, ratio={vol_ratio:.3f}",
+        "allocation": alloc,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Compute today's daily return for a signal
 # ---------------------------------------------------------------------------
 
@@ -1323,6 +1697,13 @@ def run_all_signals(
         ("dba-commodity-cycle-v1", signal_dba_commodity_cycle),
         ("reit-divergence-v2", signal_reit_divergence_v2),
         ("dividend-yield-regime-v1", signal_dividend_yield_regime),
+        # Track D regime/rotation strategies (llm-quant-e6ju)
+        ("xlk-xle-soxl-rotation-v1", signal_d10_xlk_xle_soxl_rotation),
+        ("soxx-soxl-lead-lag-v1", signal_d11_soxx_soxl),
+        ("tip-tlt-upro-real-yield-v1", signal_d12_tip_tlt_upro),
+        ("tsmom-upro-trend-v1", signal_d13_tsmom_upro),
+        ("d14-disinflation-tqqq", signal_d14_disinflation_tqqq),
+        ("d15-vol-regime-tqqq", signal_d15_vol_regime_tqqq),
     ]
     for slug, fn in regime_configs:
         try:
