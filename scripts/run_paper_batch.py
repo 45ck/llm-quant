@@ -57,6 +57,8 @@ LEAD_LAG_PARAMS: dict[str, tuple[str, str, int, float, float, float]] = {
     "ief-qqq-rate-tech": ("IEF", "QQQ", 10, 0.005, -0.005, 0.80),
     # Track D: leveraged re-expression
     "tlt-tqqq-leveraged-lead-lag": ("TLT", "TQQQ", 10, 0.01, -0.01, 0.30),
+    # Track D Sprint Alpha: TLT->TQQQ with frozen spec params (exit_threshold=-0.005)
+    "tlt-tqqq-sprint": ("TLT", "TQQQ", 10, 0.01, -0.005, 0.30),
 }
 
 # D3 TQQQ/TMF ratio z-score mean-reversion parameters
@@ -147,6 +149,7 @@ MECHANISM_FAMILIES: dict[str, str] = {
     "reit-divergence-v2": "F33",
     "dividend-yield-regime-v1": "F42",
     "tlt-tqqq-leveraged-lead-lag": "F6-leveraged",
+    "tlt-tqqq-sprint": "F6-D",
     "d3-tqqq-tmf-ratio-mr": "D3",
 }
 
