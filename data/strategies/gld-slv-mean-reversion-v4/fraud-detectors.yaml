@@ -1,0 +1,77 @@
+# Gate 6 Fraud Detectors — gld-slv-mean-reversion-v4
+# Institutional Quant Framework: shuffled signal, mechanism inversion, time-in-market
+# Refreshed run supersedes fraud_detector_results.yaml (2026-03-30).
+
+strategy: gld-slv-mean-reversion-v4
+run_date: "2026-04-17"
+beads_issue: llm-quant-3iz5
+backtest_days: 1055
+n_shuffles: 1000
+seed: 42
+
+shuffled_signal:
+  real_sharpe: 1.2346
+  shuffled_95th_pct: 1.5534
+  p_value: 0.1690
+  threshold: "real SR > 95th pct of shuffled SR distribution (p < 0.05)"
+  passed: false
+  verdict: >
+    FAIL — real Sharpe 1.235 does NOT beat 95th pct of 1000 shuffled-signal
+    Sharpes (1.553). p-value 0.169 means ~17% of random-timing runs on GLD
+    produce a higher Sharpe than the consensus-windows signal. This suggests
+    the strategy may be capturing GLD beta / drift rather than genuine
+    timing alpha from the pairs-ratio mean-reversion mechanism.
+
+mechanism_inversion:
+  original_sharpe: 1.2346
+  inverted_sharpe: 1.0521
+  sharpe_differential: 0.1825
+  min_differential: 0.25
+  threshold: "original - inverted Sharpe >= 0.25 (signal direction has content)"
+  passed: false
+  verdict: >
+    FAIL — inversion (swap symbol_a/symbol_b to flip mean-reversion direction)
+    still produces Sharpe=1.052. Differential is only +0.18 Sharpe, below the
+    0.25 threshold. A genuine directional mean-reversion signal should be
+    substantially degraded by inversion. The near-symmetric performance
+    indicates the signal has weak directional content; much of the returns
+    may come from trading GLD/SLV volatility rather than ratio reversion.
+
+time_in_market:
+  pct_invested: 0.3848
+  invested_days: 406
+  total_days: 1055
+  threshold: "< 80% invested (else likely beta capture)"
+  passed: true
+  verdict: >
+    PASS — 38.5% time in market is well below the 80% threshold. The
+    consensus-windows filter correctly keeps the strategy out of the market
+    most days, consistent with a selective mean-reversion signal.
+
+overall_verdict: FAIL
+gates_passed: 1
+gates_total: 3
+
+recommendation: >
+  DO NOT PROMOTE. Two of three Gate 6 detectors fail. The strategy passed
+  Gates 1-5 (Sharpe, MaxDD, DSR, CPCV, perturbation) but the fraud panel
+  shows the signal lacks a distinguishable timing edge vs random entry and
+  lacks strong directional content vs inversion. The CPCV OOS/IS > 0 result
+  confirms some out-of-sample signal, but Gate 6 says it is not reliably
+  better than random timing on GLD. Recommended next steps:
+    1. Keep the strategy on backlog; do not open paper trading until Gate 6
+       fraud detectors can pass.
+    2. Consider regime-split analysis: does timing alpha exist only in high
+       gold-volatility regimes?
+    3. Re-specify with tighter entry thresholds or add a volatility filter
+       to concentrate entries on high-conviction dislocations.
+    4. This run confirms the 2026-03-30 finding
+       (fraud_detector_results.yaml); v4 as specified is not promotable.
+
+notes:
+  - "Previous fraud run (2026-03-30) also FAILED with p=0.274, inv_diff=-0.127."
+  - "Current run uses fresher price data (through 2026-04-17) and same seed=42."
+  - "Shuffled p-value improved slightly (0.169 vs 0.274) but still > 0.05 gate."
+  - "Inversion differential now positive (+0.18 vs -0.13) but still below 0.25 gate."
+  - "Time-in-market consistent across runs (38.5% vs 31.9%)."
+  - "Blocks llm-quant-sxvd (promotion); remains blocked on llm-quant-uhee (paper)."
