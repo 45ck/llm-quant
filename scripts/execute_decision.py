@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from llm_quant.brain.models import Action, MarketRegime, TradingDecision
 from llm_quant.brain.parser import parse_trading_decision
 from llm_quant.config import load_config_for_pod
 from llm_quant.db.schema import get_connection
@@ -33,6 +34,155 @@ from llm_quant.trading.portfolio import Portfolio
 
 logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Whipsaw R2 — cash-floor guard
+# ---------------------------------------------------------------------------
+#
+# Root cause of the 2026-04-01 whipsaw: the LLM mass-closed 7 equity positions
+# on stale context, pushing the portfolio to 51% cash / 49% gross with no
+# active crisis. R2 prevents a repeat by rejecting decisions that project
+# cash above 40% of NAV unless the regime is explicitly risk_off OR a halt is
+# active in governance. Mass-close is a recovery path, not a default.
+#
+# See docs/investigations/apr01-whipsaw.md recommendations R1-R5.
+
+CASH_FLOOR_PCT = 0.40  # Reject if projected cash > 40% of NAV
+RISK_OFF_CONFIDENCE_THRESHOLD = 0.70
+
+
+def project_cash_after_signals(
+    portfolio: Portfolio,
+    decision: TradingDecision,
+    prices: dict[str, float],
+) -> tuple[float, float]:
+    """Project cash and NAV after every signal in *decision* executes.
+
+    This is a best-effort estimate that mirrors ``executor.execute_signals``
+    logic (BUY raises cost, SELL/CLOSE raises cash) but without mutating the
+    live portfolio. Used by the R2 cash-floor guard before any trade fires.
+
+    Skips signals lacking a price entry, matching executor behaviour.
+
+    Parameters
+    ----------
+    portfolio:
+        Live portfolio (pre-trade). NAV is computed from its current state.
+    decision:
+        Parsed trading decision with signal list.
+    prices:
+        Latest prices keyed by symbol.
+
+    Returns
+    -------
+    (projected_cash, nav_before) where projected_cash is post-signal cash in
+    USD and nav_before is pre-trade NAV (the denominator for cash_pct).
+    """
+    nav_before = portfolio.nav
+    projected_cash = portfolio.cash
+
+    # Snapshot current market values so repeated signals on same symbol compose.
+    projected_mv: dict[str, float] = {
+        sym: pos.market_value for sym, pos in portfolio.positions.items()
+    }
+
+    for sig in decision.signals:
+        symbol = sig.symbol
+        price = prices.get(symbol)
+        if price is None or price <= 0.0:
+            continue
+
+        current_mv = projected_mv.get(symbol, 0.0)
+
+        if sig.action == Action.BUY:
+            # Buys toward target_weight * nav_before (same math as executor).
+            target_notional = sig.target_weight * nav_before
+            additional = target_notional - current_mv
+            if additional <= 0.0:
+                continue
+            # Can't spend more than available cash.
+            spend = min(additional, max(projected_cash, 0.0))
+            projected_cash -= spend
+            projected_mv[symbol] = current_mv + spend
+
+        elif sig.action == Action.SELL:
+            # Reduce toward target_weight * nav_before.
+            target_notional = sig.target_weight * nav_before
+            reduce = current_mv - target_notional
+            if reduce <= 0.0 or current_mv <= 0.0:
+                continue
+            reduce = min(reduce, current_mv)
+            projected_cash += reduce
+            projected_mv[symbol] = current_mv - reduce
+
+        elif sig.action == Action.CLOSE:
+            if current_mv > 0.0:
+                projected_cash += current_mv
+                projected_mv[symbol] = 0.0
+        # HOLD: no cash movement.
+
+    return projected_cash, nav_before
+
+
+def check_cash_floor_guard(
+    portfolio: Portfolio,
+    decision: TradingDecision,
+    prices: dict[str, float],
+    governance_severity: str = "ok",
+) -> tuple[bool, str | None, dict]:
+    """Enforce the R2 cash-floor guard.
+
+    Rejects a decision that would push cash above :data:`CASH_FLOOR_PCT` of
+    NAV during a ``risk_on`` or ``transition`` regime, unless the regime is
+    explicitly ``risk_off`` with confidence >= 0.70 OR governance has halted.
+
+    Returns
+    -------
+    (allowed, error_message, debug) where ``allowed`` is True when the
+    decision passes the guard, ``error_message`` carries a PM-readable
+    explanation on rejection (None otherwise), and ``debug`` contains the
+    projected cash math for observability.
+    """
+    projected_cash, nav_before = project_cash_after_signals(portfolio, decision, prices)
+    projected_cash_pct = projected_cash / nav_before if nav_before > 0 else 0.0
+
+    debug = {
+        "nav_before": round(nav_before, 2),
+        "projected_cash": round(projected_cash, 2),
+        "projected_cash_pct": round(projected_cash_pct, 4),
+        "regime": decision.market_regime.value,
+        "regime_confidence": decision.regime_confidence,
+        "governance_severity": governance_severity,
+        "cash_floor_pct": CASH_FLOOR_PCT,
+    }
+
+    # Guard only fires when projection exceeds floor.
+    if projected_cash_pct <= CASH_FLOOR_PCT:
+        return True, None, debug
+
+    # Allowed: explicit risk_off regime with high confidence.
+    if (
+        decision.market_regime == MarketRegime.RISK_OFF
+        and decision.regime_confidence >= RISK_OFF_CONFIDENCE_THRESHOLD
+    ):
+        return True, None, debug
+
+    # Allowed: governance is in halt state (sells-only gate already in force).
+    if str(governance_severity).lower() == "halt":
+        return True, None, debug
+
+    error = (
+        f"Projected cash {projected_cash_pct * 100:.0f}% exceeds "
+        f"{int(CASH_FLOOR_PCT * 100)}% floor in non-risk-off regime "
+        f"(regime={decision.market_regime.value}, "
+        f"confidence={decision.regime_confidence:.2f}). "
+        "Either include specific risk-off justification in "
+        "portfolio_commentary AND explicitly mark regime=risk_off with "
+        f"confidence>=0.70, or reduce the number of SELL/CLOSE actions. "
+        "Mass-close is a recovery path, not a default (whipsaw R2)."
+    )
+    return False, error, debug
 
 
 def main() -> None:
@@ -93,6 +243,40 @@ def main() -> None:
 
         portfolio.update_prices(prices)
         nav_before = portfolio.nav
+
+        # Whipsaw R2 — cash-floor guard (see docs/investigations/apr01-whipsaw.md).
+        # Projected cash after all signals must not exceed 40% of NAV during
+        # risk_on / transition regimes. Rejections return a PM-readable error
+        # and exit non-zero; the LLM reconsiders rather than retrying blindly.
+        governance_severity = "ok"
+        try:
+            raw_data = (
+                json.loads(raw_input) if raw_input.strip().startswith("{") else {}
+            )
+            gov_block = (
+                raw_data.get("governance") if isinstance(raw_data, dict) else None
+            )
+            if isinstance(gov_block, dict):
+                governance_severity = str(
+                    gov_block.get("overall_severity", "ok")
+                ).lower()
+        except (json.JSONDecodeError, AttributeError):
+            governance_severity = "ok"
+
+        allowed, guard_error, guard_debug = check_cash_floor_guard(
+            portfolio, decision, prices, governance_severity=governance_severity
+        )
+        if not allowed:
+            print(
+                json.dumps(
+                    {
+                        "error": guard_error,
+                        "guard": "cash_floor_r2",
+                        "debug": guard_debug,
+                    }
+                )
+            )
+            sys.exit(1)
 
         # Risk filter
         risk_mgr = RiskManager(config)
