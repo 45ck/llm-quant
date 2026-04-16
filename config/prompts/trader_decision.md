@@ -28,6 +28,15 @@
 - **VIX Regime**: {{ market_regime }} (thresholds: {{ "%.1f"|format(vix_regime_thresholds[0]) }} / {{ "%.1f"|format(vix_regime_thresholds[1]) }})
 - **10Y-2Y Spread**: {{ "%.2f"|format(yield_spread) }} bps
 - **SPY 50/200 SMA**: {{ spy_trend }}
+
+### Direction of Travel (whipsaw guard)
+Use these to distinguish "rising INTO a risk-off spike" from "receding OUT of one". A VIX reading of 25 is NOT the same signal when `vix_change_5d` is -6 (spike already past) as when it is +5 (panic building). Do not de-risk on elevated VIX alone if `vix_change_5d < 0` AND `vix_pct_from_20d_high < 90` — the spike has already peaked.
+
+- **VIX 5d change**: {% if vix_change_5d is not none %}{{ "%+.2f"|format(vix_change_5d) }}{% else %}N/A{% endif %} (negative = receding from spike; positive = climbing)
+- **VIX % of 20d high**: {% if vix_pct_from_20d_high is not none %}{{ "%.1f"|format(vix_pct_from_20d_high) }}%{% else %}N/A{% endif %} (values << 100 mean the spike has already peaked)
+- **SPY drawdown from 20d high**: {% if spy_drawdown_from_20d_high is not none %}{{ "%.2f"|format(spy_drawdown_from_20d_high * 100) }}%{% else %}N/A{% endif %} (near-zero with falling VIX = recovery underway)
+- **Days since regime flip**: {% if days_since_regime_flip is not none %}{{ days_since_regime_flip }}{% else %}N/A{% endif %} (small value = fresh flip; large value = stable regime call)
+
 {% if credit_spread_oas is not none %}
 - **Credit OAS (BAMLC0A0CM)**: {{ "%.2f"|format(credit_spread_oas) }} bps (z-score: {{ "%.2f"|format(credit_spread_zscore) if credit_spread_zscore is not none else "N/A" }}){% if silent_stress %} ⚠️ **SILENT STRESS**: credit spread elevated while VIX is low — hidden risk building{% endif %}
 {% else %}

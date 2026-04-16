@@ -123,3 +123,10 @@ class MarketContext:
     # Task llm-quant-t2s: 2x2 inflation regime overlay (Bridgewater / Dalio framework)
     macro_quadrant: str | None = None  # e.g. "disinflationary_boom"
     quadrant_tilts: dict | None = None  # keys: overweight, underweight, confidence
+    # Whipsaw R1 — direction-of-travel fields (2026-04-01 whipsaw fix).
+    # Added so the LLM can distinguish "VIX=25 rising INTO spike" from
+    # "VIX=25 receding FROM spike". See docs/investigations/apr01-whipsaw.md.
+    vix_change_5d: float | None = None  # current VIX minus VIX 5 sessions ago
+    vix_pct_from_20d_high: float | None = None  # current / 20d max * 100
+    spy_drawdown_from_20d_high: float | None = None  # SPY/20d_max - 1
+    days_since_regime_flip: int | None = None  # sessions since current regime began
