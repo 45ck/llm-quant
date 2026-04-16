@@ -1,0 +1,50 @@
+strategy_slug: d15-vol-regime-tqqq
+spec_hash: d15-vol-regime-tqqq-phase2-frozen-hash-placeholder
+robustness_date: '2026-04-06'
+robustness_phase: phase2_recentered_vol_window_45
+start_date: '2026-04-17'
+tracking_start_date: '2026-04-17'
+status: active
+backtest_baseline:
+  sharpe_ratio: 0.9776
+  max_drawdown: 0.1985
+  cagr: 0.1797
+  dsr: 0.9599
+performance:
+  initial_nav: 100000.0
+  current_nav: 100682.63
+  peak_nav: 100682.63
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 0.6826
+  total_trades: 0
+promotion_gate:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.6
+  max_drawdown_limit: 0.4
+  max_hold_days: 5
+strategy_params:
+  vol_window: 45
+  target_weight: 0.5
+  vix_crash_threshold: 30
+  gld_defensive_weight: 0.4
+  tlt_defensive_weight: 0.3
+  shy_defensive_weight: 0.3
+  rebalance_days: 5
+  cost_bps: 20
+daily_log:
+- date: '2026-04-16'
+  day_number: 1
+  position: equity_calm
+  regime: equity_calm
+  nav: 100682.63
+  daily_pnl: 682.63
+  daily_return_pct: 0.6826
+  signal_desc: SPY vol(45d)=16.0%, GLD vol(45d)=32.6%, ratio=0.491
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
+cumulative_metrics: {}
+created_at: '2026-04-17'
+updated_at: '2026-04-17'

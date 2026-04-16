@@ -1,0 +1,46 @@
+strategy_slug: tlt-soxl-sprint
+spec_hash: tlt-soxl-sprint-frozen-hash-placeholder
+robustness_date: '2026-03-31'
+start_date: '2026-04-17'
+tracking_start_date: '2026-04-17'
+status: active
+backtest_baseline:
+  sharpe_ratio: 0.936
+  max_drawdown: 0.171
+  cagr: 0.166
+performance:
+  initial_nav: 100000.0
+  current_nav: 100000.0
+  peak_nav: 100000.0
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 0.0
+  total_trades: 0
+promotion_gate:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.6
+  max_drawdown_limit: 0.4
+  max_hold_days: 5
+strategy_params:
+  leader_symbol: TLT
+  follower_symbol: SOXL
+  lag_days: 3
+  signal_window: 10
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  target_weight: 0.3
+  rebalance_frequency_days: 1
+daily_log:
+- date: '2026-04-16'
+  day_number: 1
+  position: hold_prev
+  regime: neutral
+  nav: 100000.0
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: TLT 10d ret=+0.0016 (entry>=+0.0100, exit<=-0.0050)
+  allocation: {}
+cumulative_metrics: {}
+created_at: '2026-04-17'
+updated_at: '2026-04-17'

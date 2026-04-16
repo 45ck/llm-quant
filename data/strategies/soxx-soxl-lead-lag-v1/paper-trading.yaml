@@ -1,0 +1,52 @@
+strategy_slug: soxx-soxl-lead-lag-v1
+spec_hash: soxx-soxl-lead-lag-v1-frozen-hash-placeholder
+robustness_date: '2026-04-06'
+start_date: '2026-04-17'
+tracking_start_date: '2026-04-17'
+status: active
+backtest_baseline:
+  sharpe_ratio: 0.818
+  max_drawdown: 0.372
+  cagr: 0.251
+performance:
+  initial_nav: 100000.0
+  current_nav: 101383.64
+  peak_nav: 101383.64
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 1.3836
+  total_trades: 0
+promotion_gate:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.6
+  max_drawdown_limit: 0.4
+  max_hold_days: 5
+strategy_params:
+  leader_symbol: SOXX
+  follower_symbol: SOXL
+  defensive_symbol: SHY
+  crash_filter_symbol: VIX
+  signal_window: 7
+  entry_threshold: 0.03
+  exit_threshold: -0.01
+  soxl_weight: 0.5
+  shy_weight_risk_on: 0.5
+  shy_weight_risk_off: 1.0
+  vix_crash_threshold: 35.0
+  rebalance_frequency_days: 7
+daily_log:
+- date: '2026-04-16'
+  day_number: 1
+  position: risk_on
+  regime: risk_on
+  nav: 101383.64
+  daily_pnl: 1383.64
+  daily_return_pct: 1.3836
+  signal_desc: SOXX 7d ret=+0.1679 (entry>=0.030, exit<=-0.010)
+  allocation:
+    SOXL: 0.5
+    SHY: 0.5
+cumulative_metrics: {}
+created_at: '2026-04-17'
+updated_at: '2026-04-17'

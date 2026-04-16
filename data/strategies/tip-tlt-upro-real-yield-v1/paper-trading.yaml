@@ -1,0 +1,49 @@
+strategy_slug: tip-tlt-upro-real-yield-v1
+spec_hash: tip-tlt-upro-real-yield-v1-frozen-hash-placeholder
+robustness_date: '2026-04-06'
+start_date: '2026-04-17'
+tracking_start_date: '2026-04-17'
+status: active
+backtest_baseline:
+  sharpe_ratio: 0.895
+  max_drawdown: 0.167
+  cagr: 0.097
+performance:
+  initial_nav: 100000.0
+  current_nav: 100238.74
+  peak_nav: 100238.74
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 0.2387
+  total_trades: 0
+promotion_gate:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.6
+  max_drawdown_limit: 0.4
+  max_hold_days: 5
+strategy_params:
+  lookback: 15
+  upro_weight_loosening: 0.35
+  shy_weight_loosening: 0.65
+  gld_weight_tightening: 0.4
+  shy_weight_tightening: 0.5
+  tlt_weight_tightening: 0.1
+  shy_weight_vix_override: 1.0
+  vix_threshold: 30
+  rebalance_frequency_days: 5
+daily_log:
+- date: '2026-04-16'
+  day_number: 1
+  position: loosening
+  regime: loosening
+  nav: 100238.74
+  daily_pnl: 238.74
+  daily_return_pct: 0.2387
+  signal_desc: TIP/TLT mom(15d)=+0.0050
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
+cumulative_metrics: {}
+created_at: '2026-04-17'
+updated_at: '2026-04-17'

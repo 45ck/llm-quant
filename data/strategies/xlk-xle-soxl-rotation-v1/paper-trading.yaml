@@ -1,0 +1,54 @@
+strategy_slug: xlk-xle-soxl-rotation-v1
+spec_hash: xlk-xle-soxl-rotation-v1-frozen-hash-placeholder
+robustness_date: '2026-04-06'
+start_date: '2026-04-17'
+tracking_start_date: '2026-04-17'
+status: active
+backtest_baseline:
+  sharpe_ratio: 1.171
+  max_drawdown: 0.226
+  cagr: 0.277
+performance:
+  initial_nav: 100000.0
+  current_nav: 101117.82
+  peak_nav: 101117.82
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 1.1178
+  total_trades: 0
+promotion_gate:
+  min_days: 30
+  min_trades: 10
+  sharpe_floor: 0.6
+  max_drawdown_limit: 0.4
+  max_hold_days: 5
+strategy_params:
+  signal_symbols:
+  - XLK
+  - XLE
+  lookback: 40
+  sma_period: 20
+  rebalance_frequency_days: 5
+  vix_crash_threshold: 30
+  growth_soxl_weight: 0.4
+  growth_shy_weight: 0.1
+  inflation_gld_weight: 0.3
+  inflation_dba_weight: 0.2
+  neutral_upro_weight: 0.25
+  neutral_shy_weight: 0.25
+  crash_shy_weight: 1.0
+daily_log:
+- date: '2026-04-16'
+  day_number: 1
+  position: growth
+  regime: growth
+  nav: 101117.82
+  daily_pnl: 1117.82
+  daily_return_pct: 1.1178
+  signal_desc: XLK/XLE mom(40d)=+0.0387, vs_sma(20d)=+0.1545
+  allocation:
+    SOXL: 0.4
+    SHY: 0.1
+cumulative_metrics: {}
+created_at: '2026-04-17'
+updated_at: '2026-04-17'
