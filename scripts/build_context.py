@@ -20,8 +20,14 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Fix Windows cp1252 encoding crashes when printing Polars DataFrames or
-# yfinance progress bars that contain characters outside cp1252.
-if sys.platform == "win32" and os.environ.get("PYTHONIOENCODING") is None:
+# yfinance progress bars that contain characters outside cp1252. Only rewire
+# when executed as a script — importing build_context from tests must not
+# replace the pytest-owned stdout/stderr wrappers.
+if (
+    __name__ == "__main__"
+    and sys.platform == "win32"
+    and os.environ.get("PYTHONIOENCODING") is None
+):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
@@ -94,6 +100,96 @@ def _fetch_and_store(conn, config) -> None:
 
 
 COT_STALENESS_THRESHOLD_DAYS = 10  # COT data older than this triggers exclusion
+
+# Whipsaw R3 — snapshot-gap soft block thresholds (see
+# docs/investigations/apr01-whipsaw.md). A 6-calendar-day snapshot gap on
+# 2026-04-01 was the enabling cause of the mass-close whipsaw: the LLM
+# came back online after an absence and acted on a cold book. Advisory at
+# >=3 days warns the PM to reconcile; at >=7 days we escalate to halt so
+# /trade treats it as a sells-only gate.
+SNAPSHOT_GAP_WARNING_DAYS = 3
+SNAPSHOT_GAP_HALT_DAYS = 7
+
+
+def _check_snapshot_staleness(conn, pod_id: str, today) -> dict | None:
+    """Return a governance advisory dict if the last snapshot is too old.
+
+    Queries ``portfolio_snapshots`` for the most recent ``date`` tied to
+    *pod_id* (falls back to any pod when the column is missing) and compares
+    to *today*. Returns ``None`` when no staleness exists or no snapshot has
+    ever been written (fresh systems shouldn't block).
+
+    Output shape matches the governance block's ``halt_details`` /
+    ``warning_details`` entries so downstream consumers see it alongside
+    surveillance scans.
+    """
+    try:
+        cols = [c[0] for c in conn.execute("DESCRIBE portfolio_snapshots").fetchall()]
+    except Exception as exc:
+        logger.debug("DESCRIBE portfolio_snapshots failed: %s", exc)
+        return None
+
+    try:
+        if "pod_id" in cols:
+            row = conn.execute(
+                """
+                SELECT MAX(date) FROM portfolio_snapshots WHERE pod_id = ?
+                """,
+                [pod_id],
+            ).fetchone()
+        else:
+            row = conn.execute("SELECT MAX(date) FROM portfolio_snapshots").fetchone()
+    except Exception as exc:
+        logger.debug("portfolio_snapshots lookup failed: %s", exc)
+        return None
+
+    last_date = row[0] if row else None
+    if last_date is None:
+        # No snapshot history — nothing to warn about (fresh system).
+        return None
+
+    # Normalise to date (DuckDB may return date or string depending on version).
+    from datetime import date as date_cls
+
+    if isinstance(last_date, str):
+        last_date_obj = date_cls.fromisoformat(last_date[:10])
+    elif isinstance(last_date, date_cls):
+        last_date_obj = last_date
+    else:
+        try:
+            last_date_obj = date_cls.fromisoformat(str(last_date)[:10])
+        except (TypeError, ValueError):
+            return None
+
+    days_stale = (today - last_date_obj).days
+    if days_stale < SNAPSHOT_GAP_WARNING_DAYS:
+        return None
+
+    if days_stale >= SNAPSHOT_GAP_HALT_DAYS:
+        severity = "halt"
+        message = (
+            f"Last snapshot is {days_stale} days old "
+            f"(>= {SNAPSHOT_GAP_HALT_DAYS} day halt threshold). "
+            "Treat this session as sells-only until portfolio state is "
+            "reconciled. Do NOT open new positions on a cold book "
+            "(whipsaw R3)."
+        )
+    else:
+        severity = "warning"
+        message = (
+            f"Last snapshot is {days_stale} days old "
+            f"(>= {SNAPSHOT_GAP_WARNING_DAYS} day advisory threshold). "
+            "Reconcile portfolio state before trading new signals. "
+            "Consider HOLD or review-only cycle (whipsaw R3)."
+        )
+
+    return {
+        "detector": "snapshot_staleness",
+        "severity": severity,
+        "days_stale": days_stale,
+        "last_snapshot_date": last_date_obj.isoformat(),
+        "message": message,
+    }
 
 
 def _vix_direction_of_travel(conn) -> tuple[float | None, float | None]:
@@ -388,6 +484,52 @@ def main() -> None:
             }
         except Exception as exc:
             print(f"WARNING: Governance scan failed: {exc}", file=sys.stderr)
+
+        # Whipsaw R3 — snapshot-gap soft block (see
+        # docs/investigations/apr01-whipsaw.md). When the last portfolio
+        # snapshot is stale we inject a dedicated advisory into the governance
+        # block so the LLM doesn't trade on a cold book.
+        today_date = datetime.now(tz=UTC).date()
+        staleness = _check_snapshot_staleness(conn, pod_id, today_date)
+        if staleness is not None:
+            severity = staleness["severity"]
+            detector = staleness["detector"]
+            message = staleness["message"]
+            days_stale = staleness["days_stale"]
+
+            if severity == "halt":
+                governance_status.setdefault("halt_details", []).append(
+                    {
+                        "detector": detector,
+                        "message": message,
+                        "days_stale": days_stale,
+                    }
+                )
+                governance_status["halts"] = int(governance_status.get("halts", 0)) + 1
+                # Halt dominates: escalate overall_severity unless already halt.
+                governance_status["overall_severity"] = "halt"
+            else:
+                governance_status.setdefault("warning_details", []).append(
+                    {
+                        "detector": detector,
+                        "message": message,
+                        "days_stale": days_stale,
+                    }
+                )
+                governance_status["warnings"] = (
+                    int(governance_status.get("warnings", 0)) + 1
+                )
+                # Warning escalates "ok" but never downgrades halt.
+                if governance_status.get("overall_severity", "ok") == "ok":
+                    governance_status["overall_severity"] = "warning"
+
+            # Bump total_checks if present so consumer math stays consistent.
+            if "total_checks" in governance_status:
+                governance_status["total_checks"] = (
+                    int(governance_status["total_checks"]) + 1
+                )
+
+            governance_status["snapshot_staleness"] = staleness
 
         # Output structured data for Claude Code
         output = {
