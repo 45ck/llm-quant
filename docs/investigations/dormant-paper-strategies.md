@@ -22,8 +22,8 @@ After investigation, **1 strategy was fixable via a small config-only change** (
 | `risk-premium` | initialized | NONE | Requires VRP (VIX minus realized vol), HYG/IEF credit carry, and multi-asset risk parity construction. No signal generator in batch runner. | **Code** | Write `signal_risk_premium()` with VRP + credit carry + risk parity overlay (~80 LOC). Non-trivial. Defer to follow-up task. |
 | `cross-asset-lead-lag` | initialized | NONE | Requires TLT lead + HYG/LQD credit lead + JPY carry unwind detection. JPY feed not in `ALL_SYMBOLS`. No signal generator. | **Code + Data** | Needs JPY data (JPY=X or similar) and a composite lead-lag signal. The two non-JPY channels overlap with existing credit-lead / rate-momentum strategies already in paper, so marginal value is limited. **Suggest retire** unless JPY channel is specifically desired. |
 | `crypto-microstructure` | initialized | NONE | Requires BTC-SPY rolling correlation regime, ETH/BTC rotation signal, and 20-day crypto realized vol sizing. BTC-USD, ETH-USD not in `ALL_SYMBOLS`. No signal generator. | **Code + Data** | Needs crypto price feeds and a bespoke generator. Backtest maxDD was 34.9% (well above 15% mandate) — the robustness file explicitly flags high risk of gate failure during paper trading. **Suggest retire** unless a Track D/crypto-specific deployment is planned. |
-| `momentum-regime` | **blocked** | NONE | Robustness gate FAILED (`DSR 0.713 < 0.95`, `PBO 0.657 > 0.10`, `parameter_stability 0% < 50%`). Paper trading cannot proceed. | **Config (by design)** | **Retire** — this is the lifecycle working correctly; strategy was rejected before paper. Update `status: "retired"` and leave `blocked_reason` intact. Supersede by v2 (also blocked) or a future v3. |
-| `momentum-regime-v2` | **blocked** | NONE | Robustness gate FAILED (`DSR 0.651 < 0.95`, `PBO 0.692 > 0.10`). Hypothesis falsified on 5 of 6 criteria. | **Config (by design)** | **Retire** — explicit `blocked_reason`. Would require v3 redesign to re-enter lifecycle. |
+| `momentum-regime` | **retired 2026-04-17** | NONE | Robustness gate FAILED (`DSR 0.713 < 0.95`, `PBO 0.657 > 0.10`, `parameter_stability 0% < 50%`). Paper trading cannot proceed. | **Config (by design)** | **RETIRED** — `retirement.yaml` written; status flipped to `retired` in `paper-trading.yaml`. Family dead — no v3 planned. |
+| `momentum-regime-v2` | **retired 2026-04-17** | NONE | Robustness gate FAILED (`DSR 0.651 < 0.95`, `PBO 0.692 > 0.10`). Hypothesis falsified on 5 of 6 criteria. | **Config (by design)** | **RETIRED** — `retirement.yaml` written; status flipped to `retired` in `paper-trading.yaml`. Supersedes v1; family closed. |
 
 ## Categorized Breakdown
 
@@ -58,6 +58,17 @@ After investigation, **1 strategy was fixable via a small config-only change** (
 - **`cross-asset-lead-lag`** — 2 of 3 channels already covered by deployed credit-lead / rate-momentum strategies; marginal value is low.
 - **`crypto-microstructure`** — backtest maxDD 34.9% > 15% mandate. The robustness file itself warns paper gate passage is unlikely. Low conviction to revive.
 - **`llm-alpha`** — requires LLM-scoring infrastructure not present in the current ops pipeline. Re-init after infra exists.
+
+## Retirement Addendum (2026-04-17)
+
+Formal retirement artifacts added for the two falsified momentum-regime strategies:
+
+- `data/strategies/momentum-regime/retirement.yaml` — verdict: REJECTED, do_not_revive: true
+- `data/strategies/momentum-regime-v2/retirement.yaml` — verdict: REJECTED, do_not_revive: true
+
+Both `paper-trading.yaml` files updated: `status: blocked` → `status: retired` with `retired_date: 2026-04-17` and `retired_reason` pointing to the retirement artifact. Original `blocked_reason` text preserved for audit. Family memory: momentum-regime family retired (no v3 planned).
+
+Related bead: `llm-quant-9kbq` (dormant-strategies investigation).
 
 ## Changes Applied This Session
 
