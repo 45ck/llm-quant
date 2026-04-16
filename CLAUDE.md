@@ -141,7 +141,7 @@ The `/trade` command runs the full autonomous trading cycle:
 ## Hard Constraints (enforced by risk/manager.py)
 
 **Track A (Defensive Alpha):**
-- Max 2% of NAV per trade, 10% per position (5% for crypto, 8% for forex)
+- Max 4% of NAV per trade, 12% per position (5% for crypto, 8% for forex)
 - Gross exposure < 200% of NAV, Net exposure < 100%
 - Sector concentration < 30%
 - Cash reserve >= 5% of NAV
