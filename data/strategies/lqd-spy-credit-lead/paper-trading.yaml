@@ -14,12 +14,12 @@ backtest_baseline:
   sortino_ratio: 1.93
 performance:
   initial_nav: 100000.0
-  current_nav: 100274.48
-  peak_nav: 100304.57
-  current_sharpe: 1.435
-  current_drawdown: 0.0003
-  total_return: 0.2745
-  total_trades: 2
+  current_nav: 100083.92
+  peak_nav: 100304.53
+  current_sharpe: 0.4031
+  current_drawdown: 0.0022
+  total_return: 0.0839
+  total_trades: 4
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -68,8 +68,8 @@ daily_log:
 - date: '2026-03-30'
   day_number: 3
   position: pending
-  nav: null
-  daily_pnl: null
+  nav: 100000.0
+  daily_pnl: 0.0
   daily_return_pct: null
   lqd_5d_return: null
   signal: pending_eod
@@ -88,8 +88,8 @@ daily_log:
   day_number: 5
   position: long_spy
   regime: risk_on
-  nav: 99336.25
-  daily_pnl: -663.75
+  nav: 99336.2
+  daily_pnl: -663.8
   daily_return_pct: -0.6638
   signal_desc: LQD 5d ret=+0.0124 (entry>=+0.0050, exit<=-0.0050)
   allocation:
@@ -98,8 +98,8 @@ daily_log:
   day_number: 6
   position: long_spy
   regime: risk_on
-  nav: 100304.57
-  daily_pnl: 968.32
+  nav: 100304.53
+  daily_pnl: 968.33
   daily_return_pct: 0.9748
   signal_desc: LQD 5d ret=+0.0061 (entry>=+0.0050, exit<=-0.0050)
   allocation:
@@ -108,16 +108,35 @@ daily_log:
   day_number: 7
   position: hold_prev
   regime: neutral
-  nav: 100274.48
+  nav: 100274.44
   daily_pnl: -30.09
   daily_return_pct: -0.03
   signal_desc: LQD 5d ret=+0.0041 (entry>=+0.0050, exit<=-0.0050)
   allocation: {}
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 8
   position: hold_prev
   regime: neutral
-  nav: 100274.48
+  nav: 100274.44
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 5d ret=-0.0005 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-20'
+  day_number: 9
+  position: long_spy
+  regime: risk_on
+  nav: 100083.92
+  daily_pnl: -190.52
+  daily_return_pct: -0.19
+  signal_desc: LQD 5d ret=+0.0077 (entry>=+0.0050, exit<=-0.0050)
+  allocation:
+    SPY: 0.8
+- date: '2026-04-21'
+  day_number: 10
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
   daily_pnl: 0.0
   daily_return_pct: 0.0
   signal_desc: LQD 5d ret=+0.0037 (entry>=+0.0050, exit<=-0.0050)
@@ -133,3 +152,6 @@ gate_evaluation:
     \ credit recovery (LQD 5d >= +0.5%).\n"
 created_at: '2026-03-26'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

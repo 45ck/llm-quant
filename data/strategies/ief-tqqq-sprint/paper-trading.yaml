@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.111
 performance:
   initial_nav: 100000.0
-  current_nav: 99618.76
+  current_nav: 99328.81
   peak_nav: 100000.0
-  current_sharpe: -15.8745
-  current_drawdown: 0.0038
-  total_return: -0.3812
+  current_sharpe: -15.5968
+  current_drawdown: 0.0067
+  total_return: -0.6712
   total_trades: 1
 promotion_gate:
   min_days: 30
@@ -41,12 +41,31 @@ daily_log:
   daily_return_pct: 0.0
   signal_desc: IEF 10d ret=+0.0015 (entry>=+0.0050, exit<=-0.0030)
   allocation: {}
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 2
+  position: hold_prev
+  regime: neutral
+  nav: 100000.0
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: IEF 10d ret=+0.0039 (entry>=+0.0050, exit<=-0.0030)
+  allocation: {}
+- date: '2026-04-20'
+  day_number: 3
   position: long_tqqq
   regime: risk_on
-  nav: 99618.76
-  daily_pnl: -381.24
+  nav: 99708.9
+  daily_pnl: -291.1
+  daily_return_pct: -0.2911
+  signal_desc: IEF 10d ret=+0.0070 (entry>=+0.0050, exit<=-0.0030)
+  allocation:
+    TQQQ: 0.3
+- date: '2026-04-21'
+  day_number: 4
+  position: long_tqqq
+  regime: risk_on
+  nav: 99328.81
+  daily_pnl: -380.09
   daily_return_pct: -0.3812
   signal_desc: IEF 10d ret=+0.0087 (entry>=+0.0050, exit<=-0.0030)
   allocation:
@@ -54,3 +73,6 @@ daily_log:
 cumulative_metrics: {}
 created_at: '2026-04-17'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

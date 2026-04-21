@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 100475.77
-  peak_nav: 100505.92
-  current_sharpe: 2.1793
-  current_drawdown: 0.0003
-  total_return: 0.4758
-  total_trades: 2
+  current_nav: 100206.37
+  peak_nav: 100505.9
+  current_sharpe: 0.8108
+  current_drawdown: 0.003
+  total_return: 0.2064
+  total_trades: 4
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -41,8 +41,8 @@ daily_log:
   day_number: 2
   position: long_qqq
   regime: risk_on
-  nav: 99155.64
-  daily_pnl: -844.36
+  nav: 99155.6
+  daily_pnl: -844.4
   daily_return_pct: -0.8444
   signal_desc: HYG 5d ret=+0.0124 (entry>=+0.0050, exit<=-0.0050)
   allocation:
@@ -51,8 +51,8 @@ daily_log:
   day_number: 3
   position: long_qqq
   regime: risk_on
-  nav: 100505.92
-  daily_pnl: 1350.28
+  nav: 100505.9
+  daily_pnl: 1350.3
   daily_return_pct: 1.3618
   signal_desc: HYG 5d ret=+0.0070 (entry>=+0.0050, exit<=-0.0050)
   allocation:
@@ -61,16 +61,35 @@ daily_log:
   day_number: 4
   position: hold_prev
   regime: neutral
-  nav: 100475.77
+  nav: 100475.75
   daily_pnl: -30.15
   daily_return_pct: -0.03
   signal_desc: HYG 5d ret=+0.0034 (entry>=+0.0050, exit<=-0.0050)
   allocation: {}
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 5
   position: hold_prev
   regime: neutral
-  nav: 100475.77
+  nav: 100475.75
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: HYG 5d ret=+0.0009 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-20'
+  day_number: 6
+  position: long_qqq
+  regime: risk_on
+  nav: 100206.37
+  daily_pnl: -269.38
+  daily_return_pct: -0.2681
+  signal_desc: HYG 5d ret=+0.0086 (entry>=+0.0050, exit<=-0.0050)
+  allocation:
+    QQQ: 0.75
+- date: '2026-04-21'
+  day_number: 7
+  position: hold_prev
+  regime: neutral
+  nav: 100206.37
   daily_pnl: 0.0
   daily_return_pct: 0.0
   signal_desc: HYG 5d ret=+0.0040 (entry>=+0.0050, exit<=-0.0050)
@@ -85,3 +104,6 @@ gate_evaluation:
     '
 created_at: '2026-03-30'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

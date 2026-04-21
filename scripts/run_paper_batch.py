@@ -1855,12 +1855,65 @@ def run_all_signals(
     return results
 
 
-def main():
+def rebuild_performance(paper: dict) -> dict:
+    """Rebuild NAV chain and performance aggregates from daily_log.
+
+    Walks daily_log in order, recomputing nav, daily_pnl, day_number,
+    peak_nav, drawdown, total_return, total_trades, and current_sharpe
+    from stored daily_return_pct values. Used after out-of-order insertion
+    to restore chain consistency.
+    """
+    daily_log = paper.get("daily_log", [])
+    perf = paper.get("performance", {})
+    initial_nav = perf.get("initial_nav", INITIAL_NAV)
+
+    nav = initial_nav
+    peak = initial_nav
+    total_trades = 0
+    prev_regime = None
+
+    for i, entry in enumerate(daily_log):
+        r_pct = entry.get("daily_return_pct")
+        r = (r_pct or 0.0) / 100.0
+        prev_nav = nav
+        nav = round(nav * (1.0 + r), 2)
+        peak = max(peak, nav)
+        entry["day_number"] = i + 1
+        entry["nav"] = nav
+        entry["daily_pnl"] = round(nav - prev_nav, 2)
+        regime = entry.get("regime")
+        if prev_regime is not None and regime != prev_regime:
+            total_trades += 1
+        prev_regime = regime
+
+    current_dd = round((peak - nav) / peak, 4) if peak > 0 else 0.0
+    metrics = compute_cumulative_metrics(daily_log)
+
+    perf["current_nav"] = nav
+    perf["peak_nav"] = peak
+    perf["current_drawdown"] = current_dd
+    perf["total_return"] = round((nav / initial_nav - 1.0) * 100, 4)
+    perf["total_trades"] = total_trades
+    perf["current_sharpe"] = metrics.get("sharpe")
+    paper["performance"] = perf
+    paper["daily_log"] = daily_log
+    return paper
+
+
+def main():  # noqa: PLR0912
     parser = argparse.ArgumentParser(description="Paper trading batch runner")
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Show signals without writing files",
+    )
+    parser.add_argument(
+        "--date",
+        type=str,
+        default=None,
+        help="Target date (YYYY-MM-DD) to run for. Defaults to latest available "
+        "trading day. Use to backfill missed days; entries inserted in "
+        "chronological order with NAV chain rebuilt.",
     )
     args = parser.parse_args()
 
@@ -1869,38 +1922,56 @@ def main():
     logger.info("Paper trading batch run: %s", today_str)
 
     # 1. Fetch shared data
-    prices_df, sym_data, spy_dates = load_shared_data()
+    prices_df, sym_data, spy_dates_full = load_shared_data()
 
-    if not spy_dates:
+    if not spy_dates_full:
         logger.error("No SPY data available. Aborting.")
         sys.exit(1)
 
-    # Check if today (or most recent trading day) has data
+    # Resolve target date
+    if args.date:
+        try:
+            target_date = datetime.date.fromisoformat(args.date)
+        except ValueError:
+            logger.exception("Invalid --date %r, expected YYYY-MM-DD", args.date)
+            sys.exit(1)
+        spy_dates = [d for d in spy_dates_full if d <= target_date]
+        if not spy_dates or spy_dates[-1] != target_date:
+            logger.error(
+                "Target date %s not in SPY trading calendar (nearest <= %s). Aborting.",
+                target_date,
+                spy_dates[-1] if spy_dates else "none",
+            )
+            sys.exit(1)
+        logger.info("Backfill mode: target date %s", target_date)
+    else:
+        spy_dates = spy_dates_full
+
     latest_date = spy_dates[-1]
     logger.info("Latest data date: %s", latest_date)
 
-    # 2. Compute signals for all 35 strategies
+    # 2. Compute signals for all strategies (using sliced calendar)
     signals = run_all_signals(sym_data, spy_dates, prices_df)
 
     # 3. Process each strategy
     summary_rows = []
+    backfill = args.date is not None
 
     for slug in sorted(signals.keys()):
         sig = signals[slug]
         alloc = sig.get("allocation", {})
 
-        # Compute today's return from allocation
+        # Compute signal-date return from allocation (uses dates[-1] vs dates[-2])
         daily_ret = compute_daily_return(alloc, sym_data, spy_dates)
 
         # Load existing YAML
         paper = load_paper_yaml(slug)
         daily_log = paper.get("daily_log", [])
 
-        # Check idempotency: skip if today already logged
+        # Idempotency: skip if target date already logged
         existing_dates = {str(e.get("date", "")) for e in daily_log}
         latest_str = str(latest_date)
         if latest_str in existing_dates:
-            # Already logged today, skip
             metrics = compute_cumulative_metrics(daily_log)
             summary_rows.append(
                 {
@@ -1918,10 +1989,17 @@ def main():
             )
             continue
 
-        # Compute previous position for switch cost
+        # Find insertion position (chronological); for append-mode this is len(daily_log)
+        insert_pos = len(daily_log)
+        for i, e in enumerate(daily_log):
+            if str(e.get("date", "")) > latest_str:
+                insert_pos = i
+                break
+
+        # Previous-entry regime for switch cost (the entry that will precede the new one)
         prev_regime = None
-        if daily_log:
-            prev_regime = daily_log[-1].get("regime")
+        if insert_pos > 0:
+            prev_regime = daily_log[insert_pos - 1].get("regime")
 
         # Apply switch cost
         if prev_regime is not None and sig.get("regime") != prev_regime:
@@ -1929,47 +2007,30 @@ def main():
 
         daily_ret_pct = round(daily_ret * 100, 4)
 
-        # Update NAV
-        perf = paper.get("performance", {})
-        prev_nav = perf.get("current_nav", INITIAL_NAV)
-        new_nav = round(prev_nav * (1.0 + daily_ret), 2)
-        peak_nav = max(perf.get("peak_nav", INITIAL_NAV), new_nav)
-        current_dd = round((peak_nav - new_nav) / peak_nav, 4) if peak_nav > 0 else 0.0
-
-        # Count trades
-        trade_count = 0
-        if prev_regime is not None and sig.get("regime") != prev_regime:
-            trade_count = 1
-
-        # Build log entry
+        # Build log entry (nav/day_number/pnl filled in by rebuild)
         log_entry = {
             "date": latest_str,
-            "day_number": len(daily_log) + 1,
+            "day_number": 0,  # placeholder — rebuild sets this
             "position": sig.get("position", "flat"),
             "regime": sig.get("regime", "unknown"),
-            "nav": new_nav,
-            "daily_pnl": round(new_nav - prev_nav, 2),
+            "nav": 0.0,  # placeholder
+            "daily_pnl": 0.0,  # placeholder
             "daily_return_pct": daily_ret_pct,
             "signal_desc": sig.get("signal_desc", ""),
             "allocation": alloc,
         }
-        daily_log.append(log_entry)
-
-        # Update performance
-        total_trades = perf.get("total_trades", 0) + trade_count
-        perf["current_nav"] = new_nav
-        perf["peak_nav"] = peak_nav
-        perf["current_drawdown"] = current_dd
-        perf["total_return"] = round((new_nav / INITIAL_NAV - 1.0) * 100, 4)
-        perf["total_trades"] = total_trades
-
-        # Recompute cumulative Sharpe
-        metrics = compute_cumulative_metrics(daily_log)
-        perf["current_sharpe"] = metrics.get("sharpe")
-
-        paper["performance"] = perf
+        daily_log.insert(insert_pos, log_entry)
         paper["daily_log"] = daily_log
+
+        # Rebuild NAV chain and performance block from full daily_log
+        paper = rebuild_performance(paper)
+        metrics = compute_cumulative_metrics(daily_log)
+
         paper["updated_at"] = today_str
+        if backfill:
+            paper.setdefault("backfilled_dates", [])
+            if latest_str not in paper["backfilled_dates"]:
+                paper["backfilled_dates"].append(latest_str)
 
         # Save
         save_paper_yaml(slug, paper, dry_run=args.dry_run)

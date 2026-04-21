@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.097
 performance:
   initial_nav: 100000.0
-  current_nav: 98945.08
-  peak_nav: 100238.74
-  current_sharpe: -10.919
-  current_drawdown: 0.0129
-  total_return: -1.0549
+  current_nav: 100053.26
+  peak_nav: 101603.55
+  current_sharpe: 0.2974
+  current_drawdown: 0.0153
+  total_return: 0.0533
   total_trades: 1
 promotion_gate:
   min_days: 30
@@ -37,19 +37,41 @@ daily_log:
   day_number: 1
   position: loosening
   regime: loosening
-  nav: 100238.74
-  daily_pnl: 238.74
+  nav: 100238.7
+  daily_pnl: 238.7
   daily_return_pct: 0.2387
   signal_desc: TIP/TLT mom(15d)=+0.0050
   allocation:
     UPRO: 0.35
     SHY: 0.65
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 2
+  position: loosening
+  regime: loosening
+  nav: 101603.55
+  daily_pnl: 1364.85
+  daily_return_pct: 1.3616
+  signal_desc: TIP/TLT mom(15d)=+0.0159
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
+- date: '2026-04-20'
+  day_number: 3
+  position: loosening
+  regime: loosening
+  nav: 101361.43
+  daily_pnl: -242.12
+  daily_return_pct: -0.2383
+  signal_desc: TIP/TLT mom(15d)=+0.0045
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
+- date: '2026-04-21'
+  day_number: 4
   position: tightening
   regime: tightening
-  nav: 98945.08
-  daily_pnl: -1293.66
+  nav: 100053.26
+  daily_pnl: -1308.17
   daily_return_pct: -1.2906
   signal_desc: TIP/TLT mom(15d)=-0.0006
   allocation:
@@ -59,3 +81,6 @@ daily_log:
 cumulative_metrics: {}
 created_at: '2026-04-17'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

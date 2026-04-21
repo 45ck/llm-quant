@@ -12,11 +12,11 @@ backtest_baseline:
   dsr: 0.9599
 performance:
   initial_nav: 100000.0
-  current_nav: 100020.1
-  peak_nav: 100682.63
-  current_sharpe: 0.2913
-  current_drawdown: 0.0066
-  total_return: 0.0201
+  current_nav: 101562.68
+  peak_nav: 102707.23
+  current_sharpe: 5.8759
+  current_drawdown: 0.0111
+  total_return: 1.5627
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -38,19 +38,41 @@ daily_log:
   day_number: 1
   position: equity_calm
   regime: equity_calm
-  nav: 100682.63
-  daily_pnl: 682.63
+  nav: 100682.6
+  daily_pnl: 682.6
   daily_return_pct: 0.6826
   signal_desc: SPY vol(45d)=16.0%, GLD vol(45d)=32.6%, ratio=0.491
   allocation:
     TQQQ: 0.5
     SHY: 0.5
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 2
   position: equity_calm
   regime: equity_calm
-  nav: 100020.1
-  daily_pnl: -662.53
+  nav: 102707.23
+  daily_pnl: 2024.63
+  daily_return_pct: 2.0109
+  signal_desc: SPY vol(45d)=16.0%, GLD vol(45d)=32.6%, ratio=0.491
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
+- date: '2026-04-20'
+  day_number: 3
+  position: equity_calm
+  regime: equity_calm
+  nav: 102235.39
+  daily_pnl: -471.84
+  daily_return_pct: -0.4594
+  signal_desc: SPY vol(45d)=16.2%, GLD vol(45d)=32.6%, ratio=0.498
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
+- date: '2026-04-21'
+  day_number: 4
+  position: equity_calm
+  regime: equity_calm
+  nav: 101562.68
+  daily_pnl: -672.71
   daily_return_pct: -0.658
   signal_desc: SPY vol(45d)=15.8%, GLD vol(45d)=31.6%, ratio=0.499
   allocation:
@@ -59,3 +81,6 @@ daily_log:
 cumulative_metrics: {}
 created_at: '2026-04-17'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

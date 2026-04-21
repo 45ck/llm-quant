@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 100510.7
-  peak_nav: 100540.86
-  current_sharpe: 2.1979
-  current_drawdown: 0.0003
-  total_return: 0.5107
-  total_trades: 2
+  current_nav: 100225.24
+  peak_nav: 100540.85
+  current_sharpe: 0.8323
+  current_drawdown: 0.0031
+  total_return: 0.2252
+  total_trades: 4
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -41,8 +41,8 @@ daily_log:
   day_number: 2
   position: long_qqq
   regime: risk_on
-  nav: 99101.35
-  daily_pnl: -898.65
+  nav: 99101.3
+  daily_pnl: -898.7
   daily_return_pct: -0.8987
   signal_desc: VCIT 5d ret=+0.0083 (entry>=+0.0040, exit<=-0.0040)
   allocation:
@@ -51,8 +51,8 @@ daily_log:
   day_number: 3
   position: long_qqq
   regime: risk_on
-  nav: 100540.86
-  daily_pnl: 1439.51
+  nav: 100540.85
+  daily_pnl: 1439.55
   daily_return_pct: 1.4526
   signal_desc: VCIT 5d ret=+0.0073 (entry>=+0.0040, exit<=-0.0040)
   allocation:
@@ -61,16 +61,35 @@ daily_log:
   day_number: 4
   position: hold_prev
   regime: neutral
-  nav: 100510.7
+  nav: 100510.69
   daily_pnl: -30.16
   daily_return_pct: -0.03
   signal_desc: VCIT 5d ret=+0.0040 (entry>=+0.0040, exit<=-0.0040)
   allocation: {}
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 5
   position: hold_prev
   regime: neutral
-  nav: 100510.7
+  nav: 100510.69
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: VCIT 5d ret=+0.0006 (entry>=+0.0040, exit<=-0.0040)
+  allocation: {}
+- date: '2026-04-20'
+  day_number: 6
+  position: long_qqq
+  regime: risk_on
+  nav: 100225.24
+  daily_pnl: -285.45
+  daily_return_pct: -0.284
+  signal_desc: VCIT 5d ret=+0.0064 (entry>=+0.0040, exit<=-0.0040)
+  allocation:
+    QQQ: 0.8
+- date: '2026-04-21'
+  day_number: 7
+  position: hold_prev
+  regime: neutral
+  nav: 100225.24
   daily_pnl: 0.0
   daily_return_pct: 0.0
   signal_desc: VCIT 5d ret=+0.0036 (entry>=+0.0040, exit<=-0.0040)
@@ -85,3 +104,6 @@ gate_evaluation:
     '
 created_at: '2026-03-30'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

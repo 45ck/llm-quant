@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.277
 performance:
   initial_nav: 100000.0
-  current_nav: 102009.54
-  peak_nav: 102009.54
-  current_sharpe: 134.5666
+  current_nav: 105496.51
+  peak_nav: 105496.51
+  current_sharpe: 23.6893
   current_drawdown: 0.0
-  total_return: 2.0095
+  total_return: 5.4965
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -42,19 +42,41 @@ daily_log:
   day_number: 1
   position: growth
   regime: growth
-  nav: 101117.82
-  daily_pnl: 1117.82
+  nav: 101117.8
+  daily_pnl: 1117.8
   daily_return_pct: 1.1178
   signal_desc: XLK/XLE mom(40d)=+0.0387, vs_sma(20d)=+0.1545
   allocation:
     SOXL: 0.4
     SHY: 0.1
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 2
   position: growth
   regime: growth
-  nav: 102009.54
-  daily_pnl: 891.72
+  nav: 104025.54
+  daily_pnl: 2907.74
+  daily_return_pct: 2.8756
+  signal_desc: XLK/XLE mom(40d)=+0.0445, vs_sma(20d)=+0.1428
+  allocation:
+    SOXL: 0.4
+    SHY: 0.1
+- date: '2026-04-20'
+  day_number: 3
+  position: growth
+  regime: growth
+  nav: 104574.27
+  daily_pnl: 548.73
+  daily_return_pct: 0.5275
+  signal_desc: XLK/XLE mom(40d)=+0.1041, vs_sma(20d)=+0.1813
+  allocation:
+    SOXL: 0.4
+    SHY: 0.1
+- date: '2026-04-21'
+  day_number: 4
+  position: growth
+  regime: growth
+  nav: 105496.51
+  daily_pnl: 922.24
   daily_return_pct: 0.8819
   signal_desc: XLK/XLE mom(40d)=+0.0933, vs_sma(20d)=+0.1689
   allocation:
@@ -63,3 +85,6 @@ daily_log:
 cumulative_metrics: {}
 created_at: '2026-04-17'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

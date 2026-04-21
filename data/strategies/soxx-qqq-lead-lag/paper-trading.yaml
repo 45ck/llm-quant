@@ -13,12 +13,12 @@ backtest_baseline:
   total_trades: 162
 performance:
   initial_nav: 100000.0
-  current_nav: 100700.68
-  peak_nav: 101046.56
-  current_sharpe: 2.1772
+  current_nav: 101595.46
+  peak_nav: 102236.51
+  current_sharpe: 3.7467
   current_sortino: null
-  current_drawdown: 0.0034
-  total_return: 0.7007
+  current_drawdown: 0.0063
+  total_return: 1.5955
   total_trades: 1
   win_rate: null
 gate_criteria:
@@ -71,8 +71,8 @@ daily_log:
 - date: '2026-03-30'
   day_number: 3
   position: pending
-  nav: null
-  daily_pnl: null
+  nav: 100000.0
+  daily_pnl: 0.0
   daily_return_pct: null
   soxx_5d_return: null
   signal: pending_eod
@@ -91,8 +91,8 @@ daily_log:
   day_number: 5
   position: long_qqq
   regime: risk_on
-  nav: 98992.77
-  daily_pnl: -1007.23
+  nav: 98992.8
+  daily_pnl: -1007.2
   daily_return_pct: -1.0072
   signal_desc: SOXX 5d ret=+0.0637 (entry>=+0.0200, exit<=-0.0100)
   allocation:
@@ -102,7 +102,7 @@ daily_log:
   position: long_qqq
   regime: risk_on
   nav: 100610.44
-  daily_pnl: 1617.67
+  daily_pnl: 1617.64
   daily_return_pct: 1.6341
   signal_desc: SOXX 5d ret=+0.1431 (entry>=+0.0200, exit<=-0.0100)
   allocation:
@@ -111,18 +111,38 @@ daily_log:
   day_number: 7
   position: long_qqq
   regime: risk_on
-  nav: 101046.56
-  daily_pnl: 436.12
+  nav: 101046.59
+  daily_pnl: 436.15
   daily_return_pct: 0.4335
   signal_desc: SOXX 5d ret=+0.0849 (entry>=+0.0200, exit<=-0.0100)
   allocation:
     QQQ: 0.9
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 8
   position: long_qqq
   regime: risk_on
-  nav: 100700.68
-  daily_pnl: -345.88
+  nav: 102236.51
+  daily_pnl: 1189.92
+  daily_return_pct: 1.1776
+  signal_desc: SOXX 5d ret=+0.0722 (entry>=+0.0200, exit<=-0.0100)
+  allocation:
+    QQQ: 0.9
+- date: '2026-04-20'
+  day_number: 9
+  position: long_qqq
+  regime: risk_on
+  nav: 101944.42
+  daily_pnl: -292.09
+  daily_return_pct: -0.2857
+  signal_desc: SOXX 5d ret=+0.0753 (entry>=+0.0200, exit<=-0.0100)
+  allocation:
+    QQQ: 0.9
+- date: '2026-04-21'
+  day_number: 10
+  position: long_qqq
+  regime: risk_on
+  nav: 101595.46
+  daily_pnl: -348.96
   daily_return_pct: -0.3423
   signal_desc: SOXX 5d ret=+0.0615 (entry>=+0.0200, exit<=-0.0100)
   allocation:
@@ -137,3 +157,6 @@ gate_evaluation:
     \ working as designed. 2/30 days, 0/50 trades. Continue monitoring.\n"
 created_at: '2026-03-26'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'

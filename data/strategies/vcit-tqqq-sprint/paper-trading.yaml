@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.115
 performance:
   initial_nav: 100000.0
-  current_nav: 100067.76
-  peak_nav: 100420.48
-  current_sharpe: 1.4256
-  current_drawdown: 0.0035
-  total_return: 0.0678
+  current_nav: 100952.62
+  peak_nav: 101573.63
+  current_sharpe: 6.287
+  current_drawdown: 0.0061
+  total_return: 0.9526
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -36,18 +36,38 @@ daily_log:
   day_number: 1
   position: long_tqqq
   regime: risk_on
-  nav: 100420.48
-  daily_pnl: 420.48
+  nav: 100420.5
+  daily_pnl: 420.5
   daily_return_pct: 0.4205
   signal_desc: VCIT 10d ret=+0.0074 (entry>=+0.0050, exit<=-0.0030)
   allocation:
     TQQQ: 0.3
-- date: '2026-04-21'
+- date: '2026-04-17'
   day_number: 2
   position: long_tqqq
   regime: risk_on
-  nav: 100067.76
-  daily_pnl: -352.72
+  nav: 101573.63
+  daily_pnl: 1153.13
+  daily_return_pct: 1.1483
+  signal_desc: VCIT 10d ret=+0.0074 (entry>=+0.0050, exit<=-0.0030)
+  allocation:
+    TQQQ: 0.3
+- date: '2026-04-20'
+  day_number: 3
+  position: long_tqqq
+  regime: risk_on
+  nav: 101308.42
+  daily_pnl: -265.21
+  daily_return_pct: -0.2611
+  signal_desc: VCIT 10d ret=+0.0089 (entry>=+0.0050, exit<=-0.0030)
+  allocation:
+    TQQQ: 0.3
+- date: '2026-04-21'
+  day_number: 4
+  position: long_tqqq
+  regime: risk_on
+  nav: 100952.62
+  daily_pnl: -355.8
   daily_return_pct: -0.3512
   signal_desc: VCIT 10d ret=+0.0109 (entry>=+0.0050, exit<=-0.0030)
   allocation:
@@ -55,3 +75,6 @@ daily_log:
 cumulative_metrics: {}
 created_at: '2026-04-17'
 updated_at: '2026-04-22'
+backfilled_dates:
+- '2026-04-17'
+- '2026-04-20'
