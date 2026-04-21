@@ -10,12 +10,12 @@ backtest_baseline:
   cagr: 0.097
 performance:
   initial_nav: 100000.0
-  current_nav: 100238.74
+  current_nav: 98945.08
   peak_nav: 100238.74
-  current_sharpe: null
-  current_drawdown: 0.0
-  total_return: 0.2387
-  total_trades: 0
+  current_sharpe: -10.919
+  current_drawdown: 0.0129
+  total_return: -1.0549
+  total_trades: 1
 promotion_gate:
   min_days: 30
   min_trades: 10
@@ -44,6 +44,18 @@ daily_log:
   allocation:
     UPRO: 0.35
     SHY: 0.65
+- date: '2026-04-21'
+  day_number: 2
+  position: tightening
+  regime: tightening
+  nav: 98945.08
+  daily_pnl: -1293.66
+  daily_return_pct: -1.2906
+  signal_desc: TIP/TLT mom(15d)=-0.0006
+  allocation:
+    GLD: 0.4
+    TLT: 0.1
+    SHY: 0.5
 cumulative_metrics: {}
 created_at: '2026-04-17'
-updated_at: '2026-04-17'
+updated_at: '2026-04-22'

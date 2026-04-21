@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 101036.32
+  current_nav: 100410.68
   peak_nav: 101066.64
-  current_sharpe: 8.8216
-  current_drawdown: 0.0003
-  total_return: 1.0363
-  total_trades: 2
+  current_sharpe: 2.43
+  current_drawdown: 0.0065
+  total_return: 0.4107
+  total_trades: 3
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -65,6 +65,16 @@ daily_log:
   daily_return_pct: -0.03
   signal_desc: 10d avg overnight ret=+0.001544 (entry>=0.002, exit<=-0.0005)
   allocation: {}
+- date: '2026-04-21'
+  day_number: 5
+  position: long_spy
+  regime: risk_on
+  nav: 100410.68
+  daily_pnl: -625.64
+  daily_return_pct: -0.6192
+  signal_desc: 10d avg overnight ret=+0.002945 (entry>=0.002, exit<=-0.0005)
+  allocation:
+    SPY: 0.9
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -72,4 +82,4 @@ gate_evaluation:
   notes: "Paper trading initialized 2026-03-30. Family 8 (overnight momentum) mechanism. Key data dependency: requires accurate\
     \ SPY open prices \xE2\u20AC\u201D verify yfinance open price accuracy before first live signal.\n"
 created_at: '2026-03-30'
-updated_at: '2026-04-17'
+updated_at: '2026-04-22'
