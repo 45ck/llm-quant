@@ -229,7 +229,16 @@ This determines which gate thresholds apply throughout the lifecycle.
 3. Single-session loss > 20%
 4. Beta decay drag > 5% annualized vs. 3x theoretical return (measured monthly)
 
-**Status:** 1 strategy passing all 6 Track D gates (TLT-TQQQ: Sharpe=1.030, MaxDD=10.16%, DSR=0.965). Advancing to paper trading. LQD-SPY signal → TQQQ in backtest phase.
+**Status (2026-04-22):** 14 strategies passing all 6 Track D gates. Top performers by CAGR:
+D10 XLK-SOXL (Sharpe=1.171, CAGR=27.7%), D11 SOXX-SOXL (0.818, 25.1%), D13 TSMOM-UPRO
+(1.345, 20.1%), TLT-SOXL Sprint (0.936, 16.6%), D15 Vol-Regime-TQQQ (0.978, 15.3%),
+D14 Disinflation-TQQQ (0.883, 12.6%), D1 TLT-TQQQ (1.030, 12.4%). Optimal 2-strat
+portfolio: XLK-SOXL@60% + TLT-TQQQ@70% = CAGR 42.8%, MaxDD 22.8%, Sharpe 1.533.
+D3 TQQQ/TMF ratio MR **RETIRED** (independent replication showed Sharpe=-1.08 vs
+original 2.21 — signal bug). Key insight: rate momentum (TLT) survives ALL 3x
+vehicles; IG credit (AGG, LQD) survives TQQQ but NOT SOXL; commodity carry has
+NO causal link to semis (D16 falsified, Sharpe=-0.358). VIX crash filter MANDATORY
+for all Track D strategies.
 
 ---
 
@@ -237,10 +246,10 @@ This determines which gate thresholds apply throughout the lifecycle.
 
 | Track | Allocation | Expected Sharpe | Beta | Status |
 |-------|-----------|-----------------|------|--------|
-| A (23 strategies, 13 families) | 60% | ~2.18 | ~0.4 | Paper trading |
-| B (3-5 target) | 20% | ~1.5 | ~0.8 | Research |
-| C (2-3 target) | 10-20% | ~2.0 | ~0.0 | Planning |
-| D (1 strategy: TLT-TQQQ) | 0-15% | ~1.0 | ~2.0 | Paper trading |
+| A (35 strategies, 21 families) | 40% | ~2.21 | ~0.4 | Backlog — research complete, paper trading |
+| B (3 strategies: SOXX-QQQ, USO/XLE MR, GDX/GLD MR) | 0% | ~1.5 | ~0.8 | Backlog — subsumed by Track D |
+| C (Polymarket/CEF/funding-rate) | 20% | ~2.0 | ~0.0 | Active research — infrastructure built, live scanning |
+| D (14 strategies passing gates) | 40% | ~1.0 | ~2.0 | Active — paper trading validation |
 | **Combined** | **100%** | **~2.0-2.5** | ~0.4 | |
 
 Track D allocation is gated: 0% until paper trading gate passes, then grows from 5% → 15% over 6 months contingent on MAR >= 1.0.
@@ -255,3 +264,4 @@ Track D allocation is gated: 0% until paper trading gate passes, then grows from
 | 2.0 | 2026-03-27 | Added Track C (Niche Arbitrage). |
 | 3.0 | 2026-03-30 | Added Track D (Sprint Alpha — leveraged re-expression). |
 | 4.0 | 2026-04-01 | Updated Track A to 23 strategies across 13 families (SR=2.184). Track D first pass (TLT-TQQQ). |
+| 5.0 | 2026-04-22 | Track A research complete (35 strategies, 21 families, SR=2.205, MaxDD=6.3%) — moved to backlog per solo-trader CAGR priority. Track D expanded to 14 passing strategies; D3 retired (signal bug). Track B subsumed by Track D for high-CAGR slot. Allocation target shifted: D 40% / A 40% / C 20% / B 0%. |
