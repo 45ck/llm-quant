@@ -69,6 +69,7 @@ LEAD_LAG_PARAMS: dict[str, tuple[str, str, int, float, float, float]] = {
     "agg-upro-sprint": ("AGG", "UPRO", 10, 0.01, -0.005, 0.30),
     "vcit-tqqq-sprint": ("VCIT", "TQQQ", 10, 0.005, -0.003, 0.30),
     "lqd-tqqq-sprint": ("LQD", "TQQQ", 10, 0.01, -0.005, 0.30),
+    "lqd-soxl-sprint": ("LQD", "SOXL", 10, 0.01, -0.005, 0.30),
 }
 
 # D3 TQQQ/TMF ratio z-score mean-reversion parameters

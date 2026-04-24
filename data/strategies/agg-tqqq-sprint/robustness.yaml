@@ -1,0 +1,198 @@
+strategy_slug: agg-tqqq-sprint
+strategy_type: leveraged_lead_lag
+track: D
+mechanism: AGG (aggregate bond) 10-day return -> TQQQ (3x leveraged QQQ)
+key_differentiator: AGG captures broad fixed income sentiment; credit easing -> equity
+  rally
+vix_crash_filter: Go 100% SHY when VIX > threshold (default 30)
+base_params:
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  lag_days: 3
+  signal_window: 10
+  target_weight: 0.3
+  rebalance_frequency: 1
+  vix_crash_threshold: 30
+base_sharpe: 1.0779
+base_max_dd: 0.1059
+base_total_return: 0.6311
+base_cagr: 0.1087
+n_trades: 50
+dsr: 0.969
+cpcv:
+  config: n_groups=15, k=3, purge=5
+  oos_mean_sharpe: 1.0912
+  oos_std: 0.7876
+  oos_is_ratio: 1.0123
+  pct_positive_folds: 0.9143
+perturbation:
+  variants:
+  - variant: lag=1
+    sharpe: 0.9453
+    max_dd: 0.1007
+    cagr: 0.0931
+    change_pct: -12.3
+    status: STABLE
+  - variant: lag=2
+    sharpe: 0.8072
+    max_dd: 0.0961
+    cagr: 0.0793
+    change_pct: -25.1
+    status: UNSTABLE
+  - variant: lag=5
+    sharpe: 0.412
+    max_dd: 0.1105
+    cagr: 0.0367
+    change_pct: -61.8
+    status: UNSTABLE
+  - variant: lag=7
+    sharpe: 0.1385
+    max_dd: 0.1329
+    cagr: 0.009
+    change_pct: -87.2
+    status: UNSTABLE
+  - variant: window=5
+    sharpe: 0.6932
+    max_dd: 0.1053
+    cagr: 0.0615
+    change_pct: -35.7
+    status: UNSTABLE
+  - variant: window=7
+    sharpe: 0.1667
+    max_dd: 0.1153
+    cagr: 0.0115
+    change_pct: -84.5
+    status: UNSTABLE
+  - variant: window=15
+    sharpe: 0.4554
+    max_dd: 0.1318
+    cagr: 0.0441
+    change_pct: -57.7
+    status: UNSTABLE
+  - variant: window=20
+    sharpe: 0.1118
+    max_dd: 0.1486
+    cagr: 0.0063
+    change_pct: -89.6
+    status: UNSTABLE
+  - variant: entry=0.5%
+    sharpe: 1.0588
+    max_dd: 0.0942
+    cagr: 0.1257
+    change_pct: -1.8
+    status: STABLE
+  - variant: entry=0.8%
+    sharpe: 1.0081
+    max_dd: 0.1059
+    cagr: 0.1047
+    change_pct: -6.5
+    status: STABLE
+  - variant: entry=1.5%
+    sharpe: 0.8372
+    max_dd: 0.113
+    cagr: 0.076
+    change_pct: -22.3
+    status: STABLE
+  - variant: entry=2.0%
+    sharpe: 0.4444
+    max_dd: 0.113
+    cagr: 0.0341
+    change_pct: -58.8
+    status: UNSTABLE
+  - variant: exit=-0.3%
+    sharpe: 0.9738
+    max_dd: 0.1059
+    cagr: 0.094
+    change_pct: -9.7
+    status: STABLE
+  - variant: exit=-0.8%
+    sharpe: 0.8928
+    max_dd: 0.1181
+    cagr: 0.0945
+    change_pct: -17.2
+    status: STABLE
+  - variant: exit=-1.0%
+    sharpe: 0.8165
+    max_dd: 0.1181
+    cagr: 0.0891
+    change_pct: -24.2
+    status: STABLE
+  - variant: weight=0.20
+    sharpe: 0.8966
+    max_dd: 0.0775
+    cagr: 0.0615
+    change_pct: -16.8
+    status: STABLE
+  - variant: weight=0.25
+    sharpe: 1.0053
+    max_dd: 0.0917
+    cagr: 0.085
+    change_pct: -6.7
+    status: STABLE
+  - variant: weight=0.40
+    sharpe: 1.1679
+    max_dd: 0.1341
+    cagr: 0.1568
+    change_pct: 8.4
+    status: STABLE
+  - variant: weight=0.50
+    sharpe: 1.2212
+    max_dd: 0.1619
+    cagr: 0.2057
+    change_pct: 13.3
+    status: STABLE
+  - variant: rebal=3
+    sharpe: 0.6273
+    max_dd: 0.0904
+    cagr: 0.0617
+    change_pct: -41.8
+    status: UNSTABLE
+  - variant: rebal=5
+    sharpe: 0.336
+    max_dd: 0.1271
+    cagr: 0.0301
+    change_pct: -68.8
+    status: UNSTABLE
+  - variant: rebal=7
+    sharpe: 0.5555
+    max_dd: 0.1156
+    cagr: 0.0473
+    change_pct: -48.5
+    status: UNSTABLE
+  - variant: vix_crash=25
+    sharpe: 0.9394
+    max_dd: 0.1059
+    cagr: 0.0869
+    change_pct: -12.9
+    status: STABLE
+  - variant: vix_crash=35
+    sharpe: 1.0394
+    max_dd: 0.1059
+    cagr: 0.1047
+    change_pct: -3.6
+    status: STABLE
+  - variant: vix_crash=40
+    sharpe: 0.8728
+    max_dd: 0.1059
+    cagr: 0.0895
+    change_pct: -19.0
+    status: STABLE
+  pct_stable: 56.0
+  stable_count: 14
+  total_variants: 25
+shuffled_signal:
+  real_sharpe: 1.0774
+  shuffled_mean: 0.5258
+  shuffled_95th: 0.6659
+  shuffled_99th: 0.7331
+  p_value: 0.0
+  n_shuffles: 1000
+  passed: true
+gates:
+  sharpe_gte_0.80: true
+  maxdd_lt_40pct: true
+  dsr_gte_0.90: true
+  cpcv_oos_positive: true
+  perturbation_gte_40pct: true
+  shuffled_signal_passed: true
+verdict: PASS

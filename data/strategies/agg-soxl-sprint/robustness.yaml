@@ -1,0 +1,186 @@
+strategy_slug: agg-soxl-sprint
+strategy_type: leveraged_credit_lead_lag
+track: D
+mechanism: AGG (aggregate bond) 10-day return -> SOXL (3x leveraged semiconductors)
+key_differentiator: 'Credit spread contagion: AGG reflects funding conditions that
+  hit capital-intensive semis first; VIX crash filter prevents holding through extreme
+  vol spikes'
+base_params:
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  lag_days: 3
+  signal_window: 10
+  target_weight: 0.3
+  vix_crash_threshold: 30.0
+  rebalance_frequency: 1
+base_sharpe: 0.7311
+base_max_dd: 0.2056
+base_total_return: 0.6808
+base_cagr: 0.1157
+n_trades: 50
+dsr: 0.9213
+cpcv:
+  config: n_groups=15, k=3, purge=5
+  oos_mean_sharpe: 0.7978
+  oos_std: 0.9707
+  oos_is_ratio: 1.0913
+  pct_positive_folds: 0.7714
+perturbation:
+  variants:
+  - variant: lag=1
+    sharpe: 0.5342
+    max_dd: 0.2574
+    cagr: 0.0784
+    change_pct: -26.9
+    status: UNSTABLE
+  - variant: lag=2
+    sharpe: 0.3806
+    max_dd: 0.2807
+    cagr: 0.0514
+    change_pct: -47.9
+    status: UNSTABLE
+  - variant: lag=5
+    sharpe: 0.3959
+    max_dd: 0.2073
+    cagr: 0.053
+    change_pct: -45.8
+    status: UNSTABLE
+  - variant: lag=7
+    sharpe: 0.2305
+    max_dd: 0.182
+    cagr: 0.0249
+    change_pct: -68.5
+    status: UNSTABLE
+  - variant: lag=10
+    sharpe: 0.1728
+    max_dd: 0.2386
+    cagr: 0.015
+    change_pct: -76.4
+    status: UNSTABLE
+  - variant: window=5
+    sharpe: 0.6513
+    max_dd: 0.1772
+    cagr: 0.0881
+    change_pct: -10.9
+    status: STABLE
+  - variant: window=7
+    sharpe: -0.0383
+    max_dd: 0.2575
+    cagr: -0.0202
+    change_pct: -105.2
+    status: UNSTABLE
+  - variant: window=15
+    sharpe: 0.3552
+    max_dd: 0.2502
+    cagr: 0.0496
+    change_pct: -51.4
+    status: UNSTABLE
+  - variant: window=20
+    sharpe: 0.0625
+    max_dd: 0.272
+    cagr: -0.0053
+    change_pct: -91.5
+    status: UNSTABLE
+  - variant: entry=0.5%
+    sharpe: 0.7097
+    max_dd: 0.2466
+    cagr: 0.1293
+    change_pct: -2.9
+    status: STABLE
+  - variant: entry=1.5%
+    sharpe: 0.6651
+    max_dd: 0.2063
+    cagr: 0.0936
+    change_pct: -9.0
+    status: STABLE
+  - variant: exit=-0.25%
+    sharpe: 0.7083
+    max_dd: 0.2102
+    cagr: 0.1072
+    change_pct: -3.1
+    status: STABLE
+  - variant: exit=-0.75%
+    sharpe: 0.7628
+    max_dd: 0.2056
+    cagr: 0.1302
+    change_pct: 4.3
+    status: STABLE
+  - variant: weight=0.20
+    sharpe: 0.6338
+    max_dd: 0.1397
+    cagr: 0.0681
+    change_pct: -13.3
+    status: STABLE
+  - variant: weight=0.25
+    sharpe: 0.6922
+    max_dd: 0.1731
+    cagr: 0.0921
+    change_pct: -5.3
+    status: STABLE
+  - variant: weight=0.40
+    sharpe: 0.7793
+    max_dd: 0.2682
+    cagr: 0.1618
+    change_pct: 6.6
+    status: STABLE
+  - variant: weight=0.50
+    sharpe: 0.8081
+    max_dd: 0.3273
+    cagr: 0.206
+    change_pct: 10.5
+    status: STABLE
+  - variant: rebal=3d
+    sharpe: 0.2356
+    max_dd: 0.2964
+    cagr: 0.0258
+    change_pct: -67.8
+    status: UNSTABLE
+  - variant: rebal=5d
+    sharpe: 0.4778
+    max_dd: 0.2404
+    cagr: 0.0693
+    change_pct: -34.6
+    status: UNSTABLE
+  - variant: rebal=7d
+    sharpe: 0.3446
+    max_dd: 0.2425
+    cagr: 0.0466
+    change_pct: -52.9
+    status: UNSTABLE
+  - variant: vix_crash=25
+    sharpe: 0.2988
+    max_dd: 0.2162
+    cagr: 0.0353
+    change_pct: -59.1
+    status: UNSTABLE
+  - variant: vix_crash=35
+    sharpe: 0.6365
+    max_dd: 0.2056
+    cagr: 0.0988
+    change_pct: -12.9
+    status: STABLE
+  - variant: vix_crash=40
+    sharpe: 0.631
+    max_dd: 0.1962
+    cagr: 0.0987
+    change_pct: -13.7
+    status: STABLE
+  pct_stable: 47.8
+  stable_count: 11
+  total_variants: 23
+shuffled_signal:
+  real_sharpe: 0.7308
+  shuffled_mean: 0.7352
+  shuffled_95th: 0.8691
+  shuffled_99th: 0.9331
+  p_value: 0.527
+  n_shuffles: 1000
+  passed: false
+gates:
+  sharpe_gte_0.80: false
+  maxdd_lt_40pct: true
+  dsr_gte_0.90: true
+  cpcv_oos_positive: true
+  perturbation_gte_40pct: true
+  shuffled_signal_passed: false
+verdict: FAIL

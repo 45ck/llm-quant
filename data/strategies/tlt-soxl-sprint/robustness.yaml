@@ -1,0 +1,179 @@
+strategy_slug: tlt-soxl-sprint
+strategy_type: leveraged_lead_lag
+track: D
+mechanism: TLT (20+ yr Treasury) 10-day return -> SOXL (3x leveraged semiconductors)
+key_differentiator: 'TLT duration-growth channel: rate moves lead semiconductor capex/demand
+  cycle via SOXL 3x leverage; VIX crash filter for tail risk'
+base_params:
+  entry_threshold: 0.01
+  exit_threshold: -0.005
+  lag_days: 3
+  signal_window: 10
+  target_weight: 0.3
+  rebalance_frequency: 1
+  vix_crash_threshold: 30
+base_sharpe: 1.1406
+base_max_dd: 0.1311
+base_total_return: 1.4049
+base_cagr: 0.2033
+n_trades: 97
+dsr: 0.9734
+cpcv:
+  config: n_groups=15, k=3, purge=5
+  oos_mean_sharpe: 0.8846
+  oos_std: 0.9988
+  oos_is_ratio: 0.7756
+  pct_positive_folds: 0.8066
+perturbation:
+  variants:
+  - variant: lag=1
+    sharpe: 1.4029
+    max_dd: 0.2031
+    cagr: 0.2578
+    change_pct: 23.0
+    status: STABLE
+  - variant: lag=2
+    sharpe: 0.8575
+    max_dd: 0.1918
+    cagr: 0.1442
+    change_pct: -24.8
+    status: STABLE
+  - variant: lag=7
+    sharpe: 0.2026
+    max_dd: 0.2595
+    cagr: 0.0204
+    change_pct: -82.2
+    status: UNSTABLE
+  - variant: lag=10
+    sharpe: 0.5156
+    max_dd: 0.1679
+    cagr: 0.0772
+    change_pct: -54.8
+    status: UNSTABLE
+  - variant: window=5
+    sharpe: 1.1146
+    max_dd: 0.1835
+    cagr: 0.2023
+    change_pct: -2.3
+    status: STABLE
+  - variant: window=7
+    sharpe: 1.085
+    max_dd: 0.2215
+    cagr: 0.1979
+    change_pct: -4.9
+    status: STABLE
+  - variant: window=15
+    sharpe: 0.6331
+    max_dd: 0.2062
+    cagr: 0.1027
+    change_pct: -44.5
+    status: UNSTABLE
+  - variant: window=20
+    sharpe: 0.5407
+    max_dd: 0.1931
+    cagr: 0.0831
+    change_pct: -52.6
+    status: UNSTABLE
+  - variant: entry=0.5%
+    sharpe: 0.9775
+    max_dd: 0.2222
+    cagr: 0.1832
+    change_pct: -14.3
+    status: STABLE
+  - variant: entry=1.5%
+    sharpe: 0.9375
+    max_dd: 0.162
+    cagr: 0.1472
+    change_pct: -17.8
+    status: STABLE
+  - variant: exit=-0.25%
+    sharpe: 1.3288
+    max_dd: 0.1311
+    cagr: 0.2371
+    change_pct: 16.5
+    status: STABLE
+  - variant: exit=-0.75%
+    sharpe: 1.2188
+    max_dd: 0.1128
+    cagr: 0.2211
+    change_pct: 6.9
+    status: STABLE
+  - variant: weight=0.20
+    sharpe: 0.9862
+    max_dd: 0.1003
+    cagr: 0.1162
+    change_pct: -13.5
+    status: STABLE
+  - variant: weight=0.25
+    sharpe: 1.0789
+    max_dd: 0.1158
+    cagr: 0.1594
+    change_pct: -5.4
+    status: STABLE
+  - variant: weight=0.40
+    sharpe: 1.2171
+    max_dd: 0.1612
+    cagr: 0.2929
+    change_pct: 6.7
+    status: STABLE
+  - variant: weight=0.50
+    sharpe: 1.2627
+    max_dd: 0.1905
+    cagr: 0.3846
+    change_pct: 10.7
+    status: STABLE
+  - variant: rebal=3
+    sharpe: 1.0363
+    max_dd: 0.1286
+    cagr: 0.1794
+    change_pct: -9.1
+    status: STABLE
+  - variant: rebal=5
+    sharpe: 0.6632
+    max_dd: 0.1989
+    cagr: 0.1071
+    change_pct: -41.9
+    status: UNSTABLE
+  - variant: rebal=7
+    sharpe: 0.6082
+    max_dd: 0.1716
+    cagr: 0.0925
+    change_pct: -46.7
+    status: UNSTABLE
+  - variant: vix_crash=25
+    sharpe: 1.1115
+    max_dd: 0.1654
+    cagr: 0.1797
+    change_pct: -2.5
+    status: STABLE
+  - variant: vix_crash=35
+    sharpe: 1.1798
+    max_dd: 0.1593
+    cagr: 0.2318
+    change_pct: 3.4
+    status: STABLE
+  - variant: vix_crash=40
+    sharpe: 1.1454
+    max_dd: 0.1802
+    cagr: 0.2253
+    change_pct: 0.4
+    status: STABLE
+  pct_stable: 72.7
+  stable_count: 16
+  total_variants: 22
+shuffled_signal:
+  real_sharpe: 1.1401
+  shuffled_mean: 0.7352
+  shuffled_95th: 0.8668
+  shuffled_99th: 0.9246
+  p_value: 0.0
+  n_shuffles: 1000
+  passed: true
+gates:
+  sharpe_gte_0.80: true
+  maxdd_lt_40pct: true
+  dsr_gte_0.90: true
+  cpcv_oos_positive: true
+  perturbation_gte_40pct: true
+  shuffled_signal_passed: true
+verdict: PASS

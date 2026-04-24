@@ -1,0 +1,22 @@
+strategy_slug: lqd-soxl-sprint
+start_date: '2026-04-24'
+status: active
+performance:
+  initial_nav: 100000.0
+  current_nav: 100000.0
+  peak_nav: 100000.0
+  current_sharpe: null
+  current_drawdown: 0.0
+  total_return: 0.0
+  total_trades: 0
+daily_log:
+- date: '2026-04-23'
+  day_number: 1
+  position: hold_prev
+  regime: neutral
+  nav: 100000.0
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 10d ret=+0.0030 (entry>=+0.0100, exit<=-0.0050)
+  allocation: {}
+updated_at: '2026-04-24'

@@ -1,0 +1,231 @@
+{
+  "strategy_slug": "tlt-upro-sprint",
+  "strategy_type": "leveraged_lead_lag",
+  "track": "D",
+  "mechanism": "TLT (20+ year Treasury) 10-day return -> UPRO (3x leveraged S&P 500)",
+  "key_differentiator": "Treasury duration signal leads equity via rate-sensitivity channel; VIX crash filter for tail risk",
+  "parent_strategy": "tlt-spy-lead-lag (Treasury-equity lead-lag family)",
+  "base_params": {
+    "entry_threshold": 0.01,
+    "exit_threshold": -0.005,
+    "lag_days": 3,
+    "signal_window": 10,
+    "target_weight": 0.3,
+    "rebalance_frequency": 1,
+    "vix_crash_threshold": 30
+  },
+  "base_sharpe": 0.8487,
+  "base_max_dd": 0.0843,
+  "base_total_return": 0.364,
+  "base_cagr": 0.0677,
+  "n_trades": 97,
+  "dsr": 0.9435,
+  "cpcv": {
+    "config": "n_groups=15, k=3, purge=5",
+    "oos_mean_sharpe": 0.7102,
+    "oos_std": 0.9145,
+    "oos_is_ratio": 0.8369,
+    "pct_positive_folds": 0.7868
+  },
+  "perturbation": {
+    "variants": [
+      {
+        "variant": "lag=1",
+        "sharpe": 0.909,
+        "max_dd": 0.092,
+        "cagr": 0.068,
+        "change_pct": 7.1,
+        "status": "STABLE"
+      },
+      {
+        "variant": "lag=2",
+        "sharpe": 0.5602,
+        "max_dd": 0.0913,
+        "cagr": 0.0415,
+        "change_pct": -34.0,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "lag=7",
+        "sharpe": -0.2172,
+        "max_dd": 0.1837,
+        "cagr": -0.0206,
+        "change_pct": -125.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "lag=10",
+        "sharpe": 0.0943,
+        "max_dd": 0.1036,
+        "cagr": 0.0044,
+        "change_pct": -88.9,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=5",
+        "sharpe": 0.8602,
+        "max_dd": 0.0864,
+        "cagr": 0.0667,
+        "change_pct": 1.4,
+        "status": "STABLE"
+      },
+      {
+        "variant": "window=7",
+        "sharpe": 0.913,
+        "max_dd": 0.0655,
+        "cagr": 0.0705,
+        "change_pct": 7.6,
+        "status": "STABLE"
+      },
+      {
+        "variant": "window=15",
+        "sharpe": 0.469,
+        "max_dd": 0.1254,
+        "cagr": 0.0343,
+        "change_pct": -44.7,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=20",
+        "sharpe": 0.4473,
+        "max_dd": 0.1099,
+        "cagr": 0.0322,
+        "change_pct": -47.3,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "entry=0.5%",
+        "sharpe": 0.7404,
+        "max_dd": 0.1079,
+        "cagr": 0.0603,
+        "change_pct": -12.8,
+        "status": "STABLE"
+      },
+      {
+        "variant": "entry=1.5%",
+        "sharpe": 0.7763,
+        "max_dd": 0.0875,
+        "cagr": 0.0549,
+        "change_pct": -8.5,
+        "status": "STABLE"
+      },
+      {
+        "variant": "exit=-0.25%",
+        "sharpe": 0.9875,
+        "max_dd": 0.0834,
+        "cagr": 0.0783,
+        "change_pct": 16.4,
+        "status": "STABLE"
+      },
+      {
+        "variant": "exit=-0.75%",
+        "sharpe": 0.901,
+        "max_dd": 0.0868,
+        "cagr": 0.0726,
+        "change_pct": 6.2,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.20",
+        "sharpe": 0.5128,
+        "max_dd": 0.0658,
+        "cagr": 0.0279,
+        "change_pct": -39.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "weight=0.25",
+        "sharpe": 0.7118,
+        "max_dd": 0.0751,
+        "cagr": 0.0477,
+        "change_pct": -16.1,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.40",
+        "sharpe": 1.0225,
+        "max_dd": 0.1063,
+        "cagr": 0.1082,
+        "change_pct": 20.5,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.50",
+        "sharpe": 1.1273,
+        "max_dd": 0.1301,
+        "cagr": 0.1496,
+        "change_pct": 32.8,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "rebal=3",
+        "sharpe": 0.8691,
+        "max_dd": 0.0855,
+        "cagr": 0.0685,
+        "change_pct": 2.4,
+        "status": "STABLE"
+      },
+      {
+        "variant": "rebal=5",
+        "sharpe": 0.4972,
+        "max_dd": 0.1239,
+        "cagr": 0.0362,
+        "change_pct": -41.4,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "rebal=7",
+        "sharpe": 0.5676,
+        "max_dd": 0.1017,
+        "cagr": 0.0411,
+        "change_pct": -33.1,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "vix_crash=25",
+        "sharpe": 0.7952,
+        "max_dd": 0.0807,
+        "cagr": 0.0562,
+        "change_pct": -6.3,
+        "status": "STABLE"
+      },
+      {
+        "variant": "vix_crash=35",
+        "sharpe": 0.9162,
+        "max_dd": 0.0843,
+        "cagr": 0.0818,
+        "change_pct": 7.9,
+        "status": "STABLE"
+      },
+      {
+        "variant": "vix_crash=40",
+        "sharpe": 0.8385,
+        "max_dd": 0.091,
+        "cagr": 0.0751,
+        "change_pct": -1.2,
+        "status": "STABLE"
+      }
+    ],
+    "pct_stable": 59.1,
+    "stable_count": 13,
+    "total_variants": 22
+  },
+  "shuffled_signal": {
+    "real_sharpe": 0.8483,
+    "shuffled_mean": 0.5649,
+    "shuffled_95th": 0.6997,
+    "shuffled_99th": 0.7429,
+    "p_value": 0.0,
+    "n_shuffles": 1000,
+    "passed": true
+  },
+  "gates": {
+    "sharpe_gte_0.80": true,
+    "maxdd_lt_40pct": true,
+    "dsr_gte_0.90": true,
+    "cpcv_oos_positive": true,
+    "perturbation_gte_40pct": true,
+    "shuffled_signal_passed": true
+  },
+  "verdict": "PASS"
+}

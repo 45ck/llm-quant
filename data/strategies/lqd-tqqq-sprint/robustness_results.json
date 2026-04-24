@@ -1,0 +1,214 @@
+{
+  "strategy_slug": "lqd-tqqq-sprint",
+  "strategy_type": "leveraged_credit_lead_lag",
+  "track": "D",
+  "mechanism": "LQD (IG credit) 10-day return -> TQQQ (3x leveraged QQQ) with VIX crash filter",
+  "key_differentiator": "Credit risk appetite signal via LQD; VIX > 30 forces 100% SHY",
+  "base_params": {
+    "entry_threshold": 0.01,
+    "exit_threshold": -0.005,
+    "lag_days": 3,
+    "signal_window": 10,
+    "target_weight": 0.3,
+    "rebalance_frequency": 1,
+    "vix_crash_threshold": 30
+  },
+  "base_sharpe": 0.8957,
+  "base_max_dd": 0.1193,
+  "base_total_return": 0.5704,
+  "base_cagr": 0.0999,
+  "n_trades": 61,
+  "dsr": 0.9503,
+  "cpcv": {
+    "config": "n_groups=15, k=3, purge=5",
+    "oos_mean_sharpe": 0.7802,
+    "oos_std": 0.8819,
+    "oos_is_ratio": 0.8711,
+    "pct_positive_folds": 0.8154
+  },
+  "perturbation": {
+    "variants": [
+      {
+        "variant": "lag=1",
+        "sharpe": 0.8154,
+        "max_dd": 0.1372,
+        "cagr": 0.089,
+        "change_pct": -9.0,
+        "status": "STABLE"
+      },
+      {
+        "variant": "lag=5",
+        "sharpe": 0.604,
+        "max_dd": 0.1638,
+        "cagr": 0.0644,
+        "change_pct": -32.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=5",
+        "sharpe": 0.6405,
+        "max_dd": 0.1372,
+        "cagr": 0.0645,
+        "change_pct": -28.5,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=7",
+        "sharpe": 0.4703,
+        "max_dd": 0.16,
+        "cagr": 0.0463,
+        "change_pct": -47.5,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=15",
+        "sharpe": 0.2137,
+        "max_dd": 0.1764,
+        "cagr": 0.0179,
+        "change_pct": -76.1,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "window=20",
+        "sharpe": -0.0227,
+        "max_dd": 0.245,
+        "cagr": -0.0091,
+        "change_pct": -102.5,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "entry=0.5%",
+        "sharpe": 1.0117,
+        "max_dd": 0.0882,
+        "cagr": 0.1233,
+        "change_pct": 12.9,
+        "status": "STABLE"
+      },
+      {
+        "variant": "entry=1.5%",
+        "sharpe": 0.7913,
+        "max_dd": 0.0942,
+        "cagr": 0.0812,
+        "change_pct": -11.7,
+        "status": "STABLE"
+      },
+      {
+        "variant": "exit=-0.25%",
+        "sharpe": 0.8045,
+        "max_dd": 0.1104,
+        "cagr": 0.0834,
+        "change_pct": -10.2,
+        "status": "STABLE"
+      },
+      {
+        "variant": "exit=-0.75%",
+        "sharpe": 0.7663,
+        "max_dd": 0.1531,
+        "cagr": 0.0874,
+        "change_pct": -14.5,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.20",
+        "sharpe": 0.7174,
+        "max_dd": 0.1033,
+        "cagr": 0.0545,
+        "change_pct": -19.9,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.25",
+        "sharpe": 0.8239,
+        "max_dd": 0.1112,
+        "cagr": 0.0771,
+        "change_pct": -8.0,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.40",
+        "sharpe": 0.986,
+        "max_dd": 0.1358,
+        "cagr": 0.1457,
+        "change_pct": 10.1,
+        "status": "STABLE"
+      },
+      {
+        "variant": "weight=0.50",
+        "sharpe": 1.04,
+        "max_dd": 0.1528,
+        "cagr": 0.1919,
+        "change_pct": 16.1,
+        "status": "STABLE"
+      },
+      {
+        "variant": "rebal=3",
+        "sharpe": 0.4966,
+        "max_dd": 0.1321,
+        "cagr": 0.0507,
+        "change_pct": -44.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "rebal=5",
+        "sharpe": -0.1714,
+        "max_dd": 0.2296,
+        "cagr": -0.0249,
+        "change_pct": -119.1,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "rebal=7",
+        "sharpe": 0.4697,
+        "max_dd": 0.2075,
+        "cagr": 0.0523,
+        "change_pct": -47.6,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "vix_crash=25",
+        "sharpe": 0.6202,
+        "max_dd": 0.2114,
+        "cagr": 0.0588,
+        "change_pct": -30.8,
+        "status": "UNSTABLE"
+      },
+      {
+        "variant": "vix_crash=35",
+        "sharpe": 0.7931,
+        "max_dd": 0.1631,
+        "cagr": 0.0881,
+        "change_pct": -11.5,
+        "status": "STABLE"
+      },
+      {
+        "variant": "vix_crash=40",
+        "sharpe": 0.8388,
+        "max_dd": 0.1393,
+        "cagr": 0.0945,
+        "change_pct": -6.4,
+        "status": "STABLE"
+      }
+    ],
+    "pct_stable": 55.0,
+    "stable_count": 11,
+    "total_variants": 20
+  },
+  "shuffled_signal": {
+    "real_sharpe": 0.8954,
+    "shuffled_mean": 0.5228,
+    "shuffled_95th": 0.6504,
+    "shuffled_99th": 0.7177,
+    "p_value": 0.0,
+    "n_shuffles": 1000,
+    "passed": true
+  },
+  "gates": {
+    "sharpe_gte_0.80": true,
+    "maxdd_lt_40pct": true,
+    "dsr_gte_0.90": true,
+    "cpcv_oos_positive": true,
+    "perturbation_gte_40pct": true,
+    "shuffled_signal_passed": true
+  },
+  "verdict": "PASS"
+}
