@@ -17,14 +17,14 @@ strategy_params:
   target_weight: 0.4
 performance:
   initial_nav: 100000.0
-  current_nav: 97887.23
+  current_nav: 96848.67
   peak_nav: 100799.65
-  current_sharpe: -4.2981
+  current_sharpe: -5.2592
   current_sortino: null
-  current_drawdown: 0.0289
+  current_drawdown: 0.0392
   total_return_pct: 0.0
   annualized_return_pct: null
-  total_return: -2.1128
+  total_return: -3.1513
   total_trades: 0
 trades: []
 incidents: []
@@ -49,7 +49,7 @@ gate_thresholds:
   max_slippage_drift_bps: 5.0
   earliest_promotion_eligible: '2026-04-26'
 created_at: '2026-03-30'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 daily_log:
 - date: '2026-04-02'
   day_number: 1
@@ -139,6 +139,41 @@ daily_log:
   allocation:
     GLD: 0.2
     SLV: 0.2
+- date: '2026-04-24'
+  day_number: 9
+  position: neutral
+  regime: neutral
+  nav: 98105.03
+  daily_pnl: 217.8
+  daily_return_pct: 0.2225
+  signal_desc: 'GLD/SLV z(90d)=+0.41, votes={''long_gld'': 0, ''long_slv'': 0, ''neutral'': 3}'
+  allocation:
+    GLD: 0.2
+    SLV: 0.2
+- date: '2026-04-27'
+  day_number: 10
+  position: neutral
+  regime: neutral
+  nav: 97821.7
+  daily_pnl: -283.33
+  daily_return_pct: -0.2888
+  signal_desc: 'GLD/SLV z(90d)=+0.42, votes={''long_gld'': 0, ''long_slv'': 0, ''neutral'': 3}'
+  allocation:
+    GLD: 0.2
+    SLV: 0.2
+- date: '2026-04-28'
+  day_number: 11
+  position: neutral
+  regime: neutral
+  nav: 96848.67
+  daily_pnl: -973.03
+  daily_return_pct: -0.9947
+  signal_desc: 'GLD/SLV z(90d)=+0.42, votes={''long_gld'': 0, ''long_slv'': 0, ''neutral'': 3}'
+  allocation:
+    GLD: 0.2
+    SLV: 0.2
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

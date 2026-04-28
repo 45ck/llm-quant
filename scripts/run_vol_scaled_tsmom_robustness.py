@@ -24,8 +24,20 @@ from llm_quant.data.indicators import compute_indicators
 SLUG = "vol-scaled-tsmom"
 STRAT = "vol_scaled_tsmom"
 SYMBOLS = [
-    "SPY", "QQQ", "IWM", "EFA", "EEM", "TLT", "IEF", "AGG",
-    "HYG", "GLD", "SLV", "USO", "DBC", "UUP",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "EFA",
+    "EEM",
+    "TLT",
+    "IEF",
+    "AGG",
+    "HYG",
+    "GLD",
+    "SLV",
+    "USO",
+    "DBC",
+    "UUP",
 ]
 YEARS = 5
 
@@ -42,9 +54,7 @@ print(
 )
 
 # Load daily returns from the experiment yaml
-exp_yaml_path = Path(
-    f"data/strategies/{SLUG}/experiments/{base['experiment_id']}.yaml"
-)
+exp_yaml_path = Path(f"data/strategies/{SLUG}/experiments/{base['experiment_id']}.yaml")
 with exp_yaml_path.open() as f:
     exp_data = yaml.safe_load(f)
 base_daily_returns = exp_data.get("daily_returns") or []
@@ -62,9 +72,7 @@ def run_variant(params, symbols=None):
     prices_df = fetch_ohlcv(syms, lookback_days=lookback_days)
     indicators_df = compute_indicators(prices_df)
     cost = CostModel(
-        spread_bps=base_params.get("spread_bps", 5.0)
-        if False
-        else 5.0,
+        spread_bps=base_params.get("spread_bps", 5.0) if False else 5.0,
         flat_slippage_bps=3.0,
         slippage_volatility_factor=0.2,
     )
@@ -120,7 +128,13 @@ for name, params in perturbations:
     except Exception as e:
         print(f"  {name}: ERROR {e}")
         perturbation_results.append(
-            {"name": name, "sharpe": None, "pct": None, "stable": False, "error": str(e)}
+            {
+                "name": name,
+                "sharpe": None,
+                "pct": None,
+                "stable": False,
+                "error": str(e),
+            }
         )
 
 print(f"\nPerturbation stability: {n_stable}/{len(perturbations)} stable")
@@ -150,6 +164,7 @@ try:
 except Exception as e:
     print(f"CPCV error: {e}")
     import traceback
+
     traceback.print_exc()
 
 # Gate evaluation

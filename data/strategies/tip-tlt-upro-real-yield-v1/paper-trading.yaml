@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.097
 performance:
   initial_nav: 100000.0
-  current_nav: 99565.4
+  current_nav: 100016.71
   peak_nav: 101603.55
-  current_sharpe: -1.5085
-  current_drawdown: 0.0201
-  total_return: -0.4346
+  current_sharpe: 0.1046
+  current_drawdown: 0.0156
+  total_return: 0.0167
   total_trades: 2
 promotion_gate:
   min_days: 30
@@ -89,9 +89,44 @@ daily_log:
   allocation:
     UPRO: 0.35
     SHY: 0.65
+- date: '2026-04-24'
+  day_number: 6
+  position: loosening
+  regime: loosening
+  nav: 100430.32
+  daily_pnl: 864.92
+  daily_return_pct: 0.8687
+  signal_desc: TIP/TLT mom(15d)=+0.0076
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
+- date: '2026-04-27'
+  day_number: 7
+  position: loosening
+  regime: loosening
+  nav: 100580.56
+  daily_pnl: 150.24
+  daily_return_pct: 0.1496
+  signal_desc: TIP/TLT mom(15d)=+0.0099
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
+- date: '2026-04-28'
+  day_number: 8
+  position: loosening
+  regime: loosening
+  nav: 100016.71
+  daily_pnl: -563.85
+  daily_return_pct: -0.5606
+  signal_desc: TIP/TLT mom(15d)=+0.0134
+  allocation:
+    UPRO: 0.35
+    SHY: 0.65
 cumulative_metrics: {}
 created_at: '2026-04-17'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

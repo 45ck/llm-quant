@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 100225.24
+  current_nav: 100195.17
   peak_nav: 100540.85
-  current_sharpe: 0.7784
-  current_drawdown: 0.0031
-  total_return: 0.2252
-  total_trades: 4
+  current_sharpe: 0.5804
+  current_drawdown: 0.0034
+  total_return: 0.1952
+  total_trades: 5
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -103,6 +103,33 @@ daily_log:
   daily_return_pct: 0.0
   signal_desc: LQD 5d ret=-0.0011 (entry>=+0.0050, exit<=-0.0050)
   allocation: {}
+- date: '2026-04-24'
+  day_number: 9
+  position: hold_prev
+  regime: neutral
+  nav: 100225.24
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 5d ret=+0.0008 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-27'
+  day_number: 10
+  position: hold_prev
+  regime: neutral
+  nav: 100225.24
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 5d ret=-0.0040 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-28'
+  day_number: 11
+  position: flat
+  regime: risk_off
+  nav: 100195.17
+  daily_pnl: -30.07
+  daily_return_pct: -0.03
+  signal_desc: LQD 5d ret=-0.0067 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -112,7 +139,9 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

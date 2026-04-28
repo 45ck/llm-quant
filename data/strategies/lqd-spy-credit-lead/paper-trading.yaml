@@ -14,12 +14,12 @@ backtest_baseline:
   sortino_ratio: 1.93
 performance:
   initial_nav: 100000.0
-  current_nav: 100083.92
+  current_nav: 100053.89
   peak_nav: 100304.53
-  current_sharpe: 0.3824
-  current_drawdown: 0.0022
-  total_return: 0.0839
-  total_trades: 4
+  current_sharpe: 0.2247
+  current_drawdown: 0.0025
+  total_return: 0.0539
+  total_trades: 5
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -150,6 +150,33 @@ daily_log:
   daily_return_pct: 0.0
   signal_desc: LQD 5d ret=-0.0011 (entry>=+0.0050, exit<=-0.0050)
   allocation: {}
+- date: '2026-04-24'
+  day_number: 12
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 5d ret=+0.0008 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-27'
+  day_number: 13
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: LQD 5d ret=-0.0040 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-28'
+  day_number: 14
+  position: flat
+  regime: risk_off
+  nav: 100053.89
+  daily_pnl: -30.03
+  daily_return_pct: -0.03
+  signal_desc: LQD 5d ret=-0.0067 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
 gate_evaluation:
   days_active: 2
   gate_passed: null
@@ -160,7 +187,9 @@ gate_evaluation:
     \ correctly flat while SPY fell 1.79% and 1.71%. Capital preservation intact. 2/30 days, 0/10 trades. Entry signal requires\
     \ credit recovery (LQD 5d >= +0.5%).\n"
 created_at: '2026-03-26'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.251
 performance:
   initial_nav: 100000.0
-  current_nav: 110464.91
-  peak_nav: 110464.91
-  current_sharpe: 25.7578
-  current_drawdown: 0.0
-  total_return: 10.4649
+  current_nav: 109329.45
+  peak_nav: 118141.23
+  current_sharpe: 5.2987
+  current_drawdown: 0.0746
+  total_return: 9.3295
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -91,9 +91,44 @@ daily_log:
   allocation:
     SOXL: 0.5
     SHY: 0.5
+- date: '2026-04-24'
+  day_number: 6
+  position: risk_on
+  regime: risk_on
+  nav: 118141.23
+  daily_pnl: 7676.32
+  daily_return_pct: 6.9491
+  signal_desc: SOXX 7d ret=+0.0991 (entry>=0.030, exit<=-0.010)
+  allocation:
+    SOXL: 0.5
+    SHY: 0.5
+- date: '2026-04-27'
+  day_number: 7
+  position: risk_on
+  regime: risk_on
+  nav: 115857.44
+  daily_pnl: -2283.79
+  daily_return_pct: -1.9331
+  signal_desc: SOXX 7d ret=+0.1487 (entry>=0.030, exit<=-0.010)
+  allocation:
+    SOXL: 0.5
+    SHY: 0.5
+- date: '2026-04-28'
+  day_number: 8
+  position: risk_on
+  regime: risk_on
+  nav: 109329.45
+  daily_pnl: -6527.99
+  daily_return_pct: -5.6345
+  signal_desc: SOXX 7d ret=+0.1218 (entry>=0.030, exit<=-0.010)
+  allocation:
+    SOXL: 0.5
+    SHY: 0.5
 cumulative_metrics: {}
 created_at: '2026-04-17'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

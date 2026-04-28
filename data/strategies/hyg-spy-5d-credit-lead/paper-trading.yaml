@@ -7,7 +7,7 @@ performance:
   initial_nav: 100000.0
   current_nav: 100083.92
   peak_nav: 100304.53
-  current_sharpe: 0.4276
+  current_sharpe: 0.3646
   current_drawdown: 0.0022
   total_return: 0.0839
   total_trades: 4
@@ -103,6 +103,33 @@ daily_log:
   daily_return_pct: 0.0
   signal_desc: HYG 5d ret=+0.0005 (entry>=+0.0050, exit<=-0.0050)
   allocation: {}
+- date: '2026-04-24'
+  day_number: 9
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: HYG 5d ret=+0.0002 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-27'
+  day_number: 10
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: HYG 5d ret=-0.0021 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-28'
+  day_number: 11
+  position: hold_prev
+  regime: neutral
+  nav: 100083.92
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: HYG 5d ret=-0.0009 (entry>=+0.0050, exit<=-0.0050)
+  allocation: {}
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -112,7 +139,9 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

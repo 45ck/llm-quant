@@ -5,12 +5,12 @@ status: active
 backtest_baseline: null
 performance:
   initial_nav: 100000.0
-  current_nav: 99860.22
+  current_nav: 99830.26
   peak_nav: 100540.85
-  current_sharpe: -0.3959
-  current_drawdown: 0.0068
-  total_return: -0.1398
-  total_trades: 4
+  current_sharpe: -0.419
+  current_drawdown: 0.0071
+  total_return: -0.1697
+  total_trades: 5
 gate_criteria:
   min_days: 30
   min_trades: 50
@@ -104,6 +104,33 @@ daily_log:
   daily_return_pct: -0.03
   signal_desc: AGG 5d ret=-0.0001 (entry>=+0.0030, exit<=-0.0030)
   allocation: {}
+- date: '2026-04-24'
+  day_number: 9
+  position: hold_prev
+  regime: neutral
+  nav: 99860.22
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: AGG 5d ret=-0.0003 (entry>=+0.0030, exit<=-0.0030)
+  allocation: {}
+- date: '2026-04-27'
+  day_number: 10
+  position: hold_prev
+  regime: neutral
+  nav: 99860.22
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: AGG 5d ret=-0.0026 (entry>=+0.0030, exit<=-0.0030)
+  allocation: {}
+- date: '2026-04-28'
+  day_number: 11
+  position: flat
+  regime: risk_off
+  nav: 99830.26
+  daily_pnl: -29.96
+  daily_return_pct: -0.03
+  signal_desc: AGG 5d ret=-0.0040 (entry>=+0.0030, exit<=-0.0030)
+  allocation: {}
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -113,7 +140,9 @@ gate_evaluation:
 
     '
 created_at: '2026-03-30'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

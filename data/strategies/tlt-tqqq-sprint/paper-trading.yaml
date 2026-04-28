@@ -13,13 +13,13 @@ backtest_baseline:
   total_trades: 121
 performance:
   initial_nav: 100000.0
-  current_nav: 100000.0
+  current_nav: 99970.0
   peak_nav: 100000.0
-  current_sharpe: 0.0
+  current_sharpe: -6.0
   current_sortino: null
-  current_drawdown: 0.0
-  total_return: 0.0
-  total_trades: 0
+  current_drawdown: 0.0003
+  total_return: -0.03
+  total_trades: 1
   win_rate: null
 gate_criteria:
   min_days: 60
@@ -92,6 +92,33 @@ daily_log:
   daily_return_pct: 0.0
   signal_desc: TLT 10d ret=-0.0021 (entry>=+0.0100, exit<=-0.0050)
   allocation: {}
+- date: '2026-04-24'
+  day_number: 6
+  position: hold_prev
+  regime: neutral
+  nav: 100000.0
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: TLT 10d ret=-0.0017 (entry>=+0.0100, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-27'
+  day_number: 7
+  position: hold_prev
+  regime: neutral
+  nav: 100000.0
+  daily_pnl: 0.0
+  daily_return_pct: 0.0
+  signal_desc: TLT 10d ret=+0.0025 (entry>=+0.0100, exit<=-0.0050)
+  allocation: {}
+- date: '2026-04-28'
+  day_number: 8
+  position: flat
+  regime: risk_off
+  nav: 99970.0
+  daily_pnl: -30.0
+  daily_return_pct: -0.03
+  signal_desc: TLT 10d ret=-0.0054 (entry>=+0.0100, exit<=-0.0050)
+  allocation: {}
 gate_evaluation:
   days_active: 0
   gate_passed: null
@@ -102,7 +129,9 @@ gate_evaluation:
 
     '
 created_at: '2026-03-31'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

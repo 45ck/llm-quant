@@ -13,12 +13,12 @@ backtest_baseline:
   total_trades: 162
 performance:
   initial_nav: 100000.0
-  current_nav: 101080.47
-  peak_nav: 102236.51
-  current_sharpe: 2.3414
+  current_nav: 101938.24
+  peak_nav: 102869.31
+  current_sharpe: 2.8547
   current_sortino: null
-  current_drawdown: 0.0113
-  total_return: 1.0805
+  current_drawdown: 0.0091
+  total_return: 1.9382
   total_trades: 1
   win_rate: null
 gate_criteria:
@@ -157,6 +157,36 @@ daily_log:
   signal_desc: SOXX 5d ret=+0.0744 (entry>=+0.0200, exit<=-0.0100)
   allocation:
     QQQ: 0.9
+- date: '2026-04-24'
+  day_number: 12
+  position: long_qqq
+  regime: risk_on
+  nav: 102820.57
+  daily_pnl: 1740.1
+  daily_return_pct: 1.7215
+  signal_desc: SOXX 5d ret=+0.0863 (entry>=+0.0200, exit<=-0.0100)
+  allocation:
+    QQQ: 0.9
+- date: '2026-04-27'
+  day_number: 13
+  position: long_qqq
+  regime: risk_on
+  nav: 102869.31
+  daily_pnl: 48.74
+  daily_return_pct: 0.0474
+  signal_desc: SOXX 5d ret=+0.1104 (entry>=+0.0200, exit<=-0.0100)
+  allocation:
+    QQQ: 0.9
+- date: '2026-04-28'
+  day_number: 14
+  position: long_qqq
+  regime: risk_on
+  nav: 101938.24
+  daily_pnl: -931.07
+  daily_return_pct: -0.9051
+  signal_desc: SOXX 5d ret=+0.0907 (entry>=+0.0200, exit<=-0.0100)
+  allocation:
+    QQQ: 0.9
 gate_evaluation:
   days_active: 2
   gate_passed: null
@@ -166,7 +196,9 @@ gate_evaluation:
     \ deeply negative (-3.34%, -2.72%). Strategy correctly avoided QQQ which fell 2.39% and 1.95% on those days. Capital preservation\
     \ working as designed. 2/30 days, 0/50 trades. Continue monitoring.\n"
 created_at: '2026-03-26'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

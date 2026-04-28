@@ -10,11 +10,11 @@ backtest_baseline:
   cagr: 0.201
 performance:
   initial_nav: 100000.0
-  current_nav: 100023.91
+  current_nav: 100342.65
   peak_nav: 101464.16
-  current_sharpe: 0.1638
-  current_drawdown: 0.0142
-  total_return: 0.0239
+  current_sharpe: 1.0646
+  current_drawdown: 0.0111
+  total_return: 0.3426
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -97,9 +97,44 @@ daily_log:
   allocation:
     UPRO: 0.339
     SHY: 0.661
+- date: '2026-04-24'
+  day_number: 6
+  position: bullish
+  regime: bullish
+  nav: 100858.11
+  daily_pnl: 834.2
+  daily_return_pct: 0.834
+  signal_desc: SPY skip-mom(252-21)=+0.2388, vol_scale=0.84
+  allocation:
+    UPRO: 0.334
+    SHY: 0.666
+- date: '2026-04-27'
+  day_number: 7
+  position: bullish
+  regime: bullish
+  nav: 101020.09
+  daily_pnl: 161.98
+  daily_return_pct: 0.1606
+  signal_desc: SPY skip-mom(252-21)=+0.2267, vol_scale=0.93
+  allocation:
+    UPRO: 0.372
+    SHY: 0.628
+- date: '2026-04-28'
+  day_number: 8
+  position: bullish
+  regime: bullish
+  nav: 100342.65
+  daily_pnl: -677.44
+  daily_return_pct: -0.6706
+  signal_desc: SPY skip-mom(252-21)=+0.1800, vol_scale=1.07
+  allocation:
+    UPRO: 0.427
+    SHY: 0.573
 cumulative_metrics: {}
 created_at: '2026-04-17'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'

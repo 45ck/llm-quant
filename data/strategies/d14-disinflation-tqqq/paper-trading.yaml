@@ -11,11 +11,11 @@ backtest_baseline:
   dsr: 0.9484
 performance:
   initial_nav: 100000.0
-  current_nav: 100703.05
-  peak_nav: 102707.23
-  current_sharpe: 2.1578
-  current_drawdown: 0.0195
-  total_return: 0.703
+  current_nav: 102048.04
+  peak_nav: 103651.42
+  current_sharpe: 2.9619
+  current_drawdown: 0.0155
+  total_return: 2.048
   total_trades: 0
 promotion_gate:
   min_days: 30
@@ -86,9 +86,44 @@ daily_log:
   allocation:
     TQQQ: 0.5
     SHY: 0.5
+- date: '2026-04-24'
+  day_number: 6
+  position: disinflation
+  regime: disinflation
+  nav: 103597.76
+  daily_pnl: 2894.71
+  daily_return_pct: 2.8745
+  signal_desc: TLT/GLD mom(30d)=+0.0974
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
+- date: '2026-04-27'
+  day_number: 7
+  position: disinflation
+  regime: disinflation
+  nav: 103651.42
+  daily_pnl: 53.66
+  daily_return_pct: 0.0518
+  signal_desc: TLT/GLD mom(30d)=+0.0744
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
+- date: '2026-04-28'
+  day_number: 8
+  position: disinflation
+  regime: disinflation
+  nav: 102048.04
+  daily_pnl: -1603.38
+  daily_return_pct: -1.5469
+  signal_desc: TLT/GLD mom(30d)=+0.0688
+  allocation:
+    TQQQ: 0.5
+    SHY: 0.5
 cumulative_metrics: {}
 created_at: '2026-04-17'
-updated_at: '2026-04-24'
+updated_at: '2026-04-29'
 backfilled_dates:
 - '2026-04-17'
 - '2026-04-20'
+- '2026-04-24'
+- '2026-04-27'
