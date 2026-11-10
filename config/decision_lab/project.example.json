@@ -1,0 +1,10 @@
+{
+  "fee": 4000.0,
+  "direct_cost_if_won": 400.0,
+  "presales_hours": 6.0,
+  "delivery_hours_if_won": 24.0,
+  "probability_of_winning": 0.4,
+  "opportunity_cost_per_hour": 80.0,
+  "fixed_experiment_cost": 100.0,
+  "currency": "AUD"
+}
