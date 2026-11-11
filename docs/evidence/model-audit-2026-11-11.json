@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "status": "EVIDENCE_AUDIT_NO_VALIDATED_INVESTMENT_EDGE",
+  "as_of": "2026-11-11",
+  "source_commit": "a08cac5ee98c96e526b824ac649788d6e1b51bd7",
+  "sources": {
+    "track_d": {
+      "path": "docs/research/results/track-d-robustness-results-2026-04-24.md",
+      "git_blob_sha1": "4b8596c512f5a99af0d589ab7a947317988d870f",
+      "sha256": "7829d4c4c46483286e06d33eda8daa8644214d952f7e5260f446d1e18801b844",
+      "bytes": 5169
+    },
+    "latest_daily": {
+      "path": "reports/daily/2026-11-06.md",
+      "git_blob_sha1": "3967217fa5d6d54f46b1b6b521d60efa20f00488",
+      "sha256": "a00524dd1b93fd11b3f16703deb1777ba5e4a00458ae5fdf2d4fb79f66cdbc4a",
+      "bytes": 842
+    }
+  },
+  "track_d_recorded_cohort": {
+    "status": "HISTORICAL_DOCUMENT_AUDIT_NOT_BACKTEST_REPLICATION",
+    "rows": [
+      {
+        "strategy": "agg-tqqq-sprint",
+        "metrics": {
+          "sharpe": 1.078,
+          "max_drawdown": 0.106,
+          "dsr": 0.969,
+          "stable_fraction": 0.56,
+          "shuffled_p_reported": 0.0
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "1.091 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "agg-upro-sprint",
+        "metrics": {
+          "sharpe": 0.84,
+          "max_drawdown": 0.07400000000000001,
+          "dsr": 0.942,
+          "stable_fraction": 0.5,
+          "shuffled_p_reported": 0.001
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "0.936 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "agg-soxl-sprint",
+        "metrics": {
+          "sharpe": 0.731,
+          "max_drawdown": 0.20600000000000002,
+          "dsr": 0.921,
+          "stable_fraction": 0.48,
+          "shuffled_p_reported": 0.527
+        },
+        "reported_verdict": "RECORDED_FAILURE",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": false,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": false
+        },
+        "failed_rechecked_thresholds": [
+          "sharpe_at_least_0_80",
+          "shuffled_p_below_0_05"
+        ],
+        "cpcv_as_reported_ambiguous": "1.091 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "tlt-upro-sprint",
+        "metrics": {
+          "sharpe": 0.849,
+          "max_drawdown": 0.084,
+          "dsr": 0.943,
+          "stable_fraction": 0.59,
+          "shuffled_p_reported": 0.0
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "0.837 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "tlt-soxl-sprint",
+        "metrics": {
+          "sharpe": 1.141,
+          "max_drawdown": 0.131,
+          "dsr": 0.973,
+          "stable_fraction": 0.73,
+          "shuffled_p_reported": 0.0
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "0.776 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "lqd-tqqq-sprint",
+        "metrics": {
+          "sharpe": 0.896,
+          "max_drawdown": 0.11900000000000001,
+          "dsr": 0.95,
+          "stable_fraction": 0.55,
+          "shuffled_p_reported": 0.0
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "0.871 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "lqd-upro-sprint",
+        "metrics": {
+          "sharpe": 0.778,
+          "max_drawdown": 0.105,
+          "dsr": 0.931,
+          "stable_fraction": 0.45,
+          "shuffled_p_reported": 0.003
+        },
+        "reported_verdict": "RECORDED_FAILURE",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": false,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [
+          "sharpe_at_least_0_80"
+        ],
+        "cpcv_as_reported_ambiguous": "0.664 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      },
+      {
+        "strategy": "lqd-soxl-sprint",
+        "metrics": {
+          "sharpe": 0.936,
+          "max_drawdown": 0.19699999999999998,
+          "dsr": 0.955,
+          "stable_fraction": 0.6,
+          "shuffled_p_reported": 0.004
+        },
+        "reported_verdict": "RECORDED_ADVANCE_NOT_VALIDATED",
+        "rechecked_thresholds": {
+          "sharpe_at_least_0_80": true,
+          "drawdown_below_0_40": true,
+          "dsr_at_least_0_90": true,
+          "perturbation_at_least_0_40": true,
+          "shuffled_p_below_0_05": true
+        },
+        "failed_rechecked_thresholds": [],
+        "cpcv_as_reported_ambiguous": "0.678 ratio",
+        "advance_contradicted_by_checked_metrics": false
+      }
+    ],
+    "recorded_advances": 6,
+    "recorded_failures": 2,
+    "limitations": [
+      "Only this report's cohort is counted, not the full strategy universe.",
+      "Inputs are rounded report metrics; raw prices, fills and trial counts were not rerun.",
+      "CPCV values are ambiguous in the narrative; no sixth-gate validation is claimed.",
+      "Reported p=0 may be rounded finite-shuffle output; it is not an exact zero probability.",
+      "Passing recorded thresholds does not establish out-of-sample profitability."
+    ]
+  },
+  "latest_committed_daily_report": {
+    "status": "MISSING_PORTFOLIO_EVIDENCE",
+    "publication_allowed": false,
+    "missing_markers": [
+      "no portfolio snapshot",
+      "no snapshot data"
+    ],
+    "reported_nav_count": 0,
+    "performance_verified": false,
+    "return_if_missing": null,
+    "hash_chain_pass_is_performance_evidence": false
+  },
+  "housing": {
+    "source_audit": {
+      "snapshot_sha256": "c2d83a6f4d39e1dcbd918d4de7b16e754381e55d9ef419c19934f90a9780b4cf",
+      "retained_source_verified": true,
+      "source": {
+        "series_id": "QAUR628BIS",
+        "provider": "BIS via FRED; rehydrated prior browser-table export",
+        "source_url": "https://fred.stlouisfed.org/data/QAUR628BIS",
+        "terms_url": "https://www.bis.org/terms_conditions.htm",
+        "geography": "Eight large Australian cities; not Sydney alone",
+        "currency": "INDEX",
+        "frequency": "Q",
+        "basis": "real_price_index",
+        "retrieved_at": "2026-11-11T03:32:07.293462+00:00",
+        "vintage": "latest",
+        "evidence": "observed",
+        "raw_sha256": "8c030e25325859b66db4619893e6d891885e0d4dbd84e712fcabc10e17713b9a"
+      },
+      "observations": 225,
+      "first_observation": "1970-01-01",
+      "last_observation": "2026-01-01",
+      "age_from_observation_label_days": 314,
+      "maximum_age_days": 200,
+      "freshness_gate": "STALE",
+      "freshness_convention": "Age from source period label, not release date.",
+      "current_forecast_authorized": false
+    },
+    "config": {
+      "horizon": 4,
+      "paths": 2000,
+      "block_length": 4,
+      "seed": 20261111
+    },
+    "min_train": 80,
+    "all_start_phases": [
+      {
+        "offset_periods": 0,
+        "first_origin_label": "1990-01-01",
+        "folds": 36,
+        "loss_events": 1,
+        "model_brier": 0.027699881944444445,
+        "baseline_brier": 0.027806375350458976,
+        "model_minus_baseline_brier": -0.0001064934060145302,
+        "coverage_95_count": 33,
+        "coverage_95": 0.9166666666666666
+      },
+      {
+        "offset_periods": 1,
+        "first_origin_label": "1990-04-01",
+        "folds": 35,
+        "loss_events": 0,
+        "model_brier": 3.686428571428571e-05,
+        "baseline_brier": 1.996954583218312e-05,
+        "model_minus_baseline_brier": 1.689473988210259e-05,
+        "coverage_95_count": 32,
+        "coverage_95": 0.9142857142857143
+      },
+      {
+        "offset_periods": 2,
+        "first_origin_label": "1990-07-01",
+        "folds": 35,
+        "loss_events": 0,
+        "model_brier": 2.9357142857142857e-05,
+        "baseline_brier": 1.996954583218312e-05,
+        "model_minus_baseline_brier": 9.387597024959737e-06,
+        "coverage_95_count": 34,
+        "coverage_95": 0.9714285714285714
+      },
+      {
+        "offset_periods": 3,
+        "first_origin_label": "1990-10-01",
+        "folds": 35,
+        "loss_events": 1,
+        "model_brier": 0.02837609285714286,
+        "baseline_brier": 0.028591398117260754,
+        "model_minus_baseline_brier": -0.00021530526011789494,
+        "coverage_95_count": 30,
+        "coverage_95": 0.8571428571428571
+      }
+    ],
+    "conclusion": "No stable advantage over the baseline across all phases; sparse severe-loss outcomes.",
+    "limitations": [
+      "Reproduction of the earlier browser table capture, not a fresh market-data download.",
+      "Eight-city Australian real price index; not Sydney or investable total return.",
+      "Within-phase outcomes do not overlap; outcomes overlap across phases and must not be pooled.",
+      "Zero or one severe-loss outcome per phase cannot establish tail calibration.",
+      "Latest-vintage historical diagnostic, not an untouched holdout or forward paper validation.",
+      "Aggregate metrics only; raw provider observations are not included in this public audit."
+    ]
+  },
+  "strategy_backtests_reexecuted": false,
+  "live_trading_authorized": false,
+  "full_repository_tests": "NOT_RUN_IN_RESTRICTED_RUNTIME",
+  "runtime": {
+    "decision_lab": "0.1.0",
+    "python": "3.13.5",
+    "numpy": "2.3.5",
+    "code_sha256": "6f7b45fc4d18e70e1ed2c156d2325c001ecc539a920ce2da87829367fcb69451"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "source_commit": "829e31431dc0573bb8f9b38b9c241d8d96793ece",
+  "scope": "Repository organisation, public contribution paths, documentation checks and focused research regression tests; partial local checkout",
+  "status": "FOCUSED_LOCAL_CHECKS_PASSED_NOT_FULL_REPOSITORY_CERTIFICATION",
+  "environment": {
+    "python": "3.13.5",
+    "numpy": "2.3.5",
+    "pytest": "9.0.2"
+  },
+  "pytest": {
+    "tests": 151,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "documentation_tests": 20,
+    "existing_decision_lab_tests": 131,
+    "subtests_passed": 5,
+    "junit_cases_including_subtests": 156
+  },
+  "commands_executed": [
+    "PYTHONPATH=src python -m pytest -q tests/test_decision_lab*.py tests/test_research_docs.py",
+    "python -m unittest discover -s tests -p test_research_docs.py",
+    "python scripts/check_research_docs.py --inventory FROZEN_REMOTE_PATH_INVENTORY.json",
+    "python -m compileall -q scripts/check_research_docs.py tests/test_research_docs.py src/llm_quant/decision_lab",
+    "PYTHONPATH=src python -m llm_quant.decision_lab demo",
+    "PYTHONPATH=src python -m llm_quant.decision_lab project config/decision_lab/project.example.json"
+  ],
+  "navigation": {
+    "entry_points": 20,
+    "local_links_checked": 106,
+    "links_using_frozen_remote_path_inventory": 16,
+    "errors": 0,
+    "boundaries": "Inventory proves target paths in the frozen remote tree only, not unseen file content. Markdown fragments and external URL availability are not checked."
+  },
+  "template_metadata_and_workflow_yaml": "PARSED_AND_CHECKED_LOCALLY",
+  "workflow_safety": {
+    "permissions": "contents:read",
+    "timeout_minutes": 3,
+    "new_schedule": false,
+    "live_data_calls_added": false
+  },
+  "model_parameters_changed": false,
+  "historical_evidence_rewritten": false,
+  "source_paths_moved": false,
+  "full_legacy_suite": "NOT_RUN_PARTIAL_CHECKOUT",
+  "black_ruff_mypy": "NOT_RUN_TOOLING_UNAVAILABLE",
+  "hosted_ci": "NOT_VERIFIED_PASS_PRIOR_BILLING_LOCK",
+  "original_strategy_backtests": "NOT_RERUN",
+  "research_conclusion": "No new profitability or calibrated-forecast claim. Publication is not model promotion.",
+  "private_or_raw_vendor_data_published": false
+}

@@ -2,7 +2,7 @@ name: Daily Reports
 
 on:
   schedule:
-    - cron: '0 22 * * 1-5'  # 10pm UTC weekdays (after US market close)
+    - cron: '0 22 * * 1-5'  # Existing cadence; no new scheduled work.
   workflow_dispatch:
     inputs:
       date:
@@ -13,21 +13,30 @@ on:
         required: false
         default: 'daily'
         type: choice
-        options:
-          - daily
-          - weekly
-          - monthly
+        options: [daily, weekly, monthly]
 
 permissions:
   contents: write
 
+concurrency:
+  group: daily-reports-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   generate-report:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Require an existing evidence database
+        run: |
+          if [ ! -s data/llm_quant.duckdb ]; then
+            echo '::error::No source database is available. Restore a verified private snapshot; never initialize an empty database to publish performance.'
+            exit 1
+          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -36,60 +45,63 @@ jobs:
       - name: Install dependencies
         run: pip install -e .
 
-      - name: Initialize database if needed
-        run: |
-          if [ ! -f data/llm_quant.duckdb ]; then
-            mkdir -p data
-            PYTHONPATH=src python -c "
-          from llm_quant.db.schema import init_schema
-          from pathlib import Path
-          init_schema(Path('data/llm_quant.duckdb'))
-          print('Database initialized.')
-          "
-          fi
-
-      - name: Set report date
+      - name: Set and validate report date
         id: date
+        env:
+          REQUESTED_DATE: ${{ inputs.date }}
         run: |
-          if [ -n "${{ inputs.date }}" ]; then
-            echo "report_date=${{ inputs.date }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "report_date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
-          fi
+          python - <<'PY'
+          import os
+          from datetime import UTC, date, datetime
+          value = os.environ.get('REQUESTED_DATE') or datetime.now(UTC).date().isoformat()
+          parsed = date.fromisoformat(value)
+          if parsed.isoformat() != value or parsed > datetime.now(UTC).date():
+              raise ValueError('Report date must be an ISO date, not in the future')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'report_date={value}\n')
+          PY
 
       - name: Generate daily report
         if: inputs.type == '' || inputs.type == 'daily'
-        run: |
-          PYTHONPATH=src python scripts/generate_report.py daily \
-            --date "${{ steps.date.outputs.report_date }}" || true
+        env:
+          REPORT_DATE: ${{ steps.date.outputs.report_date }}
+        run: PYTHONPATH=src python scripts/generate_report.py daily --date "$REPORT_DATE"
 
       - name: Generate weekly report (Monday or manual)
         if: inputs.type == 'weekly' || (inputs.type == '' && github.event_name == 'schedule')
+        env:
+          REPORT_DATE: ${{ steps.date.outputs.report_date }}
+          REPORT_TYPE: ${{ inputs.type }}
         run: |
-          DAY_OF_WEEK=$(date -u +%u)
-          if [ "$DAY_OF_WEEK" = "1" ] || [ "${{ inputs.type }}" = "weekly" ]; then
-            PYTHONPATH=src python scripts/generate_report.py weekly \
-              --date "${{ steps.date.outputs.report_date }}" || true
+          if [ "$(date -u +%u)" = "1" ] || [ "$REPORT_TYPE" = 'weekly' ]; then
+            PYTHONPATH=src python scripts/generate_report.py weekly --date "$REPORT_DATE"
           fi
 
       - name: Generate monthly report (1st of month or manual)
         if: inputs.type == 'monthly' || (inputs.type == '' && github.event_name == 'schedule')
+        env:
+          REPORT_DATE: ${{ steps.date.outputs.report_date }}
+          REPORT_TYPE: ${{ inputs.type }}
         run: |
-          DAY_OF_MONTH=$(date -u +%d)
-          if [ "$DAY_OF_MONTH" = "01" ] || [ "${{ inputs.type }}" = "monthly" ]; then
-            PYTHONPATH=src python scripts/generate_report.py monthly \
-              --date "${{ steps.date.outputs.report_date }}" || true
+          if [ "$(date -u +%d)" = "01" ] || [ "$REPORT_TYPE" = 'monthly' ]; then
+            PYTHONPATH=src python scripts/generate_report.py monthly --date "$REPORT_DATE"
           fi
 
-      - name: Commit and push reports
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Refuse to publish reports without portfolio evidence
+        env:
+          PYTHONPATH: src
+        run: python -m llm_quant.decision_lab.evidence --changed-reports
 
+      - name: Commit and push reports
+        env:
+          REPORT_DATE: ${{ steps.date.outputs.report_date }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           if [ -d reports ] && [ -n "$(git status reports/ --porcelain)" ]; then
             git add reports/
-            git commit -m "docs: daily report ${{ steps.date.outputs.report_date }} [automated]"
+            git commit -m "docs: daily report $REPORT_DATE [automated]"
             git push
           else
-            echo "No new reports to commit."
+            echo 'No new reports to commit.'
           fi

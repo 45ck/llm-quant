@@ -1,0 +1,3 @@
+# Local source snapshots, model outputs and private economics must not be published.
+*
+!.gitignore
