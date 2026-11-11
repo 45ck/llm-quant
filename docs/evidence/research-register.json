@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "results": [
+    {
+      "id": "track-d-april-cohort",
+      "status": "recorded_backtest",
+      "summary": "Six recorded advances and two failures in the reviewed eight-strategy cohort; original backtests not rerun.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/evidence/model-audit-2026-11-11.json",
+          "sha256": "9cbe7aeb9324c894274208ee72f32cc2326d766420f7bcf7a7a288282bf19c3d"
+        }
+      ]
+    },
+    {
+      "id": "d3-tqqq-tmf",
+      "status": "failed_replication",
+      "summary": "Retired in the inspected records after a signal bug. A stale positive paper row does not reinstate it.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/research/model-audit-2026-11-11.md",
+          "sha256": "175df482210f558fae529f7f398e8e32a59b4f593750fad094806608cd871c48"
+        }
+      ]
+    },
+    {
+      "id": "housing-phase-diagnostic",
+      "status": "retrospective",
+      "summary": "Tiny baseline advantage changes sign across starting quarters; zero or one severe-loss outcome per phase.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/evidence/model-audit-2026-11-11.json",
+          "sha256": "9cbe7aeb9324c894274208ee72f32cc2326d766420f7bcf7a7a288282bf19c3d"
+        }
+      ]
+    },
+    {
+      "id": "latest-inspected-paper-report",
+      "status": "unavailable",
+      "summary": "The 6 November report contains no portfolio snapshots; its zero returns are not verified performance.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "reports/daily/2026-11-06.md",
+          "sha256": "a00524dd1b93fd11b3f16703deb1777ba5e4a00458ae5fdf2d4fb79f66cdbc4a"
+        }
+      ]
+    },
+    {
+      "id": "cost-aware-reference",
+      "status": "synthetic_validation",
+      "summary": "Five predeclared baselines exercised on an artificial fixture; no market-performance or profit claim.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/evidence/synthetic-reference-2026-11-11.json",
+          "sha256": "3f222794649c9457e47db35d3a9c5ac2f1831d11454737a901b5c307ccf3cdc4"
+        }
+      ]
+    }
+  ]
+}

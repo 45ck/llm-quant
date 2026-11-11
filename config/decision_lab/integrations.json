@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "no_vendored_source": true,
+  "projects": [
+    {
+      "id": "sklearn",
+      "name": "scikit-learn",
+      "scope": "TimeSeriesSplit, LedoitWolf and training-only allocations",
+      "distribution": "scikit-learn",
+      "license": "BSD-3-Clause",
+      "docs": "https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.TimeSeriesSplit.html",
+      "source": "https://github.com/scikit-learn/scikit-learn",
+      "module": "allocation.py"
+    },
+    {
+      "id": "statsmodels",
+      "name": "statsmodels",
+      "scope": "HAC mean inference and Holm multiple-testing corrections",
+      "distribution": "statsmodels",
+      "license": "BSD-3-Clause",
+      "docs": "https://www.statsmodels.org/stable/stats.html",
+      "source": "https://github.com/statsmodels/statsmodels",
+      "module": "uncertainty.py"
+    },
+    {
+      "id": "skfolio",
+      "name": "skfolio",
+      "scope": "Long-only minimum variance and empirical CVaR allocation",
+      "distribution": "skfolio",
+      "license": "BSD-3-Clause",
+      "docs": "https://skfolio.org/generated/skfolio.optimization.MeanRisk.html",
+      "source": "https://github.com/skfolio/skfolio",
+      "module": "allocation.py"
+    },
+    {
+      "id": "arch",
+      "name": "arch",
+      "scope": "Stationary-bootstrap mean intervals and one-period GARCH-t variance",
+      "distribution": "arch",
+      "license": "NCSA",
+      "docs": "https://bashtage.github.io/arch/",
+      "source": "https://github.com/bashtage/arch",
+      "module": "uncertainty.py"
+    },
+    {
+      "id": "backtesting",
+      "name": "Backtesting.py",
+      "scope": "Single-instrument next-open execution/commission diagnostic",
+      "distribution": "backtesting",
+      "license": "AGPL-3.0-or-later; review upstream terms",
+      "docs": "https://kernc.github.io/backtesting.py/doc/backtesting/backtesting.html",
+      "source": "https://github.com/kernc/backtesting.py",
+      "module": "execution.py"
+    },
+    {
+      "id": "qlib",
+      "name": "Microsoft Qlib",
+      "scope": "Local experiment recording through QlibRecorder and MLflowExpManager",
+      "distribution": "pyqlib",
+      "license": "MIT",
+      "docs": "https://qlib.readthedocs.io/en/stable/component/recorder.html",
+      "source": "https://github.com/microsoft/qlib",
+      "module": "tracking.py"
+    },
+    {
+      "id": "cvxpy",
+      "name": "CVXPY",
+      "scope": "Explicit empirical CVaR linear program with weight caps",
+      "distribution": "cvxpy",
+      "license": "Apache-2.0",
+      "docs": "https://www.cvxpy.org/",
+      "source": "https://github.com/cvxpy/cvxpy",
+      "module": "allocation.py"
+    },
+    {
+      "id": "pandera",
+      "name": "Pandera",
+      "scope": "Strict OHLC DataFrame schema; no silent coercion or repair",
+      "distribution": "pandera",
+      "license": "MIT",
+      "docs": "https://pandera.readthedocs.io/en/stable/dataframe_schemas.html",
+      "source": "https://github.com/unionai-oss/pandera",
+      "module": "dataframes.py"
+    },
+    {
+      "id": "hypothesis",
+      "name": "Hypothesis",
+      "scope": "Generated self-financing accounting properties with deterministic CI settings",
+      "distribution": "hypothesis",
+      "license": "MPL-2.0",
+      "docs": "https://hypothesis.readthedocs.io/en/latest/",
+      "source": "https://github.com/HypothesisWorks/hypothesis",
+      "module": "tests/integrations/test_native.py"
+    }
+  ]
+}

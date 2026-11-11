@@ -3,24 +3,66 @@ name: quality
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
   merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          python-version: '3.12'
-      - run: pip install black ruff mypy pytest
-      - name: Install typos
-        uses: taiki-e/install-action@v2
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13.5'
+          cache: pip
+          cache-dependency-path: |
+            requirements/research-py313.lock
+            requirements/quality-tools.txt
+            pyproject.toml
+      - name: Install project and checking dependencies
+        id: install
+        run: |
+          python -m pip install -r requirements/research-py313.lock -r requirements/quality-tools.txt
+          python -m pip install -e '.[dev]' -c requirements/research-py313.lock -c requirements/quality-tools.txt
+          python -m pip check
+          python -m pip freeze --all
+      - name: Install existing spelling gate
+        if: always() && steps.install.outcome == 'success'
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
           tool: typos-cli
-      - run: black --check .
-      - run: ruff check .
-      - run: typos
-      - run: mypy .
-      - run: pytest
+      - name: Formatting
+        if: always() && steps.install.outcome == 'success'
+        run: black --check .
+      - name: Lint
+        if: always() && steps.install.outcome == 'success'
+        run: ruff check .
+      - name: Spelling
+        if: always() && steps.install.outcome == 'success'
+        run: typos
+      - name: Types
+        if: always() && steps.install.outcome == 'success'
+        run: mypy .
+      - name: Complete legacy and research test suite
+        if: always() && steps.install.outcome == 'success'
+        run: python -m pytest --junitxml=research-local/quality-junit.xml
+      - name: Evidence and documentation consistency
+        if: always() && steps.install.outcome == 'success'
+        env:
+          PYTHONPATH: src
+        run: |
+          python scripts/check_research_docs.py
+          python scripts/check_research_standards.py
+          python scripts/check_quant_integrations.py
+          python -m llm_quant.decision_lab.catalog --check

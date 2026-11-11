@@ -1,0 +1,2 @@
+# Separate venv recommended. Pin the resolved MLflow and pyqlib versions after testing.
+pyqlib>=0.9.7,<0.10

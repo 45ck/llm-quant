@@ -1,0 +1,52 @@
+name: research-integrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: One explicitly selected optional runtime (backtesting acknowledges AGPL)
+        required: true
+        type: choice
+        options: [arch, skfolio, cvxpy, pandera, qlib, hypothesis, backtesting]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-integrations-${{ github.ref }}-${{ inputs.backend }}
+  cancel-in-progress: true
+
+jobs:
+  native-library:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: src
+      BACKEND: ${{ inputs.backend }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Validate selection and install isolated runtime
+        run: |
+          case "$BACKEND" in
+            arch|skfolio|cvxpy|pandera|qlib|hypothesis|backtesting) ;;
+            *) echo "Unsupported backend"; exit 2 ;;
+          esac
+          python -m pip install -r requirements/integrations/core.txt
+          python -m pip install -c requirements/research-py313.lock -r "requirements/integrations/$BACKEND.txt"
+          python -m pip check
+          python -m pip freeze --all
+      - name: Execute the selected native test (no skip-as-success)
+        run: |
+          mkdir -p research-local
+          if [ "$BACKEND" = "hypothesis" ]; then
+            FILTER=test_hypothesis_accounting_native
+          else
+            FILTER="test_${BACKEND}_native"
+          fi
+          python -m pytest -q tests/integrations/test_native.py -k "$FILTER" --junitxml=research-local/native.xml
+          python scripts/check_native_integration_results.py research-local/native.xml

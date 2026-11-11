@@ -3,130 +3,213 @@
 ## Open quantitative research. Results you can inspect.
 
 A Python lab for market-risk scenarios, housing indicators, paper strategies and
-project economics. Deterministic code calculates results; LLMs assist research.
-**Research only. No validated investment edge or live-trading approval.**
+project economics. Established numerical libraries calculate results; LLMs assist
+research. **Research only. No validated investment edge or live-trading approval.**
 
 [Start here](#start-here) · [Results](#what-worked-and-what-failed) ·
-[Contribute research](CONTRIBUTING.md) · [Documentation](docs/README.md) ·
-[Repository map](docs/repository-map.md)
+[Research policy](RESEARCH_POLICY.md) · [Contribute](CONTRIBUTING.md) ·
+[Documentation](docs/README.md) · [Repository map](docs/repository-map.md) ·
+[Library integrations](docs/research/integrations.md) · [Agent skills](docs/skills/README.md)
 
 ## Start here
 
 | Your goal | Start with |
 | --- | --- |
-| Try a model without credentials | The offline example below |
-| Understand the evidence | [Model audit](docs/research/model-audit-2026-11-11.md) |
-| Submit an idea, replication or negative result | [Research contribution guide](docs/contributing/research.md) |
-| Find code, data contracts or experiments | [Repository map](docs/repository-map.md) |
-| Reproduce the housing study | [Decision Lab commands and limits](DECISION_LAB.md) |
-| Review a contribution | [Reviewer checklist](docs/contributing/review.md) |
+| Run an example without credentials | The offline reference below |
+| Review established methods used here | [Standards and reuse](docs/research/standards-and-reuse.md) |
+| Understand historical successes and failures | [Model audit](docs/research/model-audit-2026-11-11.md) |
+| Submit a replication, idea or negative result | [Research contribution guide](docs/contributing/research.md) |
+| Find code, source contracts or experiments | [Repository map](docs/repository-map.md) |
+| Reproduce the housing diagnostics | [Decision Lab commands](DECISION_LAB.md) |
+| Review a contribution | [Reviewer checklist](docs/contributing/review.md) and [current policy](RESEARCH_POLICY.md) |
 
-### Offline quick start
+### Offline reference: one command after installation
 
-Use Python 3.12+ and a virtual environment. No API key, broker or paid feed is needed.
-Fork this repository for contributions; clone your fork and work from its root.
+Use Python 3.13.5 in an isolated environment for the pinned reference. No API key,
+broker account, paid data feed or LLM subscription is required. Fork and clone the
+repository, then run from its root:
 
 ```sh
 python -m venv .venv
-# Activate .venv (see CONTRIBUTING.md for your platform).
-python -m pip install numpy==2.3.5 pytest==9.0.2
-PYTHONPATH=src python -m llm_quant.decision_lab demo
-PYTHONPATH=src python -m pytest -q tests/test_decision_lab.py tests/test_decision_lab_study.py tests/test_decision_lab_evidence.py
-python -m unittest discover -s tests -p test_research_docs.py
-python scripts/check_research_docs.py
+# Activate .venv; see CONTRIBUTING.md for your platform.
+python -m pip install -r requirements/research-py313.lock
+PYTHONPATH=src python -m llm_quant.decision_lab.benchmark --reference
+PYTHONPATH=src python -m pytest -q tests/test_decision_lab*.py
+python scripts/check_research_standards.py --environment
+PYTHONPATH=src python -m llm_quant.decision_lab.catalog --check
 ```
 
 For PowerShell, set `$env:PYTHONPATH = "src"` and omit the `PYTHONPATH=src` prefix.
-The demo is **synthetic**. It demonstrates the pipeline, not market performance.
-Private inputs and downloaded histories belong in gitignored `research-local/`.
+The reference is **artificial**, explicitly marked `SYNTHETIC_REFERENCE_NOT_MARKET_EVIDENCE`.
+It checks the mechanics; it is not a profitable strategy or a market forecast.
+Private inputs and downloaded histories stay in gitignored `research-local/`.
+
+## Library-backed modelling and QA
+
+| Capability | Implemented boundary |
+| --- | --- |
+| Time-aware backtesting | scikit-learn `TimeSeriesSplit`, a full-bar gap, and separately reserved holdout; not full event-label CPCV |
+| Portfolio baselines | Cash, rebalanced equal weight, equal-weight buy-and-hold, shrinkage inverse volatility and long-only shrinkage minimum variance |
+| Covariance estimation | scikit-learn `LedoitWolf`, fitted on training data only |
+| Numerical optimization | SciPy SLSQP; failed fits stop instead of silently falling back |
+| Transaction costs | Self-financing buys/sells, explicit commission/slippage assumption, cash residual and accounting tests |
+| Statistical diagnostics | statsmodels Holm correction for the complete declared family; exact binomial intervals only under an explicit independence assumption |
+| Prospective records | Local append-only forecast/outcome journal; premature scoring, duplicates and corruption rejected |
+| Evidence consistency | Hash-checked public register generates the status table below; changed evidence requires review |
+
+```mermaid
+flowchart LR
+    A[Permitted source + data contract] --> B[Training window]
+    B --> C[Full-bar separation]
+    C --> D[Out-of-sample evaluation]
+    D --> E[Reserved holdout]
+    E --> F[Evidence register + limitations]
+    G[Prospective forecast] --> H[Wait for maturity]
+    H --> I[Append outcome + score]
+```
+
+**Publication is not promotion.** Local timestamps and hashes need an independent
+retained anchor to establish a prospective record. No real forward forecast was
+issued by this engineering increment, and no live-trading path was added.
+[Exact methods, timing, cost conventions, upstream sources and limits](docs/research/standards-and-reuse.md).
+
+## Established projects, connected to runnable research
+
+Nine upstream projects now have a defined role in the repository. These are
+original adapters calling public APIs, not vendored code or a claim that every
+upstream feature is integrated.
+
+| Project | Implemented integration | Local runtime evidence |
+| --- | --- | --- |
+| scikit-learn | Chronological splits, shrinkage covariance and cost-aware allocation evaluation | Executed |
+| statsmodels | HAC mean inference and multiple-testing diagnostics | Executed |
+| skfolio | Minimum variance and empirical CVaR allocation | Optional runtime not installed; contract checks executed |
+| arch | Stationary-bootstrap mean intervals and GARCH-t variance | Optional runtime not installed; contract checks executed |
+| Backtesting.py | Next-open entry/exit and commission diagnostic | Optional runtime not installed; AGPL opt-in |
+| Microsoft Qlib | Local experiment metadata via QlibRecorder/MLflow | Optional runtime not installed; contract checks executed |
+| CVXPY | Explicit capped empirical CVaR program | Optional runtime not installed; native/cross-engine tests supplied |
+| Pandera | Strict OHLC schema | Optional runtime not installed; prerequisite validation executed |
+| Hypothesis | Generated accounting/conservation tests | Optional runtime not installed; property tests supplied |
+
+```sh
+PYTHONPATH=src python -m llm_quant.decision_lab.integrations doctor
+PYTHONPATH=src python -m llm_quant.decision_lab.integrations probe sklearn
+PYTHONPATH=src python -m llm_quant.decision_lab.integrations probe statsmodels
+PYTHONPATH=src python -m llm_quant.decision_lab.integrations compare-synthetic \
+  --method sklearn_inverse_volatility
+python scripts/check_quant_integrations.py
+```
+
+Seven project skills are available under `.claude/skills/`: research routing, data
+contracts, backtesting, portfolio/risk, statistical validation, experiment evidence
+and integration QA. They point to actual code and tests, require the current
+policy, and grant no trading, spending or account-management permissions.
+[Skills and invocation guide](docs/skills/README.md).
+
+**Verification:** 341 focused tests passed; eight optional native checks skipped
+because dependencies are absent. Mocked contracts are not native-library passes.
+The manual native workflow rejects missing or skipped selected tests. No manual
+native job was dispatched in this update. Full legacy/hosted/lint/type verification
+and a clean all-framework dependency resolution remain outstanding.
+[Exact receipt](docs/evidence/integrations-2026-11-11.json) ·
+[API boundaries and commands](docs/research/integrations.md) ·
+[Attribution and licenses](THIRD_PARTY_RESEARCH.md).
 
 ## What worked and what failed
 
-**Evidence review: 11 November 2026.** These are different kinds of evidence;
-a passing software test is not a profitable strategy.
+This table is generated from [the research register](docs/evidence/research-register.json).
+A passing software test is not a successful investment. Historical records remain
+unchanged; the new methods do not rehabilitate rejected or unverified strategies.
 
-| Research area | Finding | Evidence status |
+<!-- research-register:start -->
+| Study | Evidence status | Finding |
 | --- | --- | --- |
-| Eight-strategy April Track D cohort | Six recorded advances; two failures. Original backtests were not rerun. | Recorded historical results |
-| D3 TQQQ/TMF | Records retire it after a signal bug changed reported Sharpe from 2.21 to -1.08. | Recorded failed replication |
-| Housing loss model | Calculation reproduced; its small baseline advantage reverses with the starting quarter. | No robust forecasting edge established |
-| Latest paper report inspected, 6 November | No portfolio snapshots; displayed zeros do not prove a flat return. | Performance unavailable |
-| Earlier 42.8% CAGR / 2.205 Sharpe claims | Original prices, complete ledger and runs not independently reproduced in this audit. | Unverified here |
+| [track-d-april-cohort](docs/evidence/model-audit-2026-11-11.json) | Historical record; not independently rerun | Six recorded advances and two failures in the reviewed eight-strategy cohort; original backtests not rerun. |
+| [d3-tqqq-tmf](docs/research/model-audit-2026-11-11.md) | Recorded failed replication | Retired in the inspected records after a signal bug. A stale positive paper row does not reinstate it. |
+| [housing-phase-diagnostic](docs/evidence/model-audit-2026-11-11.json) | Retrospective research; no established edge | Tiny baseline advantage changes sign across starting quarters; zero or one severe-loss outcome per phase. |
+| [latest-inspected-paper-report](reports/daily/2026-11-06.md) | Performance evidence unavailable | The 6 November report contains no portfolio snapshots; its zero returns are not verified performance. |
+| [cost-aware-reference](docs/evidence/synthetic-reference-2026-11-11.json) | Artificial fixture; not market evidence | Five predeclared baselines exercised on an artificial fixture; no market-performance or profit claim. |
+<!-- research-register:end -->
 
 ### Historical strategy outcomes
 
 ![Eight recorded Track D Sharpe values: six advances and two failures; not rerun backtests or forward performance.](docs/assets/track-d-record-audit.svg)
 
 AGG to SOXL failed the historical Sharpe threshold and shuffled-signal check;
-LQD to UPRO failed the Sharpe threshold. An advance means **further testing**, not
-proven profitability. The audit also identifies two mislabelled cross-validation
-metrics. [Exact values, qualifications and sources](docs/research/model-audit-2026-11-11.md).
+LQD to UPRO failed the Sharpe threshold. An advance meant further testing, not
+proven profitability. The audit also identifies mislabelled cross-validation
+metrics. [Exact values and source qualifications](docs/research/model-audit-2026-11-11.md).
 
 ### Housing evaluation sensitivity
 
-![Four annual starting phases: two slightly favour the model and two the historical baseline; zero or one severe-loss outcome per phase.](docs/assets/housing-phase-sensitivity.svg)
+![Four annual starting phases: two slightly favour the model and two the baseline; zero or one severe-loss outcome per phase.](docs/assets/housing-phase-sensitivity.svg)
 
-The study uses 225 quarterly observations, 1970 Q1-2026 Q1, from a captured
-BIS/FRED eight-city Australian **real-price index**, not Sydney alone or an
-investable total-return series. Annual outcomes overlap across starting phases:
-do not pool them as independent trials. Sparse loss events and latest-vintage
-observations do not establish calibrated current crash probabilities.
+The historical study uses 225 quarterly observations, 1970 Q1-2026 Q1, from a
+captured BIS/FRED eight-city Australian real-price index, not Sydney alone or total
+investment returns. Annual outcomes overlap across starting phases; do not pool
+them as independent trials. No new housing study or current crash forecast is
+claimed by the hardening increment.
 
-[Machine-readable results](docs/evidence/model-audit-2026-11-11.json) ·
-[Original test receipt](docs/evidence/verification-2026-11-11.json) ·
-[Evidence catalogue](docs/evidence/README.md)
+[Historical machine-readable results](docs/evidence/model-audit-2026-11-11.json) ·
+[New artificial reference](docs/evidence/synthetic-reference-2026-11-11.json) ·
+[New test receipt](docs/evidence/hardening-2026-11-11.json)
 
 ## Contribute research
 
-**Useful contributions include reproductions, failed hypotheses, data corrections,
-tests and clearer explanations. A high backtest return is not an entry requirement.**
+Reproductions, failed hypotheses, data corrections and tests are useful
+contributions. A high backtest return is not an entry requirement.
 
 1. Open a [research proposal](.github/ISSUE_TEMPLATE/01-research-proposal.md),
    [replication/result](.github/ISSUE_TEMPLATE/02-replication-result.md), or
    [data/engineering issue](.github/ISSUE_TEMPLATE/03-data-engineering.md).
-2. Agree on a bounded question, baseline, data rights and resource budget.
-   Freeze confirmatory methods before seeing the evaluation outcomes.
-3. Submit a small PR with reproducible commands, evidence and limitations using
-   the [contribution guide](CONTRIBUTING.md) and [research templates](docs/templates/README.md).
+2. Agree on a bounded question, permitted data, baseline, costs and resource budget.
+   Freeze confirmatory methods and holdouts before inspecting outcomes.
+3. Submit reproducible code, all attempted variants and the relevant negative tests.
+   Use [CONTRIBUTING.md](CONTRIBUTING.md), [research templates](docs/templates/README.md)
+   and [RESEARCH_POLICY.md](RESEARCH_POLICY.md).
 
-External contributors do not need Beads, private accounts or an LLM subscription.
-Maintainers link accepted public issues into the existing internal Beads workflow.
-Negative or inconclusive results are welcome; do not tune a failed test into a pass
-without recording the new trial and a new evaluation plan.
+Test future-data mutation, accounting conservation, costs, bad inputs and missing
+evidence. Record code/source identities and the exact environment. Never change a
+failed threshold after seeing the result without registering a new experiment.
+Maintainers can link public issues to Beads; contributors need no private access.
 
 ## Repository layout
 
 ```text
-src/llm_quant/       Implementation and research modules; existing imports retained
-  decision_lab/     Isolated scenarios, source checks and project economics
-config/             Explicit settings and synthetic examples
-scripts/            Entry points and reproducible figure generation
-tests/             Software and evidence-contract tests
-data/strategies/   Existing strategy lifecycle records (not raw market data)
-docs/              Navigation, contribution guides, governance and evidence
-reports/           Historical paper/scan reports; missing data stays missing
-research/          Existing experiment manifest, prompts and result records
-research-local/    Gitignored local data, private inputs and run output
+src/llm_quant/       Existing research and paper modules; imports preserved
+  decision_lab/     Sources, scenarios, baselines, journal and result catalogue
+    integrations/   Explicit upstream adapters and held-out comparisons
+.claude/skills/     Seven repo-local research procedures with executable entry points
+config/             Explicit plans and artificial examples
+requirements/       Pinned focused environment and separate QA tool versions
+scripts/            Reproducible reports, documentation and policy checks
+tests/              Numerical, leakage, accounting and evidence contracts
+data/strategies/    Historical strategy lifecycle records, not raw vendor data
+docs/               Research, review instructions and hash-linked evidence
+reports/            Historical reports; missing data is not zero performance
+research/           Existing experiment manifests, prompts and results
+research-local/     Gitignored local inputs and run output
 ```
 
-See the [detailed map](docs/repository-map.md) for responsibilities and naming rules.
-Existing source modules, strategy IDs and historical records have not been moved.
+## Verification boundaries
 
-## Verification and limitations
+The hardening receipt records executed focused tests and reference runs. It is
+**not a full legacy suite, formatting/typecheck or hosted-CI pass**. The runtime
+could not download missing tooling or obtain a full checkout. The new workflow
+repairs `master` triggers and installs project dependencies before full checks;
+its execution is still an acceptance requirement. Existing billing-blocked runs
+must not be relabelled green.
 
-The dated model audit records **131 focused tests passing locally**, not a full
-legacy-suite pass. [Organisation checks](docs/evidence/organisation-2026-11-11.json)
-record the separate documentation/template verification and rerun in this update.
-Hosted CI was blocked by an account billing issue in the inspected runs; **no green
-CI claim is made**. Full-repository lint/type checks, original strategy replication,
-live-source ingestion and prospective validation remain outstanding.
+The focused environment is pinned to observed installed versions. It is not a
+wheel-hash-verified or fully resolved lock for every legacy dependency. Real source
+ingestion, original-strategy replication, release-aware vintages, calendar/FX checks
+and forward forecasting remain unverified where the evidence says so.
 
-Repository publication is not model promotion or approval to trade. No new paid
-feeds, brokerage access, recurring ingestion or private data are introduced.
-See [research governance](docs/governance/research-tracks.md) for the existing
-strategy mandates; conflicting claims must be reconciled, not silently replaced.
+Current policy supersedes old promotional status claims in historical mandates;
+it never weakens numerical risk controls. No new paid feed, live trade, recurring
+ingestion or private-data publication is authorized.
 
 ## License
 
-Code contributions: [MIT](LICENSE). Dataset permissions are separate. Do not
-publish licensed market histories, private account records, client data or secrets.
+Code: [MIT](LICENSE). Dataset rights are separate. No upstream implementation
+source was copied in this increment; dependencies retain their own licenses.

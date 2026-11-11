@@ -1,0 +1,2 @@
+# AGPL-3.0 component: opt-in only, not relicensed by llm-quant's MIT license.
+backtesting>=0.6.5,<0.7

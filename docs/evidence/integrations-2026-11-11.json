@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "base_commit": "160c371eda7ee6231f2cd7c2563b7ee1fc10e07a",
+  "status": "FOCUSED_LOCAL_AND_CONTRACT_CHECKS_NOT_ALL_NATIVE_BACKENDS_VERIFIED",
+  "tests": {
+    "passed": 341,
+    "skipped": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped_tests": [
+      "test_arch_native",
+      "test_skfolio_native",
+      "test_cvxpy_native",
+      "test_cross_engine_cvar_native",
+      "test_pandera_native",
+      "test_backtesting_native",
+      "test_qlib_native",
+      "test_hypothesis_accounting_native"
+    ],
+    "focused_statement_branch_coverage_percent": 85.98901098901099,
+    "note": "Mocked API contracts contribute to coverage but do not verify native dependency execution."
+  },
+  "native_libraries_executed": {
+    "scikit-learn": "1.8.0",
+    "statsmodels": "0.14.6"
+  },
+  "optional_missing": [
+    "skfolio",
+    "arch",
+    "backtesting",
+    "pyqlib",
+    "cvxpy",
+    "pandera",
+    "hypothesis"
+  ],
+  "skills_checked": 7,
+  "catalog_projects": 9,
+  "checks": {
+    "compile": "passed",
+    "policy_workflow_core_environment": "passed",
+    "register_readme_hash_consistency": "passed",
+    "synthetic_demo": "passed",
+    "project_example": "passed",
+    "reference_repeat_byte_identical": true,
+    "integration_comparison_repeat_byte_identical": true
+  },
+  "full_legacy_suite": "NOT_RUN_PARTIAL_CHECKOUT",
+  "format_lint_type_checks": "NOT_RUN_TOOLS_NOT_INSTALLED",
+  "hosted_ci": "NOT_CLAIMED_PASS_PREVIOUS_ACCOUNT_BILLING_LOCK",
+  "optional_native_workflow_dispatched": false,
+  "licensing": "Original adapters; upstream licensing retained; Backtesting.py isolated and requires AGPL acknowledgement.",
+  "market_results": "No real market dataset fetched, old strategies rerun, new forecast issued, or investment edge established.",
+  "safety": {
+    "live_trading": false,
+    "paid_services": false,
+    "network_in_offline_tests": false,
+    "private_data_published": false
+  },
+  "reference_output_sha256": "fd6dea58ebe300381a752503344b22e6e8cbc6a81c40d65bec5d0bce9b4153d6",
+  "integration_comparison_sha256": "92f739b916914417d2cba3933f2c0ecd68930f6490fa8c876f3b0de4902597a3",
+  "prior_hardening_receipt": "Preserved as a historical pre-publication receipt; this increment includes that formerly unshipped code.",
+  "tracked_reference_artifact": "Compact summary of executed synthetic reference, including original full-output hash; full arrays regenerate via documented command.",
+  "tracked_reference_summary_sha256": "3f222794649c9457e47db35d3a9c5ac2f1831d11454737a901b5c307ccf3cdc4",
+  "final_review_fixes": [
+    "Corrected unsupported CI flag and added a regression test.",
+    "Clarified that SciPy supplies exact event-rate intervals."
+  ]
+}

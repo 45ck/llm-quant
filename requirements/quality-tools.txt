@@ -1,0 +1,4 @@
+# Reviewed stable tool releases; execution still required in the target environment.
+black==25.12.0
+ruff==0.14.10
+mypy==1.19.0
