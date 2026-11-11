@@ -6,7 +6,9 @@ on:
       - 'src/llm_quant/decision_lab/**'
       - 'tests/test_decision_lab*.py'
       - 'config/decision_lab/**'
+      - 'scripts/render_model_audit.py'
       - '.github/workflows/decision-lab.yml'
+      - '.github/workflows/reports.yml'
   workflow_dispatch:
 
 permissions:
@@ -25,13 +27,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install only the focused test dependencies
+      - name: Install only focused test dependencies
         run: pip install --disable-pip-version-check numpy==2.3.5 pytest==9.0.2
-      - name: Run offline data and model contracts
+      - name: Run offline data, model and reporting contracts
         env:
           PYTHONPATH: src
         run: |
-          python -m compileall -q src/llm_quant/decision_lab
           python -m pytest -q tests/test_decision_lab*.py
+          python -m compileall -q src/llm_quant/decision_lab tests/test_decision_lab*.py scripts/render_model_audit.py
           python -m llm_quant.decision_lab demo
           python -m llm_quant.decision_lab project config/decision_lab/project.example.json

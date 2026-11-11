@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "source_commit": "a08cac5ee98c96e526b824ac649788d6e1b51bd7",
+  "status": "FOCUSED_LOCAL_CHECKS_PASS_REPOSITORY_ACCEPTANCE_PENDING",
+  "environment": {
+    "python": "3.13.5",
+    "numpy": "2.3.5",
+    "pytest": "9.0.2"
+  },
+  "test_scope": "Three focused Decision Lab and evidence modules; not the full legacy repository suite",
+  "pytest": {
+    "tests": 131,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "checks": [
+    {
+      "name": "focused-pytest",
+      "argv": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_decision_lab.py",
+        "tests/test_decision_lab_study.py",
+        "tests/test_decision_lab_evidence.py",
+        "--junitxml=research-local/decision-lab/audit-test-results.xml"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "focused-compilation",
+      "argv": [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "src/llm_quant/decision_lab",
+        "tests/test_decision_lab.py",
+        "tests/test_decision_lab_study.py",
+        "tests/test_decision_lab_evidence.py",
+        "scripts/render_model_audit.py"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "synthetic-demo",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab",
+        "demo"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "illustrative-project",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab",
+        "project",
+        "config/decision_lab/project.example.json"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "audit-first",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab.audit",
+        "--snapshot",
+        "YOUR_RETAINED_SNAPSHOT.json",
+        "--as-of",
+        "2026-11-11",
+        "--out",
+        "research-local/decision-lab/audit-repeat-one.json"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "audit-second",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab.audit",
+        "--snapshot",
+        "YOUR_RETAINED_SNAPSHOT.json",
+        "--as-of",
+        "2026-11-11",
+        "--out",
+        "research-local/decision-lab/audit-repeat-two.json"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "passed": true
+    },
+    {
+      "name": "missing-report-refused",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab.evidence",
+        "reports/daily/2026-11-06.md"
+      ],
+      "exit_code": 2,
+      "expected_exit_code": 2,
+      "passed": true
+    },
+    {
+      "name": "stale-forecast-refused",
+      "argv": [
+        "python",
+        "-m",
+        "llm_quant.decision_lab",
+        "risk",
+        "--snapshot",
+        "YOUR_RETAINED_SNAPSHOT.json",
+        "--weights",
+        "1",
+        "--indicator",
+        "--as-of",
+        "2026-11-11",
+        "--max-age-days",
+        "200",
+        "--horizon",
+        "4",
+        "--paths",
+        "100",
+        "--out",
+        "research-local/decision-lab/forbidden-current-forecast.json"
+      ],
+      "exit_code": 2,
+      "expected_exit_code": 2,
+      "passed": true
+    }
+  ],
+  "audit_repeat_byte_identical": true,
+  "stale_forecast_output_created": false,
+  "audit_result_sha256": "9cbe7aeb9324c894274208ee72f32cc2326d766420f7bcf7a7a288282bf19c3d",
+  "strategy_backtests_reexecuted": false,
+  "native_live_provider_tested": false,
+  "full_repository_tests": "NOT_RUN_PARTIAL_CHECKOUT",
+  "black_ruff_mypy": "NOT_RUN_TOOLING_UNAVAILABLE",
+  "hosted_ci": "NOT_GREEN_PRIOR_ACCOUNT_BILLING_LOCK",
+  "private_data_or_raw_vendor_history_published": false,
+  "limitations": [
+    "A local test pass is not proof of strategy profitability.",
+    "Historical cohort summary is not a raw-data backtest replication.",
+    "Housing capture is reused latest-vintage evidence, not a current forecast.",
+    "Workflow publication guard is regression-tested; hosted execution remains blocked."
+  ],
+  "visual_checks": {
+    "renderer": "Matplotlib; Chromium 1280px and 390px README preview",
+    "figures": 2,
+    "images_loaded": true,
+    "mobile_page_horizontal_overflow": false,
+    "svg_sha256": {
+      "track-d-record-audit": "ff3b5942b8c7f2e22ced356477bb3ab721721712534d98b72f4522e9cdbb11e6",
+      "housing-phase-sensitivity": "505163c563d6838e45ce30f910036c901297fbbc9193cf4fda48c667fb28b36a"
+    }
+  },
+  "focused_combined_statement_branch_coverage_percent": 86,
+  "coverage_scope": "Focused Decision Lab pytest run only; not whole-repository coverage"
+}
