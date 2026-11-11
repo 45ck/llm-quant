@@ -1,0 +1,1 @@
+pandera[pandas]>=0.24,<1

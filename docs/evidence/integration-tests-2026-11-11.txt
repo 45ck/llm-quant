@@ -1,0 +1,38 @@
+........................................................................ [ 20%]
+........................................................................ [ 41%]
+........................................................................ [ 61%]
+........................................................................ [ 82%]
+.....................................................ssssssss            [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.5-final-0 ________________
+
+Name                                                     Stmts   Miss Branch BrPart  Cover
+------------------------------------------------------------------------------------------
+src/llm_quant/decision_lab/__init__.py                       1      0      0      0   100%
+src/llm_quant/decision_lab/__main__.py                     118     29     26      4    72%
+src/llm_quant/decision_lab/audit.py                         54     19      4      1    66%
+src/llm_quant/decision_lab/benchmark.py                    172     24     20      1    85%
+src/llm_quant/decision_lab/catalog.py                       74     12     14      1    83%
+src/llm_quant/decision_lab/data.py                         105      0     14      0   100%
+src/llm_quant/decision_lab/evidence.py                     117     10     52      7    88%
+src/llm_quant/decision_lab/forward.py                      132      1     12      1    99%
+src/llm_quant/decision_lab/fred_table.py                   127     12     28      5    89%
+src/llm_quant/decision_lab/integrations/__init__.py          2      0      0      0   100%
+src/llm_quant/decision_lab/integrations/__main__.py         70     14     24      9    73%
+src/llm_quant/decision_lab/integrations/allocation.py       39     12      0      0    69%
+src/llm_quant/decision_lab/integrations/contracts.py        78      0      6      0   100%
+src/llm_quant/decision_lab/integrations/dataframes.py       21      4      0      0    81%
+src/llm_quant/decision_lab/integrations/evaluation.py       38      3      8      1    87%
+src/llm_quant/decision_lab/integrations/execution.py        32     23      4      0    25%
+src/llm_quant/decision_lab/integrations/tracking.py         32      0      2      0   100%
+src/llm_quant/decision_lab/integrations/uncertainty.py      32      0      0      0   100%
+src/llm_quant/decision_lab/models.py                        59      0      6      0   100%
+src/llm_quant/decision_lab/projects.py                      41      0      2      0   100%
+src/llm_quant/decision_lab/providers.py                     65      1      4      1    97%
+src/llm_quant/decision_lab/statistics.py                    20      0      0      0   100%
+src/llm_quant/decision_lab/study.py                         81     27     20      3    66%
+src/llm_quant/decision_lab/validation.py                    50      0     14      0   100%
+------------------------------------------------------------------------------------------
+TOTAL                                                     1560    191    260     34    86%
+Coverage JSON written to file /mnt/data/quant-integrations/coverage.json
+341 passed, 8 skipped in 3.49s

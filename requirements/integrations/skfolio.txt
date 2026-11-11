@@ -1,0 +1,3 @@
+# Isolated profile; resolve and record its full environment before comparisons.
+skfolio>=0.13,<1
+clarabel>=0.9,<1

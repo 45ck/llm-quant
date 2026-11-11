@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-11",
+  "base_commit": "160c371eda7ee6231f2cd7c2563b7ee1fc10e07a",
+  "status": "LOCAL_PATCH_TESTED_NOT_PUBLISHED",
+  "remote_repository_changed_by_this_increment": false,
+  "publication_blocker": "This session exposes GitHub reads only; no active alternative GitHub write connection or authenticated CLI was available.",
+  "scope": "Partial source checkout. Existing Decision Lab tests plus new benchmark, journal, register, statistical and workflow contract tests. Not the complete legacy repository.",
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Linux",
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "scikit-learn": "1.8.0",
+    "statsmodels": "0.14.6",
+    "pytest": "9.0.2",
+    "pytest-cov": "7.0.0",
+    "PyYAML": "6.0.3"
+  },
+  "tests": {
+    "tests": 250,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "prior_decision_lab_tests": 131,
+  "new_tests_in_this_increment": 119,
+  "coverage": {
+    "scope": "llm_quant.decision_lab only, including prior modules",
+    "combined_statement_branch_percent": 87.36033519553072,
+    "statements_covered": 1081,
+    "statements_total": 1216,
+    "branches_covered": 170,
+    "branches_total": 216,
+    "not_a_statistical_validity_measure": true
+  },
+  "commands_executed": [
+    "PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests/test_decision_lab*.py -p pytest_cov --cov=llm_quant.decision_lab --cov-branch --cov-report=json --junitxml=junit.xml",
+    "python -m compileall -q src/llm_quant/decision_lab tests/test_decision_lab*.py scripts/check_research_standards.py",
+    "python scripts/check_research_standards.py --environment",
+    "PYTHONPATH=src python -m llm_quant.decision_lab demo",
+    "PYTHONPATH=src python -m llm_quant.decision_lab project config/decision_lab/project.example.json",
+    "PYTHONPATH=src python -m llm_quant.decision_lab.benchmark --reference (two separate executions)",
+    "cmp reference-a.json reference-b.json",
+    "PYTHONPATH=src python -m llm_quant.decision_lab.catalog --check"
+  ],
+  "reference": {
+    "status": "SYNTHETIC_REFERENCE_NOT_MARKET_EVIDENCE",
+    "fixture_sha256": "b1b761d083f15a2c13ddd97035506bcc6576ccadb318e7bf347229a32efc7eb1",
+    "output_sha256": "fd6dea58ebe300381a752503344b22e6e8cbc6a81c40d65bec5d0bce9b4153d6",
+    "two_runs_byte_identical": true,
+    "methods": [
+      "cash",
+      "equal_weight",
+      "inverse_volatility_lw",
+      "minimum_variance_lw",
+      "equal_weight_buy_and_hold"
+    ],
+    "market_history_used": false,
+    "investment_edge_claimed": false
+  },
+  "implemented_library_calls": [
+    "sklearn.model_selection.TimeSeriesSplit",
+    "sklearn.covariance.LedoitWolf",
+    "scipy.optimize.minimize(method=SLSQP)",
+    "scipy.optimize.brentq",
+    "scipy.stats.binomtest(...).proportion_ci(method=exact)",
+    "statsmodels.stats.multitest.multipletests(method=holm)"
+  ],
+  "code_sha256": {
+    "src/llm_quant/decision_lab/benchmark.py": "cde3706aeeebf520f3b2a887d1270303abffad1e5634351abca95d3a0c30ee47",
+    "src/llm_quant/decision_lab/forward.py": "b392ca05ae487c3d93df86dc97f2c85dd37d698e586fd1add325491036588cdd",
+    "src/llm_quant/decision_lab/catalog.py": "c9ff5ebc413200f1ad84cbd50667e4b91d9d65d4af716043043cbf7c139c06da",
+    "src/llm_quant/decision_lab/statistics.py": "0033d8cc89959086f75cfd480fe8435de1d5fd0303f4f109d4033698e489883b"
+  },
+  "workflow_changes": {
+    "default_branch_push": "master",
+    "project_dependencies_installed_before_full_checks": true,
+    "permissions": "contents: read",
+    "action_versions": "commit-pinned",
+    "focused_timeout_minutes": 3,
+    "quality_timeout_minutes": 10,
+    "existing_guardrail_label_preserved": "noslop-approved",
+    "new_schedule": false,
+    "hosted_execution_verified": false
+  },
+  "unverified": [
+    "Full legacy repository tests",
+    "Black/Ruff/mypy and typos execution",
+    "Clean installation and full transitive resolution for all legacy dependencies",
+    "Hosted CI and known prior billing blocker",
+    "Existing documentation checker on a complete checkout",
+    "Live data-provider ingestion and original strategy backtest replication",
+    "Calendar/FX/corporate-action and historical-vintage validation",
+    "Independent timestamping and real prospective forecast performance"
+  ],
+  "no_live_trading": true,
+  "real_forecasts_issued": 0,
+  "private_client_or_vendor_history_published": false,
+  "upstream_implementation_source_copied": false,
+  "bundle_installer_checks": {
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "scope": "Separate temporary Git fixtures; not the user repository and not GitHub publication.",
+    "command": "python -m pytest -q tests/test_apply_bundle.py (from extracted bundle)"
+  }
+}

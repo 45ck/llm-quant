@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "status": "SYNTHETIC_REFERENCE_NOT_MARKET_EVIDENCE",
+  "identity": {
+    "implementation_sha256": "36eba0108d77d2e5d190c1a4a858f1572df63ee13ec2cf833d22a4465525ed18",
+    "plan_sha256": "50d80e008a281cd1dbf28ea1638dcd4b09af1a97581d6a3eda22ba6630502b94",
+    "library_versions": {
+      "numpy": "2.3.5",
+      "scipy": "1.17.0",
+      "scikit-learn": "1.8.0"
+    }
+  },
+  "plan": {
+    "splits": 4,
+    "test_size": 20,
+    "min_train": 60,
+    "holdout_size": 20,
+    "gap": 1,
+    "label_horizon": 1,
+    "periods_per_year": 252,
+    "transaction_bps": 10.0
+  },
+  "folds": [
+    {
+      "train_start": 0,
+      "train_end_exclusive": 139,
+      "test_start": 140,
+      "test_end_exclusive": 160
+    },
+    {
+      "train_start": 0,
+      "train_end_exclusive": 159,
+      "test_start": 160,
+      "test_end_exclusive": 180
+    },
+    {
+      "train_start": 0,
+      "train_end_exclusive": 179,
+      "test_start": 180,
+      "test_end_exclusive": 200
+    },
+    {
+      "train_start": 0,
+      "train_end_exclusive": 199,
+      "test_start": 200,
+      "test_end_exclusive": 220
+    }
+  ],
+  "evaluation_start": 140,
+  "holdout_start": 220,
+  "holdout_train_end_exclusive": 219,
+  "automatic_model_selection": false,
+  "limitations": [
+    "Equally spaced close-to-close return rows; exchange calendars must be checked separately.",
+    "At least one complete bar separates training from execution; not next-open OHLC fills.",
+    "The reserved holdout is isolated by code, but past human inspection cannot be disproved.",
+    "Each segment starts at one unit of cash; no leveraged positions or taxes.",
+    "Proportional trading cost includes explicit commission/slippage assumption, not market impact.",
+    "Cash earns zero; Sharpe is excess over zero, not a current risk-free rate.",
+    "Latest-vintage data is not point-in-time; all methods and failures must be retained."
+  ],
+  "fixture_sha256": "b1b761d083f15a2c13ddd97035506bcc6576ccadb318e7bf347229a32efc7eb1",
+  "fixture_seed": 67129,
+  "libraries": {
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "scikit-learn": "1.8.0"
+  },
+  "cost_sensitivity": {
+    "0": 0.046713357426831026,
+    "10": 0.04566768973709445,
+    "50": 0.04150582828540439
+  },
+  "artifact_kind": "SUMMARY_OF_EXECUTED_SYNTHETIC_REFERENCE",
+  "full_output_sha256": "fd6dea58ebe300381a752503344b22e6e8cbc6a81c40d65bec5d0bce9b4153d6",
+  "full_output_command": "PYTHONPATH=src python -m llm_quant.decision_lab.benchmark --reference",
+  "omitted": "Per-period NAV, fee and turnover arrays are in the reproducible full run, not this tracked summary.",
+  "results": {
+    "cash": {
+      "development_allocations": {
+        "0": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "20": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "40": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "60": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "holdout_weights": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "development": {
+        "metrics": {
+          "observations": 80,
+          "total_return": 0.0,
+          "annualized_compound_return": 0.0,
+          "annualized_volatility": 0.0,
+          "sharpe_zero_rate": null,
+          "max_drawdown": 0.0
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.0,
+        "fees_per_initial_unit_total": 0.0,
+        "risky_turnover_per_initial_unit_total": 0.0,
+        "cash_interest": "zero_by_explicit_assumption"
+      },
+      "reserved_holdout": {
+        "metrics": {
+          "observations": 20,
+          "total_return": 0.0,
+          "annualized_compound_return": 0.0,
+          "annualized_volatility": 0.0,
+          "sharpe_zero_rate": null,
+          "max_drawdown": 0.0
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.0,
+        "fees_per_initial_unit_total": 0.0,
+        "risky_turnover_per_initial_unit_total": 0.0,
+        "cash_interest": "zero_by_explicit_assumption"
+      }
+    },
+    "equal_weight": {
+      "development_allocations": {
+        "0": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "20": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "40": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ],
+        "60": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333
+        ]
+      },
+      "holdout_weights": [
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "development": {
+        "metrics": {
+          "observations": 80,
+          "total_return": -0.028360183513174153,
+          "annualized_compound_return": -0.08664059444894368,
+          "annualized_volatility": 0.1958410552717854,
+          "sharpe_zero_rate": -0.3661199757856058,
+          "max_drawdown": -0.19284214458037607
+        },
+        "initial_nav": 1.0,
+        "final_nav": 0.9716398164868258,
+        "fees_per_initial_unit_total": 0.0010998924692504513,
+        "risky_turnover_per_initial_unit_total": 1.099892469250451,
+        "cash_interest": "zero_by_explicit_assumption"
+      },
+      "reserved_holdout": {
+        "metrics": {
+          "observations": 20,
+          "total_return": 0.04566768973709445,
+          "annualized_compound_return": 0.7553368898508757,
+          "annualized_volatility": 0.13671574097271133,
+          "sharpe_zero_rate": 4.184918692862218,
+          "max_drawdown": -0.019333352192191344
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.0456676897370945,
+        "fees_per_initial_unit_total": 0.0009990009990009992,
+        "risky_turnover_per_initial_unit_total": 0.9990009990009991,
+        "cash_interest": "zero_by_explicit_assumption"
+      }
+    },
+    "inverse_volatility_lw": {
+      "development_allocations": {
+        "0": [
+          0.4558518853905265,
+          0.31344271908836324,
+          0.23070539552111027
+        ],
+        "20": [
+          0.4584271996237171,
+          0.31423669918969216,
+          0.22733610118659084
+        ],
+        "40": [
+          0.46050234391584893,
+          0.3122394729582463,
+          0.22725818312590473
+        ],
+        "60": [
+          0.46316553725855875,
+          0.3092098149980713,
+          0.22762464774337005
+        ]
+      },
+      "holdout_weights": [
+        0.4607213434178036,
+        0.30673157360593944,
+        0.232547082976257
+      ],
+      "development": {
+        "metrics": {
+          "observations": 80,
+          "total_return": -0.02901421273997462,
+          "annualized_compound_return": -0.08857581212745358,
+          "annualized_volatility": 0.18186980639351907,
+          "sharpe_zero_rate": -0.42010194864215156,
+          "max_drawdown": -0.18114100281222867
+        },
+        "initial_nav": 1.0,
+        "final_nav": 0.9709857872600254,
+        "fees_per_initial_unit_total": 0.0011087430076141584,
+        "risky_turnover_per_initial_unit_total": 1.1087430076141582,
+        "cash_interest": "zero_by_explicit_assumption"
+      },
+      "reserved_holdout": {
+        "metrics": {
+          "observations": 20,
+          "total_return": 0.04165314161348799,
+          "annualized_compound_return": 0.6722893080920309,
+          "annualized_volatility": 0.11896247887091152,
+          "sharpe_zero_rate": 4.383162140662349,
+          "max_drawdown": -0.018854435822436844
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.041653141613488,
+        "fees_per_initial_unit_total": 0.0009990009990009992,
+        "risky_turnover_per_initial_unit_total": 0.9990009990009993,
+        "cash_interest": "zero_by_explicit_assumption"
+      }
+    },
+    "minimum_variance_lw": {
+      "development_allocations": {
+        "0": [
+          0.764433178677798,
+          0.15879523961637707,
+          0.07677158170582496
+        ],
+        "20": [
+          0.7922607761922505,
+          0.15650093182708918,
+          0.05123829198066024
+        ],
+        "40": [
+          0.808075438617619,
+          0.142420620435752,
+          0.04950394094662901
+        ],
+        "60": [
+          0.8083251491827457,
+          0.13135506243933456,
+          0.06031978837791973
+        ]
+      },
+      "holdout_weights": [
+        0.7902654089182778,
+        0.14145652604956122,
+        0.06827806503216104
+      ],
+      "development": {
+        "metrics": {
+          "observations": 80,
+          "total_return": -0.024557018558595822,
+          "annualized_compound_return": -0.0753317452955109,
+          "annualized_volatility": 0.16637080487953274,
+          "sharpe_zero_rate": -0.38846670569819064,
+          "max_drawdown": -0.15313310654752887
+        },
+        "initial_nav": 1.0,
+        "final_nav": 0.9754429814414042,
+        "fees_per_initial_unit_total": 0.0011105914786328295,
+        "risky_turnover_per_initial_unit_total": 1.1105914786328295,
+        "cash_interest": "zero_by_explicit_assumption"
+      },
+      "reserved_holdout": {
+        "metrics": {
+          "observations": 20,
+          "total_return": 0.02376015174745061,
+          "annualized_compound_return": 0.34430430233047216,
+          "annualized_volatility": 0.10312064138847575,
+          "sharpe_zero_rate": 2.919896136148694,
+          "max_drawdown": -0.023316116865316983
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.0237601517474506,
+        "fees_per_initial_unit_total": 0.0009990009990009992,
+        "risky_turnover_per_initial_unit_total": 0.9990009990009991,
+        "cash_interest": "zero_by_explicit_assumption"
+      }
+    },
+    "equal_weight_buy_and_hold": {
+      "development": {
+        "metrics": {
+          "observations": 80,
+          "total_return": -0.032005774766627915,
+          "annualized_compound_return": -0.09739192547897613,
+          "annualized_volatility": 0.1948143712029534,
+          "sharpe_zero_rate": -0.4297928613632457,
+          "max_drawdown": -0.19379799540873177
+        },
+        "initial_nav": 1.0,
+        "final_nav": 0.9679942252333721,
+        "fees_per_initial_unit_total": 0.0009990009990009992,
+        "risky_turnover_per_initial_unit_total": 0.9990009990009991,
+        "cash_interest": "zero_by_explicit_assumption"
+      },
+      "reserved_holdout": {
+        "metrics": {
+          "observations": 20,
+          "total_return": 0.04566768973709445,
+          "annualized_compound_return": 0.7553368898508757,
+          "annualized_volatility": 0.13671574097271133,
+          "sharpe_zero_rate": 4.184918692862218,
+          "max_drawdown": -0.019333352192191344
+        },
+        "initial_nav": 1.0,
+        "final_nav": 1.0456676897370945,
+        "fees_per_initial_unit_total": 0.0009990009990009992,
+        "risky_turnover_per_initial_unit_total": 0.9990009990009991,
+        "cash_interest": "zero_by_explicit_assumption"
+      }
+    }
+  }
+}

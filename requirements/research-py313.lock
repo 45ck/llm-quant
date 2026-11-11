@@ -1,0 +1,23 @@
+# Exact installed dependency closure for the offline research tests.
+# Linux x86_64 / CPython 3.13.5; version pins, not wheel-hash verification.
+# Does not claim to lock the complete legacy project or formatter/typecheck stack.
+coverage==7.13.3
+iniconfig==2.3.0
+joblib==1.5.3
+numpy==2.3.5
+packaging==25.0
+pandas==2.2.3
+patsy==1.0.2
+pluggy==1.6.0
+Pygments==2.20.0
+pytest==9.0.2
+pytest-cov==7.0.0
+python-dateutil==2.9.0.post0
+pytz==2026.2
+PyYAML==6.0.3
+scikit-learn==1.8.0
+scipy==1.17.0
+six==1.17.0
+statsmodels==0.14.6
+threadpoolctl==3.6.0
+tzdata==2026.2
