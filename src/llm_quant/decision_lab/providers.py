@@ -7,10 +7,11 @@ import hashlib
 import io
 from datetime import UTC, date, datetime
 from pathlib import Path
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from .data import Contract, Snapshot, require, save_snapshot
+from .fred_table import parse_table
 
 FRED_SERIES = {
     "QAUR628BIS": "real_price_index",
@@ -47,7 +48,7 @@ def store_raw(raw: bytes, directory: Path) -> str:
 
 def fetch_fred(series_id: str, directory: Path) -> Path:
     require(series_id in FRED_SERIES, "FRED series is not allowlisted")
-    url = "https://fred.stlouisfed.org/graph/graph.csv?" + urlencode({"id": series_id})
+    url = f"https://fred.stlouisfed.org/data/{series_id}"
     # URL is fixed HTTPS + an allowlisted identifier; arbitrary URLs are not accepted.
     with urlopen(url, timeout=30) as response:  # noqa: S310 -- fixed HTTPS allowlist above
         destination = urlsplit(response.geturl())
@@ -57,17 +58,18 @@ def fetch_fred(series_id: str, directory: Path) -> Path:
         )
         raw = response.read(MAX_DOWNLOAD_BYTES + 1)
     require(len(raw) <= MAX_DOWNLOAD_BYTES, "Provider response exceeds download budget")
-    dates, values = parse_fred(raw, series_id)
+    table = parse_table(raw, series_id)
     contract = Contract(
-        series_id=series_id, provider="BIS via FRED graph CSV (latest vintage)",
-        source_url=f"https://fred.stlouisfed.org/series/{series_id}",
+        series_id=series_id,
+        provider=f"BIS via FRED HTML table; source update {table.updated}",
+        source_url=url,
         terms_url="https://www.bis.org/terms_conditions.htm",
         geography="Australia: eight large cities; not a Sydney-specific series",
         currency="INDEX", frequency="Q", basis=FRED_SERIES[series_id],
         retrieved_at=datetime.now(UTC).isoformat(), vintage="latest", evidence="observed",
         raw_sha256=hashlib.sha256(raw).hexdigest(),
     )
-    snapshot = Snapshot(contract, dates, values)
+    snapshot = Snapshot(contract, table.dates, table.values)
     snapshot.validate()
     store_raw(raw, directory / "raw")
     return save_snapshot(snapshot, directory)
@@ -80,7 +82,8 @@ def fetch_yahoo(symbol: str, start: str, end: str, directory: Path) -> Path:
     import yfinance as yf
 
     ticker = yf.Ticker(symbol)
-    frame = ticker.history(start=start, end=end, auto_adjust=False, actions=False)
+    frame = ticker.history(start=start, end=end, auto_adjust=False, actions=False,
+                           keepna=True, repair=False, raise_errors=True, timeout=20)
     require(not frame.empty and "Adj Close" in frame.columns, "No adjusted-close evidence")
     metadata = ticker.get_history_metadata()
     require(metadata.get("currency") == "AUD", "Provider did not confirm AUD currency")

@@ -43,6 +43,9 @@ or Claude/API calls. LLMs may assist research and explanations, but deterministi
 code calculates the numbers. Monetary units are explicit; the new AUD lane never
 silently changes the existing USD paper book.
 
+See `docs/decision-lab-followup-20261111.md` for the verified-data follow-up,
+new source-import/study commands and the confirmed CI blocker.
+
 ## Run an offline example
 
 From the repository root in the existing development environment:
@@ -84,10 +87,12 @@ PYTHONPATH=src python -m llm_quant.decision_lab fetch yahoo VAS.AX \
 ```
 
 Yahoo's `--end` is exclusive. Both adapters fail rather than substitute fabricated
-observations. FRED's convenience CSV endpoint can change: its schema is checked.
+observations. The former FRED graph CSV endpoint returned HTTP 404 on 11 November 2026.
+The adapter now requests the public HTML data table and validates its metadata.
+The direct Python HTTP path still needs verification in a network-enabled runtime.
 A canonical production integration should use a governed data vendor and/or the
-FRED API, with credentials supplied outside Git. Each FRED snapshot retains the
-raw response hash; yfinance's raw cache is explicitly a provider-frame CSV export,
+FRED API, with credentials supplied outside Git. Each directly fetched FRED snapshot retains the
+HTML response hash; declared browser exports retain their export hash instead; yfinance's raw cache is explicitly a provider-frame CSV export,
 not an HTTP-body capture. Snapshots also have a normalized-content hash.
 
 ## Run a market or housing scenario

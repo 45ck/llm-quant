@@ -240,10 +240,17 @@ def test_fred_parser_missing_and_schema_drift() -> None:
 def test_fetch_fred_mocked_http_stores_provenance(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     class Response(io.BytesIO):
         def geturl(self) -> str:
-            return "https://fred.stlouisfed.org/graph/graph.csv?id=QAUR628BIS"
+            return "https://fred.stlouisfed.org/data/QAUR628BIS"
 
     monkeypatch.setattr(providers, "urlopen", lambda *args, **kwargs: Response(
-        b"DATE,QAUR628BIS\n2020-01-01,100\n2020-04-01,102\n",
+        b"<table><tr><td>Series ID</td><td>QAUR628BIS</td></tr>"
+        b"<tr><td>Source</td><td>Bank for International Settlements</td></tr>"
+        b"<tr><td>Frequency</td><td>Quarterly</td></tr>"
+        b"<tr><td>Units</td><td>Index 2010=100</td></tr>"
+        b"<tr><td>Last Updated</td><td>2020-08-01</td></tr>"
+        b"<tr><td>Date Range</td><td>2020-01-01 to 2020-04-01</td></tr>"
+        b"<tr><td>2020-01-01</td><td>100</td></tr>"
+        b"<tr><td>2020-04-01</td><td>102</td></tr></table>",
     ))
     path = providers.fetch_fred("QAUR628BIS", tmp_path)
     snapshot = load_snapshot(path)

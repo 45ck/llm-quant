@@ -41,7 +41,7 @@ def validate_returns(returns: np.ndarray, weights: np.ndarray) -> tuple:
         bool(np.all(np.isfinite(allocations) & (allocations >= 0))),
         "Long-only finite weights required; leverage is not supported",
     )
-    require(math.isclose(float(allocations.sum()), 1.0, abs_tol=1e-10), "Weights sum != 1")
+    require(math.isclose(float(allocations.sum()), 1.0, rel_tol=0.0, abs_tol=1e-10), "Weights sum != 1")
     return data, allocations
 
 
@@ -75,7 +75,10 @@ def bootstrap_paths(
 
 def summarize(wealth: np.ndarray) -> dict:
     values = np.asarray(wealth, dtype=float)
-    require(values.ndim == 2 and values.shape[1] >= 2, "Need initial and future wealth")
+    require(
+        values.ndim == 2 and values.shape[0] > 0 and values.shape[1] >= 2,
+        "Need nonempty initial and future wealth",
+    )
     require(bool(np.all(np.isfinite(values) & (values > 0))), "Invalid wealth paths")
     require(bool(np.allclose(values[:, 0], 1.0)), "Initial wealth must equal one")
     terminal = values[:, -1] - 1.0

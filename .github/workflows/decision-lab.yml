@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/llm_quant/decision_lab/**'
-      - 'tests/test_decision_lab.py'
+      - 'tests/test_decision_lab*.py'
       - 'config/decision_lab/**'
       - '.github/workflows/decision-lab.yml'
   workflow_dispatch:
@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   offline-contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +31,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m pytest -q tests/test_decision_lab.py
+          python -m compileall -q src/llm_quant/decision_lab
+          python -m pytest -q tests/test_decision_lab*.py
           python -m llm_quant.decision_lab demo
           python -m llm_quant.decision_lab project config/decision_lab/project.example.json
