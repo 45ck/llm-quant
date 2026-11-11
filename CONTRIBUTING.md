@@ -1,160 +1,100 @@
-# Contributing to llm-quant
+# Contributing
 
-Thanks for your interest in contributing to llm-quant! This document covers the development workflow and standards.
+[Repository home](README.md) · [Research guide](docs/contributing/research.md) ·
+[Reviewer checklist](docs/contributing/review.md) · [Repository map](docs/repository-map.md)
 
-## Current Focus
+## Choose a contribution
 
-**Track D (Sprint Alpha)** is the primary research focus — leveraged re-expression of proven signals using 3x ETFs (TQQQ/UPRO/SOXL/TMF) targeting 50%+ CAGR.
+| Contribution | What a useful first PR looks like |
+| --- | --- |
+| Replication or negative result | Reproduce one named claim; show agreements, discrepancies and missing inputs. |
+| Data quality | One documented source contract, a permitted fixture, and failure-case tests. |
+| Model research | A bounded hypothesis and baseline with a frozen evaluation plan. |
+| Engineering | A regression test and the smallest justified fix. |
+| Documentation | Correct a misleading claim, improve an example or explain a limitation. |
 
-**Track C (Structural Arbitrage)** is the secondary focus — Polymarket/Kalshi arb, CEF discount capture, crypto funding rates.
+The current priority is reproducible evidence, not a target return. D3 TQQQ/TMF
+is **recorded as retired**, not a proven candidate. See the [current evidence
+review](docs/research/model-audit-2026-11-11.md). Do not reinstate failed claims
+from old README text or stale paper logs.
 
-### What Needs Work
+## Public entry point
 
-| Area | Status | Priority |
-|------|--------|----------|
-| **Track D research** | Active — D10-D13 candidates in pipeline | P0 |
-| **Track C Polymarket** | Infrastructure built, needs live scanning | P1 |
-| **Track A paper trading** | 35 strategies validated, need 30-day paper runs | P4 (backlog) |
-| **Track A deployment** | Vol-target scaling, production infra | P4 (backlog) |
-| **Track A new mechanisms** | Research complete, diminishing returns | P4 (backlog) |
+Open an issue using the repository's research, replication or data/engineering
+template. Plain issues remain available. For a small documentation correction,
+a PR is sufficient. No private account, Beads installation or LLM key is required.
+Maintainers use Beads for internal work tracking and link accepted public issues;
+contributors should not edit `.beads/` to manufacture workflow state.
 
-### Track D Research Candidates
+Templates become selectable in GitHub once merged to the default branch. On a
+feature branch, their Markdown files can be copied into a normal issue.
 
-Proven Track A signals that need leveraged re-expression testing:
-- Rate momentum signals (TLT→TQQQ proven, IEF→TQQQ, SOXX→SOXL)
-- Ratio mean-reversion (TQQQ/TMF proven at Sharpe=2.21)
-- Sector rotation (XLK/XLE→SOXL)
-- TSMOM→UPRO, TIP/TLT→UPRO
+## Local setup
 
-Key constraint: all Track D strategies MUST include a VIX>30 crash filter.
+Fork the repository, clone your fork, and create a focused branch from `master`.
+Use Python 3.12+ and a virtual environment:
 
-## Getting Started
-
-### Prerequisites
-
-- Python 3.12+
-- Git
-
-### Setup
-
-```bash
-git clone https://github.com/45ck/llm-quant.git
-cd llm-quant
-pip install -e ".[dev]"
+```sh
+python -m venv .venv
+# macOS/Linux:
+. .venv/bin/activate
+# Windows PowerShell instead:
+# .\.venv\Scripts\Activate.ps1
+python -m pip install numpy==2.3.5 pytest==9.0.2
 ```
 
-Copy the environment template and add your API key:
+For focused research, set `PYTHONPATH=src` in your shell. PowerShell:
+`$env:PYTHONPATH = "src"`. From the repository root:
 
-```bash
-cp .env.example .env
-# Edit .env with your ANTHROPIC_API_KEY
+```sh
+python -m llm_quant.decision_lab demo
+python -m pytest -q tests/test_decision_lab.py tests/test_decision_lab_study.py tests/test_decision_lab_evidence.py
+python -m unittest discover -s tests -p test_research_docs.py
+python scripts/check_research_docs.py
 ```
 
-Initialize the database:
+For the **full existing lab**, install `python -m pip install -e ".[dev]"`.
+Install Black separately when running the repository's Black gate. Full setup has
+more dependencies; do not claim a focused run proves the full suite passes.
+The legacy LLM path needs separately configured credentials; offline research does not.
 
-```bash
-pq init
-```
+## PR workflow
 
-## Development Workflow
+Use one concern per PR and target `master`. Explain the hypothesis or defect,
+changed files, commands actually executed, and remaining limitations. Attach
+machine-readable aggregates and permitted synthetic fixtures where appropriate.
+Report failures and unexecuted checks explicitly.
 
-### Branch Strategy
+Before committing, follow [AGENTS.md](AGENTS.md): `noslop check --tier=fast`, or
+`black --check . && ruff check .`. Before opening a PR, run the slow gate or
+`pytest` in the full environment. Run `mypy .` to match the current quality workflow.
+Do not bypass hooks, force-push without explicit approval, disable checks, or label
+unexecuted checks as passing. Infrastructure failures are not software passes.
 
-- `master` is the main branch
-- Create feature branches for new work
-- Open a PR against `master` when ready
+Use conventional commit subjects, for example `fix(data): reject duplicate dates`
+or `docs(research): record an unsuccessful replication`.
 
-### Quality Gates
+## Research submissions
 
-Every commit is checked by pre-commit hooks (`.githooks/`). Before committing:
+Read the [research guide](docs/contributing/research.md) before a material experiment.
+Use the [proposal and result templates](docs/templates/README.md). Preserve strategy
+IDs and use the existing lifecycle records under `data/strategies/`; do not create
+a second strategy registry or overwrite a frozen result. Every tried variant counts.
 
-```bash
-# Format and lint
-ruff format .
-ruff check .
+Code uses type hints. Use Polars in the core and pandas only where an existing
+provider boundary requires it. Currency must be explicit: the legacy paper book is
+USD; Decision Lab supports an explicit AUD lane. Never silently mix units.
 
-# Run tests
-pytest
+## Data, safety and attribution
 
-# Type check (optional but recommended)
-mypy src/
-```
+Keep downloaded data, private financial inputs, credentials and account logs out of
+public commits. Use `research-local/` for local work and review `git diff --cached`
+before pushing. Gitignore is not access control. Add retrieval instructions and
+source hashes instead of uploading a dataset without redistribution permission.
 
-### Commit Messages
+Declare AI assistance and verify its code, numbers and citations. Credit original
+research and other contributors. Review claims rather than personalities. Use a
+private security-reporting route where available; never put a live secret in an issue.
 
-Use conventional commits:
-
-```
-feat(backtest): add walk-forward validation engine
-fix(risk): correct stop-loss check for sell actions
-docs(readme): update strategy count
-chore(paper): daily paper trading signals 2026-04-04
-```
-
-### Rules
-
-- Never use `git commit --no-verify`
-- Never use `git push --force` without explicit approval
-- Fix all `ruff` lint errors; do not use `# noqa` without justification
-- All monetary values in USD floats
-- Use Polars for DataFrames (not pandas)
-- Type hints everywhere
-
-## Project Structure
-
-```
-src/llm_quant/
-  backtest/     # Backtesting engine, strategies, robustness
-  brain/        # LLM integration (prompts, context, parsing)
-  trading/      # Paper trading (portfolio, executor, ledger)
-  risk/         # Pre-trade risk checks
-  surveillance/ # Post-trade governance monitoring
-  data/         # Market data pipeline (yfinance -> Polars -> DuckDB)
-  db/           # DuckDB schema + hash chain integrity
-  arb/          # Track C structural arbitrage (Polymarket, CEF, funding rates)
-  nlp/          # NLP signal pipeline
-  regime/       # Regime detection (HMM, inflation)
-  signals/      # Signal generators (TSMOM, etc.)
-
-scripts/        # Standalone analysis and batch scripts
-config/         # TOML configs + Jinja2 prompt templates
-tests/          # pytest test suite
-data/strategies/ # Strategy lifecycle artifacts (YAML)
-```
-
-## Strategy Research
-
-New strategies follow a strict lifecycle. See `docs/governance/quant-lifecycle.md` for details:
-
-```
-Idea -> Mandate -> Hypothesis -> Data Contract -> Research Spec (frozen) ->
-Backtest -> Robustness -> Paper Trading (30 days) -> Promotion
-```
-
-Key principles:
-
-- **Spec freeze before backtest** -- research design is locked before execution
-- **Every backtest increments the trial counter** -- more trials raise the DSR bar
-- **Robustness is a gate, not a heuristic** -- DSR, CPCV, perturbation analysis required
-- **Persist everything** -- all artifacts on disk with hashes
-- **VIX crash filter** -- mandatory for all Track D leveraged strategies
-
-## Track D Gate Criteria
-
-| Gate | Threshold | Notes |
-|------|-----------|-------|
-| Sharpe | >= 0.80 | Lower than Track A (leverage multiplies noise) |
-| MaxDD | < 40% | Accepts large drawdowns for extreme returns |
-| DSR | >= 0.90 | Slightly relaxed vs Track A's 0.95 |
-| CPCV OOS/IS | > 0 | Non-negotiable integrity gate |
-| Perturbation | >= 40% | Lower bar than Track A's 60% |
-| Shuffled p | < 0.05 | Signal must beat random |
-| VIX filter | Required | VIX>30 = 100% cash/SHY |
-
-## Reporting Issues
-
-Use the project's issue tracker (beads). If you don't have access, open a GitHub Discussion or reach out to the maintainer.
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
+A code merge is not approval for live trading, paid data, promotion or capital use.
+Contributed code is covered by [MIT](LICENSE); dataset rights remain separate.

@@ -1,49 +1,34 @@
-# Reports
+# Historical reports
 
-Auto-generated Markdown reports from the llm-quant DuckDB portfolio database.
+[Repository home](../README.md) · [Evidence review](../docs/research/model-audit-2026-11-11.md)
 
-## Directory Structure
+| Directory | Contents |
+| --- | --- |
+| `daily/` | Dated portfolio snapshots, trades and metrics when observations exist. |
+| `weekly/` | Period aggregates and daily breakdowns. |
+| `monthly/` | Period metrics, benchmarks and trade analysis. |
+| `track_c/` | Existing structural-arbitrage scan reports. |
 
+Read a report's actual observation dates and evidence, not just its filename.
+A generated page with no portfolio snapshots is **not** a verified zero return.
+A hash-chain check tests the recorded chain; it does not prove that a complete
+ledger, positions or economic results exist. Earlier reports are preserved rather
+than silently rewritten to make the record look better.
+
+## Generation and publication
+
+From a configured full development environment at the repository root, with
+`PYTHONPATH=src`, use the existing report generator:
+
+```sh
+python scripts/generate_report.py daily --date YYYY-MM-DD
 ```
-reports/
-  daily/YYYY-MM-DD.md     # Daily portfolio snapshot, trades, and metrics
-  weekly/YYYY-WNN.md      # Weekly aggregate with daily breakdown
-  monthly/YYYY-MM.md      # Full monthly dashboard with YTD and benchmarks
-```
 
-## Generation
+Replace the date with the intended period. Do not run on an empty substitute
+database and present the result as observed performance. The workflow refuses a
+missing database, propagates generation errors and checks changed reports for
+portfolio evidence before publication. That publication guard is not an independent
+financial audit. Review logs for private fields before sharing any output.
 
-```bash
-cd E:/llm-quant && PYTHONPATH=src python scripts/generate_report.py [daily|weekly|monthly] [--date YYYY-MM-DD]
-```
-
-If `--date` is omitted, today's date is used.
-
-## Report Contents
-
-### Daily
-- Market regime (from LLM decisions)
-- Portfolio summary: NAV, cash, exposure, P&L
-- Current positions with weights and stop losses
-- Trades executed that day with conviction and reasoning
-- Performance metrics: Sharpe, Sortino, Calmar, max drawdown, win rate
-- Benchmark comparison vs 60/40 SPY/TLT
-
-### Weekly
-- Start/end NAV with weekly return
-- Daily NAV breakdown
-- All trades for the week
-- Position weight changes (start vs end of week)
-- Regime history
-
-### Monthly
-- Monthly and YTD returns
-- Full performance metrics dashboard
-- Trade statistics grouped by conviction level
-- Top/bottom performers by P&L %
-- Regime breakdown (days per regime)
-- Benchmark comparison
-
-## Integrity
-
-Every report footer includes the hash-chain verification status (`PASS` or `FAIL`) confirming the trade ledger has not been tampered with.
+See [tests](../tests/README.md) for the distinction between focused checks and full
+repository verification. Publication does not authorize live execution or promotion.
