@@ -1,0 +1,36 @@
+# Pinned upstream research projects. Reference checkouts only: nothing here is
+# imported, installed or executed by llm-quant, and no upstream code is copied
+# into this repository. See docs/research/external-projects.md before fetching.
+#   git submodule update --init --depth 1 external/<name>
+[submodule "external/tradingagents"]
+	path = external/tradingagents
+	url = https://github.com/TauricResearch/TradingAgents
+	shallow = true
+[submodule "external/ai-hedge-fund"]
+	path = external/ai-hedge-fund
+	url = https://github.com/virattt/ai-hedge-fund
+	shallow = true
+[submodule "external/rd-agent"]
+	path = external/rd-agent
+	url = https://github.com/microsoft/RD-Agent
+	shallow = true
+[submodule "external/qlib"]
+	path = external/qlib
+	url = https://github.com/microsoft/qlib
+	shallow = true
+[submodule "external/ai-trader"]
+	path = external/ai-trader
+	url = https://github.com/HKUDS/AI-Trader
+	shallow = true
+[submodule "external/finsaber"]
+	path = external/finsaber
+	url = https://github.com/waylonli/FINSABER
+	shallow = true
+[submodule "external/stockbench"]
+	path = external/stockbench
+	url = https://github.com/ChenYXxxx/stockbench
+	shallow = true
+[submodule "external/live-trade-bench"]
+	path = external/live-trade-bench
+	url = https://github.com/ulab-uiuc/live-trade-bench
+	shallow = true

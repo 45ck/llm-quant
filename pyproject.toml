@@ -65,6 +65,8 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+# Pinned third-party reference checkouts are never linted as project code.
+extend-exclude = ["external"]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -280,3 +282,7 @@ max-bool-expr = 4
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+exclude = ["^external/"]
+
+[tool.black]
+extend-exclude = "^/external/"

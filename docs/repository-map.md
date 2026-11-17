@@ -18,6 +18,7 @@
 | `reports/` | Historical paper and scan reports. | Zero-filled substitutes for missing observations |
 | `research/` | Existing experiment manifest, prompts and result artifacts. | A competing strategy lifecycle registry |
 | `research-local/` | Gitignored downloads, private inputs and scratch run output. | Files that must be accessible to public reviewers |
+| `external/` | Pinned Git submodules of comparable public projects, for reference. | Imports from them, local edits, or copied upstream code |
 | `.github/` | Public issue/PR templates and workflows. | Secrets, payment changes or hidden research policy |
 | `.beads/` | Existing maintainer work tracking. | External contributors' fabricated status updates |
 

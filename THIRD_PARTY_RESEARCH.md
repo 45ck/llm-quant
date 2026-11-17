@@ -21,6 +21,16 @@ boundary do **not** remove license obligations; assess distribution and deployme
 terms before using a combined application commercially. Hypothesis retains MPL
 terms; it is a test dependency, not part of the trading runtime.
 
-The catalogue is dated 11 November 2026. Record resolved versions, review their
+## Pinned reference projects in `external/`
+
+Eight public LLM-trading projects are attached as Git submodules pinned on
+17 November 2026: TradingAgents, FINSABER and StockBench (Apache-2.0),
+ai-hedge-fund, RD-Agent and Qlib (MIT), LiveTradeBench (PolyForm Noncommercial
+1.0.0) and AI-Trader (no licence file at the pinned commit). A submodule records a
+URL and a commit; it copies no upstream file into this repository, and nothing
+here imports or runs those checkouts. Their licences apply to anyone who fetches
+them. [Pinned commits, descriptions and evidence](docs/research/external-projects.md).
+
+The adapter catalogue above is dated 11 November 2026. Record resolved versions, review their
 actual distribution licenses and transitive dependencies before redistribution.
 No claim of endorsement by the upstream projects is made.
