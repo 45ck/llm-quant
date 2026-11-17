@@ -1,0 +1,2490 @@
+{
+ "code_sha256": "5e047bf8d744d932124590c90f6df89990c6c0a28f5e8b4f769bee0cd5f77e34",
+ "data": {
+  "field": "Close with auto_adjust=True (split/dividend adjusted)",
+  "first": "2009-01-02",
+  "last": "2026-11-13",
+  "request": {
+   "end_exclusive": "2026-11-14",
+   "interval": "1d",
+   "start": "2009-01-01"
+  },
+  "retrieved_utc": "2026-11-17T02:29:37+00:00",
+  "rows": 4495,
+  "sha256_adj_close_csv": "e62c6e509a1cc722a779176f06cc48b0f32ef0ff734e6a1160e3dbb3a2efe36e",
+  "source": "Yahoo Finance via yfinance 1.8.0",
+  "tickers": [
+   "SPY",
+   "QQQ",
+   "IWM",
+   "DIA",
+   "EFA",
+   "EEM",
+   "VNQ",
+   "XLK",
+   "XLF",
+   "XLE",
+   "XLV",
+   "XLI",
+   "XLY",
+   "XLP",
+   "XLU",
+   "XLB",
+   "SOXX",
+   "SMH",
+   "IBB",
+   "KRE",
+   "XHB",
+   "TLT",
+   "IEF",
+   "SHY",
+   "LQD",
+   "HYG",
+   "AGG",
+   "TIP",
+   "EMB",
+   "VCIT",
+   "MUB",
+   "GLD",
+   "SLV",
+   "USO",
+   "DBC",
+   "UUP",
+   "FXE",
+   "FXY",
+   "UNG",
+   "CPER",
+   "TQQQ",
+   "UPRO",
+   "SOXL",
+   "TMF"
+  ]
+ },
+ "environment": {
+  "numpy": "2.3.5",
+  "python": "3.13.18",
+  "scipy": "1.17.0",
+  "statsmodels": "0.14.6"
+ },
+ "family": {
+  "confirmatory_primary": {
+   "cost_per_switch": 0.0003,
+   "cost_scales_with_weight": false,
+   "delay": 1,
+   "equal_weight_timing_excess": {
+    "annualised_mean": -0.12751157084069797,
+    "days": 139,
+    "mean": -0.0005059982969868967,
+    "p_one_sided": 0.9736580820573012,
+    "sharpe": -1.7453803642089474,
+    "t": -1.9375034186988094
+   },
+   "members": {
+    "agg-efa-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6163405097595128,
+     "strategy_annualised_return": -0.06240519877101767,
+     "strategy_sharpe": -0.960897617362343,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": -0.08713286082946077,
+      "days": 139,
+      "mean": -0.00034576532075182836,
+      "p_one_sided": 0.9348684697182172,
+      "sharpe": -1.5492205909497425,
+      "t": -1.5130653478870653
+     }
+    },
+    "agg-qqq-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094408,
+     "strategy_annualised_return": -0.02724627595577401,
+     "strategy_sharpe": -0.22404623118068306,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": -0.05092563530263733,
+      "days": 139,
+      "mean": -0.0002020858543755448,
+      "p_one_sided": 0.6696411147833006,
+      "sharpe": -0.5315219615425609,
+      "t": -0.4389223929518587
+     }
+    },
+    "agg-spy-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152024,
+     "strategy_annualised_return": -0.04035895900873707,
+     "strategy_sharpe": -0.5591070912843336,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": -0.0718685057584218,
+      "days": 139,
+      "mean": -0.0002851924831683405,
+      "p_one_sided": 0.8886101480465838,
+      "sharpe": -1.2776831073940482,
+      "t": -1.2191699260863358
+     }
+    },
+    "agg-tqqq-sprint": {
+     "exposure": 0.11510791366906475,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.240472031829647,
+     "strategy_annualised_return": -0.15554554738288454,
+     "strategy_sharpe": -1.5951856635154877,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.16145834994264485,
+      "days": 139,
+      "mean": -0.0006407077378676384,
+      "p_one_sided": 0.9576764403648259,
+      "sharpe": -1.8171544908503545,
+      "t": -1.7243364692056262
+     }
+    },
+    "agg-upro-sprint": {
+     "exposure": 0.11510791366906475,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045304,
+     "strategy_annualised_return": -0.0712962779242929,
+     "strategy_sharpe": -1.1221454490177973,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.08063537861360946,
+      "days": 139,
+      "mean": -0.00031998166116511685,
+      "p_one_sided": 0.9566282774462133,
+      "sharpe": -1.4030843002813151,
+      "t": -1.7128320331501568
+     }
+    },
+    "emb-spy-credit-lead": {
+     "exposure": 0.20863309352517986,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.03686896725026534,
+     "strategy_sharpe": -0.6012216838044048,
+     "switches": 24,
+     "timing_excess": {
+      "annualised_mean": -0.057636623062557533,
+      "days": 139,
+      "mean": -0.00022871675818475208,
+      "p_one_sided": 0.8533665230851323,
+      "sharpe": -1.1025998620633364,
+      "t": -1.05098178914248
+     }
+    },
+    "hyg-qqq-credit-lead": {
+     "exposure": 0.1223021582733813,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094406,
+     "strategy_annualised_return": -0.03385184269391924,
+     "strategy_sharpe": -0.476620324229028,
+     "switches": 18,
+     "timing_excess": {
+      "annualised_mean": -0.04242888336643363,
+      "days": 139,
+      "mean": -0.00016836858478743499,
+      "p_one_sided": 0.7092568371674781,
+      "sharpe": -0.6471549083376591,
+      "t": -0.5512149605081398
+     }
+    },
+    "hyg-spy-5d-credit-lead": {
+     "exposure": 0.1223021582733813,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152027,
+     "strategy_annualised_return": -0.012077170684850144,
+     "strategy_sharpe": -0.3126359579895066,
+     "switches": 18,
+     "timing_excess": {
+      "annualised_mean": -0.02425131374722833,
+      "days": 139,
+      "mean": -9.623537201281083e-05,
+      "p_one_sided": 0.725438357858801,
+      "sharpe": -0.6697114207517169,
+      "t": -0.5990743817602685
+     }
+    },
+    "ief-qqq-rate-tech": {
+     "exposure": 0.2158273381294964,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094406,
+     "strategy_annualised_return": -0.14188163825321579,
+     "strategy_sharpe": -1.153714268617416,
+     "switches": 10,
+     "timing_excess": {
+      "annualised_mean": -0.15802665598971347,
+      "days": 139,
+      "mean": -0.0006270899047210853,
+      "p_one_sided": 0.9200860489868565,
+      "sharpe": -1.5580765933542247,
+      "t": -1.405650602390098
+     }
+    },
+    "ief-tqqq-sprint": {
+     "exposure": 0.2158273381294964,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964705,
+     "strategy_annualised_return": -0.16597877872678923,
+     "strategy_sharpe": -1.2218895801895082,
+     "switches": 10,
+     "timing_excess": {
+      "annualised_mean": -0.17706528352633982,
+      "days": 139,
+      "mean": -0.0007026400139934122,
+      "p_one_sided": 0.9197717985248748,
+      "sharpe": -1.5798076177147355,
+      "t": -1.4035382206000278
+     }
+    },
+    "lqd-qqq-credit-lead": {
+     "exposure": 0.26618705035971224,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094408,
+     "strategy_annualised_return": -0.0527946325208923,
+     "strategy_sharpe": -0.4677717814827081,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": -0.07270682106257279,
+      "days": 139,
+      "mean": -0.0002885191312006856,
+      "p_one_sided": 0.8032998145146292,
+      "sharpe": -0.7839685625206201,
+      "t": -0.8534670168345874
+     }
+    },
+    "lqd-soxl-sprint": {
+     "exposure": 0.1366906474820144,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285724003,
+     "strategy_annualised_return": -0.21402597848774296,
+     "strategy_sharpe": -0.7899334223927243,
+     "switches": 12,
+     "timing_excess": {
+      "annualised_mean": -0.23087744050630432,
+      "days": 139,
+      "mean": -0.0009161803194694614,
+      "p_one_sided": 0.901909443119048,
+      "sharpe": -0.9564153930423285,
+      "t": -1.292508472430673
+     }
+    },
+    "lqd-spy-credit-lead": {
+     "exposure": 0.26618705035971224,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.061309978005536746,
+     "strategy_sharpe": -0.9164296760670948,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": -0.08780664231777159,
+      "days": 139,
+      "mean": -0.00034843905681655393,
+      "p_one_sided": 0.9681696243094944,
+      "sharpe": -1.6120053966957157,
+      "t": -1.8545483377592122
+     }
+    },
+    "lqd-tqqq-sprint": {
+     "exposure": 0.1366906474820144,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296472,
+     "strategy_annualised_return": -0.1880059504217384,
+     "strategy_sharpe": -1.5553279334412875,
+     "switches": 12,
+     "timing_excess": {
+      "annualised_mean": -0.19502740346145378,
+      "days": 139,
+      "mean": -0.0007739182677041816,
+      "p_one_sided": 0.981879345665047,
+      "sharpe": -1.8237751282790162,
+      "t": -2.094209648317535
+     }
+    },
+    "soxx-qqq-lead-lag": {
+     "exposure": 0.4172661870503597,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944023,
+     "strategy_annualised_return": -0.20632429787239015,
+     "strategy_sharpe": -1.5808412964942324,
+     "switches": 32,
+     "timing_excess": {
+      "annualised_mean": -0.24143971144927268,
+      "days": 139,
+      "mean": -0.0009580940930526692,
+      "p_one_sided": 0.9794608093181186,
+      "sharpe": -2.3213538933626645,
+      "t": -2.0427379960789884
+     }
+    },
+    "tlt-qqq-rate-tech": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944073,
+     "strategy_annualised_return": -0.13416736405927052,
+     "strategy_sharpe": -1.0145139710511697,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.15300321808518452,
+      "days": 139,
+      "mean": -0.0006071556273221608,
+      "p_one_sided": 0.937035715576275,
+      "sharpe": -1.460998870817069,
+      "t": -1.5303562626219236
+     }
+    },
+    "tlt-soxl-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285723964,
+     "strategy_annualised_return": -0.1863565895569075,
+     "strategy_sharpe": -0.5520983315692383,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.21739875643320464,
+      "days": 139,
+      "mean": -0.0008626934779095422,
+      "p_one_sided": 0.7936884360013425,
+      "sharpe": -0.8028721033646675,
+      "t": -0.8192862283239114
+     }
+    },
+    "tlt-spy-rate-momentum": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.0638832136654826,
+     "strategy_sharpe": -0.8272637851243638,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.08894762585273182,
+      "days": 139,
+      "mean": -0.00035296676925687215,
+      "p_one_sided": 0.9696264467609863,
+      "sharpe": -1.4589109119204158,
+      "t": -1.875331688547183
+     }
+    },
+    "tlt-tqqq-leveraged-lead-lag": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.15866441803595194,
+     "strategy_sharpe": -1.0861365908425136,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.17159867363542758,
+      "days": 139,
+      "mean": -0.0006809471176009032,
+      "p_one_sided": 0.937413936067306,
+      "sharpe": -1.4824116590941352,
+      "t": -1.5334211215597742
+     }
+    },
+    "tlt-tqqq-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.15866441803595194,
+     "strategy_sharpe": -1.0861365908425136,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.17159867363542758,
+      "days": 139,
+      "mean": -0.0006809471176009032,
+      "p_one_sided": 0.937413936067306,
+      "sharpe": -1.4824116590941352,
+      "t": -1.5334211215597742
+     }
+    },
+    "tlt-upro-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045305,
+     "strategy_annualised_return": -0.07979307388212013,
+     "strategy_sharpe": -0.9200665635741092,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.1002223566400001,
+      "days": 139,
+      "mean": -0.0003977077644444449,
+      "p_one_sided": 0.9690105453061657,
+      "sharpe": -1.4640366127063822,
+      "t": -1.8664465940739938
+     }
+    },
+    "vcit-qqq-credit-lead": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944073,
+     "strategy_annualised_return": -0.045036559836730744,
+     "strategy_sharpe": -0.40932426141035705,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": -0.06387241386264472,
+      "days": 139,
+      "mean": -0.00025346195977239987,
+      "p_one_sided": 0.7466850206703718,
+      "sharpe": -0.6976171117379111,
+      "t": -0.6640942991164522
+     }
+    },
+    "vcit-tqqq-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.21390264665553507,
+     "strategy_sharpe": -1.5713480548274736,
+     "switches": 16,
+     "timing_excess": {
+      "annualised_mean": -0.22683690225501077,
+      "days": 139,
+      "mean": -0.0009001464375198841,
+      "p_one_sided": 0.9701245615832347,
+      "sharpe": -2.0722427191704686,
+      "t": -1.8826274265906096
+     }
+    }
+   },
+   "members_holm_rejected": 0,
+   "members_positive_excess": 0,
+   "rule": "threshold_flat_in_neutral",
+   "window": [
+    "2026-04-29",
+    "2026-11-13"
+   ]
+  },
+  "confirmatory_secondary_hysteresis": {
+   "cost_per_switch": 0.0003,
+   "cost_scales_with_weight": false,
+   "delay": 1,
+   "equal_weight_timing_excess": {
+    "annualised_mean": -0.14354866841900613,
+    "days": 139,
+    "mean": -0.000569637573091294,
+    "p_one_sided": 0.982813250194062,
+    "sharpe": -1.6960668912540984,
+    "t": -2.1156627642300867
+   },
+   "members": {
+    "agg-efa-credit-lead": {
+     "exposure": 0.460431654676259,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6163405097595123,
+     "strategy_annualised_return": -0.05382998026509817,
+     "strategy_sharpe": -0.6395612513942465,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.08979748871374267,
+      "days": 139,
+      "mean": -0.00035633924092755016,
+      "p_one_sided": 0.9582712936187733,
+      "sharpe": -1.4287812499470731,
+      "t": -1.730968332263819
+     }
+    },
+    "agg-qqq-credit-lead": {
+     "exposure": 0.460431654676259,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094405,
+     "strategy_annualised_return": -0.10850486726906772,
+     "strategy_sharpe": -0.7208243023103814,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.1429475717735962,
+      "days": 139,
+      "mean": -0.000567252268942842,
+      "p_one_sided": 0.9407521899002328,
+      "sharpe": -1.4587979103256494,
+      "t": -1.561119236070809
+     }
+    },
+    "agg-spy-credit-lead": {
+     "exposure": 0.460431654676259,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.04898737610318103,
+     "strategy_sharpe": -0.5684615947095003,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.09481944410272243,
+      "days": 139,
+      "mean": -0.00037626763532826364,
+      "p_one_sided": 0.980341234933221,
+      "sharpe": -1.679111642722625,
+      "t": -2.0608481402334045
+     }
+    },
+    "agg-tqqq-sprint": {
+     "exposure": 0.3381294964028777,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964708,
+     "strategy_annualised_return": -0.1212445818144471,
+     "strategy_sharpe": -0.7191715918642468,
+     "switches": 5,
+     "timing_excess": {
+      "annualised_mean": -0.13861343933374307,
+      "days": 139,
+      "mean": -0.0005500533306894568,
+      "p_one_sided": 0.916720595888734,
+      "sharpe": -1.156348065487004,
+      "t": -1.383345972089456
+     }
+    },
+    "agg-upro-sprint": {
+     "exposure": 0.3381294964028777,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045301,
+     "strategy_annualised_return": -0.04940555483662222,
+     "strategy_sharpe": -0.5050186190896211,
+     "switches": 5,
+     "timing_excess": {
+      "annualised_mean": -0.0768391631114896,
+      "days": 139,
+      "mean": -0.00030491731393448245,
+      "p_one_sided": 0.9124512055129226,
+      "sharpe": -1.1014562689713419,
+      "t": -1.356004962964101
+     }
+    },
+    "emb-spy-credit-lead": {
+     "exposure": 0.5467625899280576,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.894474381615203,
+     "strategy_annualised_return": -0.05847923854748012,
+     "strategy_sharpe": -0.6606644295836193,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.11290481929693554,
+      "days": 139,
+      "mean": -0.0004480349972100618,
+      "p_one_sided": 0.9936416807400863,
+      "sharpe": -2.084362606204955,
+      "t": -2.4916077603439817
+     }
+    },
+    "hyg-qqq-credit-lead": {
+     "exposure": 0.6402877697841727,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094404,
+     "strategy_annualised_return": -0.028829918976450247,
+     "strategy_sharpe": -0.18788700295050134,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.07373324955608447,
+      "days": 139,
+      "mean": -0.00029259226014319235,
+      "p_one_sided": 0.8009482362883888,
+      "sharpe": -0.8974329888641445,
+      "t": -0.8450130955733061
+     }
+    },
+    "hyg-spy-5d-credit-lead": {
+     "exposure": 0.6402877697841727,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152028,
+     "strategy_annualised_return": 0.008338861199818385,
+     "strategy_sharpe": 0.08805935768088921,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.055396358362043895,
+      "days": 139,
+      "mean": -0.00021982681889699953,
+      "p_one_sided": 0.9007817767667659,
+      "sharpe": -1.0975902238431534,
+      "t": -1.286018955108675
+     }
+    },
+    "ief-qqq-rate-tech": {
+     "exposure": 0.4748201438848921,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094407,
+     "strategy_annualised_return": -0.1282701094386828,
+     "strategy_sharpe": -0.8145816573596764,
+     "switches": 7,
+     "timing_excess": {
+      "annualised_mean": -0.16378914845897777,
+      "days": 139,
+      "mean": -0.0006499569383292767,
+      "p_one_sided": 0.9627844116467695,
+      "sharpe": -1.6766996827702216,
+      "t": -1.7839537750560532
+     }
+    },
+    "ief-tqqq-sprint": {
+     "exposure": 0.3381294964028777,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964708,
+     "strategy_annualised_return": -0.21854556417377727,
+     "strategy_sharpe": -1.4531481495314167,
+     "switches": 11,
+     "timing_excess": {
+      "annualised_mean": -0.2359144216930732,
+      "days": 139,
+      "mean": -0.0009361683400518781,
+      "p_one_sided": 0.9755216669503746,
+      "sharpe": -2.1185823006827715,
+      "t": -1.968968868777148
+     }
+    },
+    "lqd-qqq-credit-lead": {
+     "exposure": 0.43884892086330934,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094405,
+     "strategy_annualised_return": -0.07254189556283057,
+     "strategy_sharpe": -0.4772061916680866,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.1053700982937093,
+      "days": 139,
+      "mean": -0.00041813531068932256,
+      "p_one_sided": 0.8636261915628654,
+      "sharpe": -1.0561548418704998,
+      "t": -1.0967570343803268
+     }
+    },
+    "lqd-soxl-sprint": {
+     "exposure": 0.3237410071942446,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285723994,
+     "strategy_annualised_return": -0.12764199480044244,
+     "strategy_sharpe": -0.3220413831864181,
+     "switches": 5,
+     "timing_excess": {
+      "annualised_mean": -0.1675533522128245,
+      "days": 139,
+      "mean": -0.0006648942548127953,
+      "p_one_sided": 0.7560368351327869,
+      "sharpe": -0.5805271047090099,
+      "t": -0.6936107827938217
+     }
+    },
+    "lqd-spy-credit-lead": {
+     "exposure": 0.43884892086330934,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152027,
+     "strategy_annualised_return": -0.028385806862488785,
+     "strategy_sharpe": -0.326964414084387,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.07206949667455169,
+      "days": 139,
+      "mean": -0.0002859900661688559,
+      "p_one_sided": 0.9357878083367743,
+      "sharpe": -1.2554668353375777,
+      "t": -1.5203446275631785
+     }
+    },
+    "lqd-tqqq-sprint": {
+     "exposure": 0.3237410071942446,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964738,
+     "strategy_annualised_return": -0.15834794603113916,
+     "strategy_sharpe": -0.9477033880987703,
+     "switches": 5,
+     "timing_excess": {
+      "annualised_mean": -0.17497770323046508,
+      "days": 139,
+      "mean": -0.0006943559652002582,
+      "p_one_sided": 0.9655858295443361,
+      "sharpe": -1.4506900312988287,
+      "t": -1.8195448888198082
+     }
+    },
+    "soxx-qqq-lead-lag": {
+     "exposure": 0.4892086330935252,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944073,
+     "strategy_annualised_return": -0.1954540950892008,
+     "strategy_sharpe": -1.4581535188962507,
+     "switches": 26,
+     "timing_excess": {
+      "annualised_mean": -0.23662389031726994,
+      "days": 139,
+      "mean": -0.000938983691735198,
+      "p_one_sided": 0.9522174719639162,
+      "sharpe": -2.210366261756323,
+      "t": -1.6667453254390825
+     }
+    },
+    "tlt-qqq-rate-tech": {
+     "exposure": 0.41007194244604317,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944095,
+     "strategy_annualised_return": -0.07621705073362318,
+     "strategy_sharpe": -0.4983836441306888,
+     "switches": 7,
+     "timing_excess": {
+      "annualised_mean": -0.10689258443296887,
+      "days": 139,
+      "mean": -0.00042417692235305083,
+      "p_one_sided": 0.8883793618549922,
+      "sharpe": -1.047367791806119,
+      "t": -1.2179544670146725
+     }
+    },
+    "tlt-soxl-sprint": {
+     "exposure": 0.35251798561151076,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285723994,
+     "strategy_annualised_return": -0.26063407541757416,
+     "strategy_sharpe": -0.6744108624920907,
+     "switches": 6,
+     "timing_excess": {
+      "annualised_mean": -0.30409310904439013,
+      "days": 139,
+      "mean": -0.0012067186866840875,
+      "p_one_sided": 0.9048228405250152,
+      "sharpe": -1.0958161377120184,
+      "t": -1.309531664830207
+     }
+    },
+    "tlt-spy-rate-momentum": {
+     "exposure": 0.41007194244604317,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.894474381615203,
+     "strategy_annualised_return": -0.03215454041120688,
+     "strategy_sharpe": -0.3630493251250435,
+     "switches": 7,
+     "timing_excess": {
+      "annualised_mean": -0.07297372597329846,
+      "days": 139,
+      "mean": -0.0002895782776718192,
+      "p_one_sided": 0.9323402918849973,
+      "sharpe": -1.2375803665479546,
+      "t": -1.4934500645917892
+     }
+    },
+    "tlt-tqqq-leveraged-lead-lag": {
+     "exposure": 0.41007194244604317,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296473,
+     "strategy_annualised_return": -0.09910568019685356,
+     "strategy_sharpe": -0.588294465099551,
+     "switches": 7,
+     "timing_excess": {
+      "annualised_mean": -0.12017003931599973,
+      "days": 139,
+      "mean": -0.00047686523538095115,
+      "p_one_sided": 0.8893512334694136,
+      "sharpe": -1.0657070737921168,
+      "t": -1.2230851600082868
+     }
+    },
+    "tlt-tqqq-sprint": {
+     "exposure": 0.35251798561151076,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964705,
+     "strategy_annualised_return": -0.17900598023243072,
+     "strategy_sharpe": -1.0905619863408273,
+     "switches": 6,
+     "timing_excess": {
+      "annualised_mean": -0.19711393807169666,
+      "days": 139,
+      "mean": -0.000782198166951177,
+      "p_one_sided": 0.9832070692419722,
+      "sharpe": -1.6953817561112734,
+      "t": -2.1250090049171466
+     }
+    },
+    "tlt-upro-sprint": {
+     "exposure": 0.35251798561151076,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045301,
+     "strategy_annualised_return": -0.07023059200387236,
+     "strategy_sharpe": -0.7312360065103091,
+     "switches": 6,
+     "timing_excess": {
+      "annualised_mean": -0.09883158786490431,
+      "days": 139,
+      "mean": -0.0003921888407337472,
+      "p_one_sided": 0.9783970186793614,
+      "sharpe": -1.4517879912940141,
+      "t": -2.021713458844918
+     }
+    },
+    "vcit-qqq-credit-lead": {
+     "exposure": 0.4748201438848921,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094407,
+     "strategy_annualised_return": -0.1722524195020829,
+     "strategy_sharpe": -1.1253816544180795,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.20777145852237788,
+      "days": 139,
+      "mean": -0.0008244899147713409,
+      "p_one_sided": 0.9909518878904338,
+      "sharpe": -2.1422708361142697,
+      "t": -2.3636433494790463
+     }
+    },
+    "vcit-tqqq-sprint": {
+     "exposure": 0.39568345323741005,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964735,
+     "strategy_annualised_return": -0.23209802648110003,
+     "strategy_sharpe": -1.4890157524598293,
+     "switches": 11,
+     "timing_excess": {
+      "annualised_mean": -0.25242328528027613,
+      "days": 139,
+      "mean": -0.0010016797034931588,
+      "p_one_sided": 0.9799313600670391,
+      "sharpe": -2.3023654708596397,
+      "t": -2.0523333206739394
+     }
+    }
+   },
+   "members_holm_rejected": 0,
+   "members_positive_excess": 0,
+   "rule": "hysteresis_hold_previous",
+   "window": [
+    "2026-04-29",
+    "2026-11-13"
+   ]
+  },
+  "confirmatory_sensitivity_delay_cost": {
+   "cost_per_switch": 0.001,
+   "cost_scales_with_weight": true,
+   "delay": 2,
+   "equal_weight_timing_excess": {
+    "annualised_mean": -0.1212112119038272,
+    "days": 139,
+    "mean": -0.0004809968726342347,
+    "p_one_sided": 0.9690180991152071,
+    "sharpe": -1.9229239622122656,
+    "t": -1.8665546774347717
+   },
+   "members": {
+    "agg-efa-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6163405097595128,
+     "strategy_annualised_return": 0.04492318846506445,
+     "strategy_sharpe": 0.7209501925763514,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": 0.020195526406621356,
+      "days": 139,
+      "mean": 8.014097780405303e-05,
+      "p_one_sided": 0.36201395069316467,
+      "sharpe": 0.3690400444224131,
+      "t": 0.3530807534230723
+     }
+    },
+    "agg-qqq-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094408,
+     "strategy_annualised_return": 0.09421006698525072,
+     "strategy_sharpe": 0.9007511068261529,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": 0.0705307076383874,
+      "days": 139,
+      "mean": 0.0002798837604697912,
+      "p_one_sided": 0.2808291375243507,
+      "sharpe": 0.8104384200277038,
+      "t": 0.5803801694346071
+     }
+    },
+    "agg-spy-credit-lead": {
+     "exposure": 0.31654676258992803,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152024,
+     "strategy_annualised_return": 0.052333417208211726,
+     "strategy_sharpe": 0.896185835307447,
+     "switches": 28,
+     "timing_excess": {
+      "annualised_mean": 0.02082387045852701,
+      "days": 139,
+      "mean": 8.263440658145634e-05,
+      "p_one_sided": 0.3892412658549623,
+      "sharpe": 0.42212349724584664,
+      "t": 0.28129710352834775
+     }
+    },
+    "agg-tqqq-sprint": {
+     "exposure": 0.11510791366906475,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.240472031829647,
+     "strategy_annualised_return": -0.15136715416526736,
+     "strategy_sharpe": -1.353783485832261,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.1572799567250277,
+      "days": 139,
+      "mean": -0.0006241268124009036,
+      "p_one_sided": 0.8832083005734697,
+      "sharpe": -1.5573622014657198,
+      "t": -1.1911788035267115
+     }
+    },
+    "agg-upro-sprint": {
+     "exposure": 0.11510791366906475,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045304,
+     "strategy_annualised_return": -0.086778557139931,
+     "strategy_sharpe": -1.210599512043088,
+     "switches": 8,
+     "timing_excess": {
+      "annualised_mean": -0.09611765782924755,
+      "days": 139,
+      "mean": -0.0003814192771001887,
+      "p_one_sided": 0.9138484001353029,
+      "sharpe": -1.4920242008439897,
+      "t": -1.3648404579218107
+     }
+    },
+    "emb-spy-credit-lead": {
+     "exposure": 0.20863309352517986,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": 0.01100829331611787,
+     "strategy_sharpe": 0.2915863476288112,
+     "switches": 24,
+     "timing_excess": {
+      "annualised_mean": -0.009759362496174333,
+      "days": 139,
+      "mean": -3.872762895307275e-05,
+      "p_one_sided": 0.5812498000705685,
+      "sharpe": -0.2675896329496847,
+      "t": -0.2050918039149794
+     }
+    },
+    "hyg-qqq-credit-lead": {
+     "exposure": 0.1223021582733813,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094406,
+     "strategy_annualised_return": -0.03247560979831315,
+     "strategy_sharpe": -0.49876676679445475,
+     "switches": 18,
+     "timing_excess": {
+      "annualised_mean": -0.041052650470827554,
+      "days": 139,
+      "mean": -0.00016290734313820457,
+      "p_one_sided": 0.6920692519492201,
+      "sharpe": -0.6750619330302229,
+      "t": -0.5017242611918385
+     }
+    },
+    "hyg-spy-5d-credit-lead": {
+     "exposure": 0.1223021582733813,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152027,
+     "strategy_annualised_return": -0.037010564359298566,
+     "strategy_sharpe": -1.082664007279352,
+     "switches": 18,
+     "timing_excess": {
+      "annualised_mean": -0.04918470742167676,
+      "days": 139,
+      "mean": -0.00019517741040347915,
+      "p_one_sided": 0.8912740623809683,
+      "sharpe": -1.5048082513578833,
+      "t": -1.2333321298779052
+     }
+    },
+    "ief-qqq-rate-tech": {
+     "exposure": 0.2158273381294964,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094406,
+     "strategy_annualised_return": -0.07457473348350101,
+     "strategy_sharpe": -0.5775452622917481,
+     "switches": 10,
+     "timing_excess": {
+      "annualised_mean": -0.09071975121999869,
+      "days": 139,
+      "mean": -0.0003599990127777726,
+      "p_one_sided": 0.8133895057170695,
+      "sharpe": -0.8583074827902434,
+      "t": -0.8904561784953932
+     }
+    },
+    "ief-tqqq-sprint": {
+     "exposure": 0.2158273381294964,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.24047203182964705,
+     "strategy_annualised_return": -0.08185984142755076,
+     "strategy_sharpe": -0.5744843047416506,
+     "switches": 10,
+     "timing_excess": {
+      "annualised_mean": -0.09294634622710136,
+      "days": 139,
+      "mean": -0.00036883470725040224,
+      "p_one_sided": 0.7890334017506682,
+      "sharpe": -0.795914170786434,
+      "t": -0.803071868277182
+     }
+    },
+    "lqd-qqq-credit-lead": {
+     "exposure": 0.26618705035971224,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.3877388323094408,
+     "strategy_annualised_return": 0.030651921031926262,
+     "strategy_sharpe": 0.28840032008509026,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": 0.010739732490245757,
+      "days": 139,
+      "mean": 4.261798607240391e-05,
+      "p_one_sided": 0.46364008837889825,
+      "sharpe": 0.12091870318861023,
+      "t": 0.09126732967638529
+     }
+    },
+    "lqd-soxl-sprint": {
+     "exposure": 0.1366906474820144,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285724003,
+     "strategy_annualised_return": 0.011812036902888562,
+     "strategy_sharpe": 0.0510832813306385,
+     "switches": 12,
+     "timing_excess": {
+      "annualised_mean": -0.005039425115672716,
+      "days": 139,
+      "mean": -1.9997718712986882e-05,
+      "p_one_sided": 0.5104571928210337,
+      "sharpe": -0.024072418292061918,
+      "t": -0.026215297597133088
+     }
+    },
+    "lqd-spy-credit-lead": {
+     "exposure": 0.26618705035971224,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.0015474221738539596,
+     "strategy_sharpe": -0.02722410360505787,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": -0.028044086486088835,
+      "days": 139,
+      "mean": -0.00011128605748447949,
+      "p_one_sided": 0.6682072414410499,
+      "sharpe": -0.5743174024827434,
+      "t": -0.43496818993679875
+     }
+    },
+    "lqd-tqqq-sprint": {
+     "exposure": 0.1366906474820144,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296472,
+     "strategy_annualised_return": -0.014792123248659129,
+     "strategy_sharpe": -0.1488155774708038,
+     "switches": 12,
+     "timing_excess": {
+      "annualised_mean": -0.021813576288374527,
+      "days": 139,
+      "mean": -8.656181066815283e-05,
+      "p_one_sided": 0.5880561732960499,
+      "sharpe": -0.2435937148373683,
+      "t": -0.2225475605823786
+     }
+    },
+    "soxx-qqq-lead-lag": {
+     "exposure": 0.4172661870503597,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944023,
+     "strategy_annualised_return": -0.2702867661757957,
+     "strategy_sharpe": -2.203021771111753,
+     "switches": 32,
+     "timing_excess": {
+      "annualised_mean": -0.3054021797526782,
+      "days": 139,
+      "mean": -0.0012119134117169765,
+      "p_one_sided": 0.9971823632759867,
+      "sharpe": -2.982535530001803,
+      "t": -2.768281637863132
+     }
+    },
+    "tlt-qqq-rate-tech": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944073,
+     "strategy_annualised_return": -0.27248590224109115,
+     "strategy_sharpe": -2.1562723678136324,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.2913217562670052,
+      "days": 139,
+      "mean": -0.0011560387153452586,
+      "p_one_sided": 0.9935137262957198,
+      "sharpe": -2.892342856495361,
+      "t": -2.4845220496421536
+     }
+    },
+    "tlt-soxl-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.23849835285723964,
+     "strategy_annualised_return": -0.6040477034203561,
+     "strategy_sharpe": -1.8787366598322568,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.635089870296653,
+      "days": 139,
+      "mean": -0.002520197898002592,
+      "p_one_sided": 0.9907978550908013,
+      "sharpe": -2.4463002614776572,
+      "t": -2.3573822755795724
+     }
+    },
+    "tlt-spy-rate-momentum": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.8944743816152029,
+     "strategy_annualised_return": -0.13160349530221133,
+     "strategy_sharpe": -1.8115974000289246,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.15666790748946052,
+      "days": 139,
+      "mean": -0.0006216980455930971,
+      "p_one_sided": 0.9919518981643162,
+      "sharpe": -2.6939910160974416,
+      "t": -2.4067268538221582
+     }
+    },
+    "tlt-tqqq-leveraged-lead-lag": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.29469413078256484,
+     "strategy_sharpe": -2.109230258178644,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.30762838638204054,
+      "days": 139,
+      "mean": -0.0012207475650080975,
+      "p_one_sided": 0.9911808306018425,
+      "sharpe": -2.7631456284498945,
+      "t": -2.3731240525142816
+     }
+    },
+    "tlt-tqqq-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.29469413078256484,
+     "strategy_sharpe": -2.109230258178644,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.30762838638204054,
+      "days": 139,
+      "mean": -0.0012207475650080975,
+      "p_one_sided": 0.9911808306018425,
+      "sharpe": -2.7631456284498945,
+      "t": -2.3731240525142816
+     }
+    },
+    "tlt-upro-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6504746981045305,
+     "strategy_annualised_return": -0.13914412846808716,
+     "strategy_sharpe": -1.706099486125052,
+     "switches": 14,
+     "timing_excess": {
+      "annualised_mean": -0.15957341122596716,
+      "days": 139,
+      "mean": -0.0006332278223252661,
+      "p_one_sided": 0.9863789496117564,
+      "sharpe": -2.450592326995671,
+      "t": -2.208031164661808
+     }
+    },
+    "vcit-qqq-credit-lead": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.38773883230944073,
+     "strategy_annualised_return": 0.06635811646812582,
+     "strategy_sharpe": 0.6695599830784029,
+     "switches": 34,
+     "timing_excess": {
+      "annualised_mean": 0.047522262442211805,
+      "days": 139,
+      "mean": 0.00018858040651671353,
+      "p_one_sided": 0.3443525812207294,
+      "sharpe": 0.5594722304007717,
+      "t": 0.40061287848793875
+     }
+    },
+    "vcit-tqqq-sprint": {
+     "exposure": 0.2517985611510791,
+     "holm_adjusted_p": 1.0,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.2404720318296469,
+     "strategy_annualised_return": -0.18946629954850747,
+     "strategy_sharpe": -1.3096401813253327,
+     "switches": 16,
+     "timing_excess": {
+      "annualised_mean": -0.2024005551479832,
+      "days": 139,
+      "mean": -0.0008031768061427903,
+      "p_one_sided": 0.9689020273760365,
+      "sharpe": -1.7622866035100366,
+      "t": -1.86489627096469
+     }
+    }
+   },
+   "members_holm_rejected": 0,
+   "members_positive_excess": 5,
+   "rule": "threshold_flat_in_neutral",
+   "window": [
+    "2026-04-29",
+    "2026-11-13"
+   ]
+  },
+  "frozen_parameters_commit": "bb35be5",
+  "replication_exploratory_hysteresis": {
+   "cost_per_switch": 0.0003,
+   "cost_scales_with_weight": false,
+   "delay": 1,
+   "equal_weight_timing_excess": {
+    "annualised_mean": 0.06921375009960824,
+    "days": 1255,
+    "mean": 0.000274657738490509,
+    "p_one_sided": 0.009045725631036288,
+    "sharpe": 1.0413309345247086,
+    "t": 2.36374108624888
+   },
+   "members": {
+    "agg-efa-credit-lead": {
+     "exposure": 0.5067729083665339,
+     "holm_adjusted_p": 0.47057131273644887,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5713291377891935,
+     "strategy_annualised_return": 0.08135322691311019,
+     "strategy_sharpe": 0.9107384108108821,
+     "switches": 141,
+     "timing_excess": {
+      "annualised_mean": 0.04336493809615092,
+      "days": 1255,
+      "mean": 0.00017208308768313862,
+      "p_one_sided": 0.09411426254728977,
+      "sharpe": 0.6606140019222485,
+      "t": 1.3158376928161133
+     }
+    },
+    "agg-qqq-credit-lead": {
+     "exposure": 0.5067729083665339,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.732202166218469,
+     "strategy_annualised_return": 0.1423271712165038,
+     "strategy_sharpe": 1.204068275560309,
+     "switches": 141,
+     "timing_excess": {
+      "annualised_mean": 0.07577002508486946,
+      "days": 1255,
+      "mean": 0.000300674702717736,
+      "p_one_sided": 0.029210395930305593,
+      "sharpe": 0.8436937456568521,
+      "t": 1.8925270591433527
+     }
+    },
+    "agg-spy-credit-lead": {
+     "exposure": 0.5067729083665339,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737315,
+     "strategy_annualised_return": 0.11326352915868045,
+     "strategy_sharpe": 1.27753282844677,
+     "switches": 141,
+     "timing_excess": {
+      "annualised_mean": 0.05834907027868893,
+      "days": 1255,
+      "mean": 0.00023154392967733703,
+      "p_one_sided": 0.029394735207950284,
+      "sharpe": 0.8516664134279207,
+      "t": 1.8897644473756967
+     }
+    },
+    "agg-tqqq-sprint": {
+     "exposure": 0.3944223107569721,
+     "holm_adjusted_p": 0.21357012445183116,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534878,
+     "strategy_annualised_return": 0.14013732277727992,
+     "strategy_sharpe": 1.191067141830045,
+     "switches": 54,
+     "timing_excess": {
+      "annualised_mean": 0.09367159096695288,
+      "days": 1255,
+      "mean": 0.0003717126625672734,
+      "p_one_sided": 0.010939442558609555,
+      "sharpe": 0.9802328072155936,
+      "t": 2.292463956501706
+     }
+    },
+    "agg-upro-sprint": {
+     "exposure": 0.3944223107569721,
+     "holm_adjusted_p": 0.18663026456425913,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6138619314579883,
+     "strategy_annualised_return": 0.10664408318209972,
+     "strategy_sharpe": 1.2207208413965147,
+     "switches": 54,
+     "timing_excess": {
+      "annualised_mean": 0.07000991922869683,
+      "days": 1255,
+      "mean": 0.0002778171397964161,
+      "p_one_sided": 0.008887155455440911,
+      "sharpe": 0.9738575077466032,
+      "t": 2.3702863998418255
+     }
+    },
+    "emb-spy-credit-lead": {
+     "exposure": 0.5864541832669322,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737314,
+     "strategy_annualised_return": 0.11815503575629265,
+     "strategy_sharpe": 1.3351768091075757,
+     "switches": 143,
+     "timing_excess": {
+      "annualised_mean": 0.05460622799579928,
+      "days": 1255,
+      "mean": 0.00021669138093571153,
+      "p_one_sided": 0.030543321744310053,
+      "sharpe": 0.7669687566409202,
+      "t": 1.87286779383524
+     }
+    },
+    "hyg-qqq-credit-lead": {
+     "exposure": 0.6334661354581673,
+     "holm_adjusted_p": 0.5214209721919705,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184689,
+     "strategy_annualised_return": 0.10555678018284881,
+     "strategy_sharpe": 0.9305900478722628,
+     "switches": 104,
+     "timing_excess": {
+      "annualised_mean": 0.027560124559839836,
+      "days": 1255,
+      "mean": 0.00010936557365015805,
+      "p_one_sided": 0.22644736476716365,
+      "sharpe": 0.3099201329023542,
+      "t": 0.7505978266224604
+     }
+    },
+    "hyg-spy-5d-credit-lead": {
+     "exposure": 0.6334661354581673,
+     "holm_adjusted_p": 0.5214209721919705,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737316,
+     "strategy_annualised_return": 0.09660092167931612,
+     "strategy_sharpe": 1.0864094676005116,
+     "switches": 104,
+     "timing_excess": {
+      "annualised_mean": 0.027957848079326712,
+      "days": 1255,
+      "mean": 0.00011094384158462982,
+      "p_one_sided": 0.1738069907306568,
+      "sharpe": 0.38076581338128196,
+      "t": 0.9392274439506362
+     }
+    },
+    "ief-qqq-rate-tech": {
+     "exposure": 0.4940239043824701,
+     "holm_adjusted_p": 0.21357012445183116,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184688,
+     "strategy_annualised_return": 0.15202800916817874,
+     "strategy_sharpe": 1.227037131028818,
+     "switches": 86,
+     "timing_excess": {
+      "annualised_mean": 0.08714525664991886,
+      "days": 1255,
+      "mean": 0.00034581451051555106,
+      "p_one_sided": 0.010678506222591557,
+      "sharpe": 0.9728036514814088,
+      "t": 2.301612892202271
+     }
+    },
+    "ief-tqqq-sprint": {
+     "exposure": 0.4693227091633466,
+     "holm_adjusted_p": 0.3285235373162695,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534877,
+     "strategy_annualised_return": 0.14133298295423563,
+     "strategy_sharpe": 1.0650226554890567,
+     "switches": 100,
+     "timing_excess": {
+      "annualised_mean": 0.08604345560821015,
+      "days": 1255,
+      "mean": 0.00034144228415956406,
+      "p_one_sided": 0.020532721082266843,
+      "sharpe": 0.865906366655549,
+      "t": 2.042868653065507
+     }
+    },
+    "lqd-qqq-credit-lead": {
+     "exposure": 0.5625498007968127,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184687,
+     "strategy_annualised_return": 0.1487073273582338,
+     "strategy_sharpe": 1.2393125126825402,
+     "switches": 123,
+     "timing_excess": {
+      "annualised_mean": 0.07482470916808626,
+      "days": 1255,
+      "mean": 0.00029692344907970733,
+      "p_one_sided": 0.03036981993384253,
+      "sharpe": 0.8182103115170024,
+      "t": 1.8753859990633228
+     }
+    },
+    "lqd-soxl-sprint": {
+     "exposure": 0.450996015936255,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7288377133691872,
+     "strategy_annualised_return": 0.22129612158716905,
+     "strategy_sharpe": 1.12996089016067,
+     "switches": 66,
+     "timing_excess": {
+      "annualised_mean": 0.1167847540219905,
+      "days": 1255,
+      "mean": 0.0004634315635793275,
+      "p_one_sided": 0.034109819623781935,
+      "sharpe": 0.7487758445122693,
+      "t": 1.8235532533078733
+     }
+    },
+    "lqd-spy-credit-lead": {
+     "exposure": 0.5625498007968127,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737315,
+     "strategy_annualised_return": 0.11431914088147979,
+     "strategy_sharpe": 1.2684716334643846,
+     "switches": 123,
+     "timing_excess": {
+      "annualised_mean": 0.05336063778513699,
+      "days": 1255,
+      "mean": 0.00021174856263943254,
+      "p_one_sided": 0.043638873333551445,
+      "sharpe": 0.7629407092103085,
+      "t": 1.7099357934321817
+     }
+    },
+    "lqd-tqqq-sprint": {
+     "exposure": 0.450996015936255,
+     "holm_adjusted_p": 0.12544363896138175,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534877,
+     "strategy_annualised_return": 0.1589313889804465,
+     "strategy_sharpe": 1.372180287632313,
+     "switches": 66,
+     "timing_excess": {
+      "annualised_mean": 0.1058008754357089,
+      "days": 1255,
+      "mean": 0.0004198447437924958,
+      "p_one_sided": 0.005701983589153716,
+      "sharpe": 1.0901964571136562,
+      "t": 2.5300703096940342
+     }
+    },
+    "soxx-qqq-lead-lag": {
+     "exposure": 0.5394422310756972,
+     "holm_adjusted_p": 0.8975842192863257,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.732202166218469,
+     "strategy_annualised_return": 0.02547782749346223,
+     "strategy_sharpe": 0.19308452745090257,
+     "switches": 170,
+     "timing_excess": {
+      "annualised_mean": -0.05422592474318243,
+      "days": 1255,
+      "mean": -0.00021518224104437485,
+      "p_one_sided": 0.8975842192863257,
+      "sharpe": -0.52963592770211,
+      "t": -1.2679058872989366
+     }
+    },
+    "tlt-qqq-rate-tech": {
+     "exposure": 0.4756972111553785,
+     "holm_adjusted_p": 0.3452371177409414,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184687,
+     "strategy_annualised_return": 0.13876435120515856,
+     "strategy_sharpe": 1.2897077418663752,
+     "switches": 88,
+     "timing_excess": {
+      "annualised_mean": 0.07628853950612445,
+      "days": 1255,
+      "mean": 0.00030273229962747805,
+      "p_one_sided": 0.024659794124352957,
+      "sharpe": 0.8613950194537878,
+      "t": 1.9658184288008376
+     }
+    },
+    "tlt-soxl-sprint": {
+     "exposure": 0.44302788844621516,
+     "holm_adjusted_p": 0.08683789259873288,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7288377133691871,
+     "strategy_annualised_return": 0.27703542721433455,
+     "strategy_sharpe": 1.4085493379266671,
+     "switches": 101,
+     "timing_excess": {
+      "annualised_mean": 0.17437055024218037,
+      "days": 1255,
+      "mean": 0.0006919466279451604,
+      "p_one_sided": 0.0037755605477709946,
+      "sharpe": 1.1210798979036967,
+      "t": 2.671508273649575
+     }
+    },
+    "tlt-spy-rate-momentum": {
+     "exposure": 0.4756972111553785,
+     "holm_adjusted_p": 0.4432143436334304,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737316,
+     "strategy_annualised_return": 0.09497594281266715,
+     "strategy_sharpe": 1.1801309333855314,
+     "switches": 88,
+     "timing_excess": {
+      "annualised_mean": 0.04342887999607132,
+      "days": 1255,
+      "mean": 0.0001723368253812354,
+      "p_one_sided": 0.0738690572722384,
+      "sharpe": 0.6434990902450899,
+      "t": 1.447567254844868
+     }
+    },
+    "tlt-tqqq-leveraged-lead-lag": {
+     "exposure": 0.4756972111553785,
+     "holm_adjusted_p": 0.3404383616724331,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534879,
+     "strategy_annualised_return": 0.14295980568004452,
+     "strategy_sharpe": 1.193097989836098,
+     "switches": 88,
+     "timing_excess": {
+      "annualised_mean": 0.08691931701183189,
+      "days": 1255,
+      "mean": 0.0003449179246501266,
+      "p_one_sided": 0.022695890778162205,
+      "sharpe": 0.8810031250129929,
+      "t": 2.001005644986864
+     }
+    },
+    "tlt-tqqq-sprint": {
+     "exposure": 0.44302788844621516,
+     "holm_adjusted_p": 0.2923479870285308,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534877,
+     "strategy_annualised_return": 0.1439349672190913,
+     "strategy_sharpe": 1.2439606946412325,
+     "switches": 101,
+     "timing_excess": {
+      "annualised_mean": 0.09174315532708761,
+      "days": 1255,
+      "mean": 0.00036406014018685576,
+      "p_one_sided": 0.01719694041344299,
+      "sharpe": 0.9484803369650766,
+      "t": 2.1154233569484817
+     }
+    },
+    "tlt-upro-sprint": {
+     "exposure": 0.44302788844621516,
+     "holm_adjusted_p": 0.3797351470939727,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6138619314579881,
+     "strategy_annualised_return": 0.09504844822957102,
+     "strategy_sharpe": 1.097447681976338,
+     "switches": 101,
+     "timing_excess": {
+      "annualised_mean": 0.05389977114251646,
+      "days": 1255,
+      "mean": 0.00021388798072427168,
+      "p_one_sided": 0.052465069751589086,
+      "sharpe": 0.7371480686383932,
+      "t": 1.6214081244848721
+     }
+    },
+    "vcit-qqq-credit-lead": {
+     "exposure": 0.5641434262948207,
+     "holm_adjusted_p": 0.47057131273644887,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184689,
+     "strategy_annualised_return": 0.12520381908200331,
+     "strategy_sharpe": 1.0349261261753533,
+     "switches": 121,
+     "timing_excess": {
+      "annualised_mean": 0.05111190169018396,
+      "days": 1255,
+      "mean": 0.00020282500670707935,
+      "p_one_sided": 0.10880582258582888,
+      "sharpe": 0.5588831470176258,
+      "t": 1.232903833172534
+     }
+    },
+    "vcit-tqqq-sprint": {
+     "exposure": 0.49721115537848604,
+     "holm_adjusted_p": 0.28997842838594995,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534879,
+     "strategy_annualised_return": 0.15170561228939344,
+     "strategy_sharpe": 1.228152347338196,
+     "switches": 76,
+     "timing_excess": {
+      "annualised_mean": 0.09313062915879934,
+      "days": 1255,
+      "mean": 0.00036956598872539445,
+      "p_one_sided": 0.01610991268810833,
+      "sharpe": 0.933764850922308,
+      "t": 2.141672745380525
+     }
+    }
+   },
+   "members_holm_rejected": 0,
+   "members_positive_excess": 22,
+   "rule": "hysteresis_hold_previous",
+   "window": [
+    "2021-04-29",
+    "2026-04-28"
+   ]
+  },
+  "replication_exploratory_threshold": {
+   "cost_per_switch": 0.0003,
+   "cost_scales_with_weight": false,
+   "delay": 1,
+   "equal_weight_timing_excess": {
+    "annualised_mean": 0.06294241556266805,
+    "days": 1255,
+    "mean": 0.0002497714903280479,
+    "p_one_sided": 0.004636468588704596,
+    "sharpe": 1.125669990828803,
+    "t": 2.601824204704879
+   },
+   "members": {
+    "agg-efa-credit-lead": {
+     "exposure": 0.3346613545816733,
+     "holm_adjusted_p": 0.8364002388280348,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5713291377891935,
+     "strategy_annualised_return": 0.05700163792872393,
+     "strategy_sharpe": 0.7580481497186508,
+     "switches": 224,
+     "timing_excess": {
+      "annualised_mean": 0.03191503210620368,
+      "days": 1255,
+      "mean": 0.00012664695280239558,
+      "p_one_sided": 0.15268058690909192,
+      "sharpe": 0.5180030603323206,
+      "t": 1.0250042680343348
+     }
+    },
+    "agg-qqq-credit-lead": {
+     "exposure": 0.3346613545816733,
+     "holm_adjusted_p": 0.6480715603635484,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184689,
+     "strategy_annualised_return": 0.09804089740352583,
+     "strategy_sharpe": 1.0121799622592391,
+     "switches": 224,
+     "timing_excess": {
+      "annualised_mean": 0.05408806505244655,
+      "days": 1255,
+      "mean": 0.00021463517877954978,
+      "p_one_sided": 0.0786990764024636,
+      "sharpe": 0.6601538198903716,
+      "t": 1.4138765482545728
+     }
+    },
+    "agg-spy-credit-lead": {
+     "exposure": 0.3346613545816733,
+     "holm_adjusted_p": 0.8364002388280348,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737314,
+     "strategy_annualised_return": 0.06805853177836407,
+     "strategy_sharpe": 0.9192264786825344,
+     "switches": 224,
+     "timing_excess": {
+      "annualised_mean": 0.03179426648025647,
+      "days": 1255,
+      "mean": 0.0001261677241280019,
+      "p_one_sided": 0.13940003980467247,
+      "sharpe": 0.5080484470231436,
+      "t": 1.0830187974380499
+     }
+    },
+    "agg-tqqq-sprint": {
+     "exposure": 0.1856573705179283,
+     "holm_adjusted_p": 0.0037355680082933034,
+     "holm_reject": true,
+     "matched_buy_hold_sharpe": 0.5892500641534876,
+     "strategy_annualised_return": 0.13291334029194077,
+     "strategy_sharpe": 1.7989533449396313,
+     "switches": 98,
+     "timing_excess": {
+      "annualised_mean": 0.1110415917832414,
+      "days": 1255,
+      "mean": 0.0004406412372350849,
+      "p_one_sided": 0.0001624160003605784,
+      "sharpe": 1.6021667175867143,
+      "t": 3.5946467587875715
+     }
+    },
+    "agg-upro-sprint": {
+     "exposure": 0.1856573705179283,
+     "holm_adjusted_p": 0.004621079148665458,
+     "holm_reject": true,
+     "matched_buy_hold_sharpe": 0.6138619314579881,
+     "strategy_annualised_return": 0.09388651188639259,
+     "strategy_sharpe": 1.7164828129479826,
+     "switches": 98,
+     "timing_excess": {
+      "annualised_mean": 0.07664255188408375,
+      "days": 1255,
+      "mean": 0.000304137110651126,
+      "p_one_sided": 0.00021004905221206626,
+      "sharpe": 1.483940499999998,
+      "t": 3.5271251747818737
+     }
+    },
+    "emb-spy-credit-lead": {
+     "exposure": 0.350597609561753,
+     "holm_adjusted_p": 0.10230197768170099,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737315,
+     "strategy_annualised_return": 0.10250739718367265,
+     "strategy_sharpe": 1.4185347156283685,
+     "switches": 256,
+     "timing_excess": {
+      "annualised_mean": 0.06451626210946468,
+      "days": 1255,
+      "mean": 0.00025601691313279645,
+      "p_one_sided": 0.005701902935665717,
+      "sharpe": 1.038847865116397,
+      "t": 2.530075272540551
+     }
+    },
+    "hyg-qqq-credit-lead": {
+     "exposure": 0.25737051792828686,
+     "holm_adjusted_p": 0.9815285689791939,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184688,
+     "strategy_annualised_return": 0.04702483461023379,
+     "strategy_sharpe": 0.5852282285243537,
+     "switches": 206,
+     "timing_excess": {
+      "annualised_mean": 0.01533562735711192,
+      "days": 1255,
+      "mean": 6.085566411552344e-05,
+      "p_one_sided": 0.3098941195932617,
+      "sharpe": 0.21659756397873162,
+      "t": 0.49615048972757775
+     }
+    },
+    "hyg-spy-5d-credit-lead": {
+     "exposure": 0.25737051792828686,
+     "holm_adjusted_p": 0.9815285689791939,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737313,
+     "strategy_annualised_return": 0.04098472253845886,
+     "strategy_sharpe": 0.6510615817910409,
+     "switches": 206,
+     "timing_excess": {
+      "annualised_mean": 0.013095775654438011,
+      "days": 1255,
+      "mean": 5.196736370808742e-05,
+      "p_one_sided": 0.29917412982608116,
+      "sharpe": 0.232663146288963,
+      "t": 0.5267772837376745
+     }
+    },
+    "ief-qqq-rate-tech": {
+     "exposure": 0.3466135458167331,
+     "holm_adjusted_p": 0.19074792774838906,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184688,
+     "strategy_annualised_return": 0.12546481513617266,
+     "strategy_sharpe": 1.1798066107144705,
+     "switches": 172,
+     "timing_excess": {
+      "annualised_mean": 0.07994223877255485,
+      "days": 1255,
+      "mean": 0.000317231106240297,
+      "p_one_sided": 0.014504018585601002,
+      "sharpe": 0.9332003889201058,
+      "t": 2.1833772870580987
+     }
+    },
+    "ief-tqqq-sprint": {
+     "exposure": 0.3466135458167331,
+     "holm_adjusted_p": 0.19074792774838906,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534878,
+     "strategy_annualised_return": 0.13112440958181626,
+     "strategy_sharpe": 1.1095415975604692,
+     "switches": 172,
+     "timing_excess": {
+      "annualised_mean": 0.09029088768789255,
+      "days": 1255,
+      "mean": 0.00035829717336465313,
+      "p_one_sided": 0.01362485198202779,
+      "sharpe": 0.947374697662415,
+      "t": 2.2079221001747524
+     }
+    },
+    "lqd-qqq-credit-lead": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.6480715603635484,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184688,
+     "strategy_annualised_return": 0.09845576256207292,
+     "strategy_sharpe": 1.0257733124013195,
+     "switches": 226,
+     "timing_excess": {
+      "annualised_mean": 0.05575872542102449,
+      "days": 1255,
+      "mean": 0.00022126478341676388,
+      "p_one_sided": 0.07200795115150538,
+      "sharpe": 0.6848579255415285,
+      "t": 1.4609983206296633
+     }
+    },
+    "lqd-soxl-sprint": {
+     "exposure": 0.26374501992031874,
+     "holm_adjusted_p": 0.31369635585915956,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7288377133691872,
+     "strategy_annualised_return": 0.16307416289658994,
+     "strategy_sharpe": 1.1105556126114253,
+     "switches": 150,
+     "timing_excess": {
+      "annualised_mean": 0.10195532426748377,
+      "days": 1255,
+      "mean": 0.0004045846201090628,
+      "p_one_sided": 0.031369635585915955,
+      "sharpe": 0.776296044863815,
+      "t": 1.8610347383986847
+     }
+    },
+    "lqd-spy-credit-lead": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.6480715603635484,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737315,
+     "strategy_annualised_return": 0.07614565467151758,
+     "strategy_sharpe": 1.0489627701609145,
+     "switches": 226,
+     "timing_excess": {
+      "annualised_mean": 0.0409175112390702,
+      "days": 1255,
+      "mean": 0.00016237107634551665,
+      "p_one_sided": 0.08669299125171914,
+      "sharpe": 0.6616523627272385,
+      "t": 1.3614042223643832
+     }
+    },
+    "lqd-tqqq-sprint": {
+     "exposure": 0.26374501992031874,
+     "holm_adjusted_p": 0.014618023186729815,
+     "holm_reject": true,
+     "matched_buy_hold_sharpe": 0.5892500641534877,
+     "strategy_annualised_return": 0.1409000088368856,
+     "strategy_sharpe": 1.6382496416877765,
+     "switches": 150,
+     "timing_excess": {
+      "annualised_mean": 0.10982898413139419,
+      "days": 1255,
+      "mean": 0.00043582930210870713,
+      "p_one_sided": 0.0006960963422252293,
+      "sharpe": 1.3875345276214508,
+      "t": 3.1962648220189913
+     }
+    },
+    "soxx-qqq-lead-lag": {
+     "exposure": 0.3888446215139442,
+     "holm_adjusted_p": 0.9815285689791939,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184689,
+     "strategy_annualised_return": -0.015478557995888868,
+     "strategy_sharpe": -0.1335923037468072,
+     "switches": 264,
+     "timing_excess": {
+      "annualised_mean": -0.07293118885479964,
+      "days": 1255,
+      "mean": -0.0002894094795825384,
+      "p_one_sided": 0.9684537041116028,
+      "sharpe": -0.7629923790466513,
+      "t": -1.8585384265663611
+     }
+    },
+    "tlt-qqq-rate-tech": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.10230197768170099,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184688,
+     "strategy_annualised_return": 0.12185127572112144,
+     "strategy_sharpe": 1.4156264198336936,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.079154238580073,
+      "days": 1255,
+      "mean": 0.0003141041213494961,
+      "p_one_sided": 0.006575795069599543,
+      "sharpe": 1.022487291690303,
+      "t": 2.479637799284793
+     }
+    },
+    "tlt-soxl-sprint": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.08440888660397511,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7288377133691871,
+     "strategy_annualised_return": 0.22529711501770996,
+     "strategy_sharpe": 1.358044536983758,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.14996029882231626,
+      "days": 1255,
+      "mean": 0.0005950805508822075,
+      "p_one_sided": 0.004220444330198756,
+      "sharpe": 1.0523405502642527,
+      "t": 2.6339058641121897
+     }
+    },
+    "tlt-spy-rate-momentum": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.19074792774838906,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7924607740737315,
+     "strategy_annualised_return": 0.08527707561856525,
+     "strategy_sharpe": 1.3206030174649857,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.05004893218611785,
+      "days": 1255,
+      "mean": 0.00019860687375443582,
+      "p_one_sided": 0.01573384334689494,
+      "sharpe": 0.8535606830930352,
+      "t": 2.151107867228212
+     }
+    },
+    "tlt-tqqq-leveraged-lead-lag": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.10230197768170099,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534878,
+     "strategy_annualised_return": 0.12830890421957217,
+     "strategy_sharpe": 1.3387399061323857,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.09000987678802988,
+      "days": 1255,
+      "mean": 0.00035718205074615033,
+      "p_one_sided": 0.005683443204538944,
+      "sharpe": 1.044130841488579,
+      "t": 2.5312127968491525
+     }
+    },
+    "tlt-tqqq-sprint": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.10230197768170099,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534878,
+     "strategy_annualised_return": 0.12830890421957217,
+     "strategy_sharpe": 1.3387399061323857,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.09000987678802988,
+      "days": 1255,
+      "mean": 0.00035718205074615033,
+      "p_one_sided": 0.005683443204538944,
+      "sharpe": 1.044130841488579,
+      "t": 2.5312127968491525
+     }
+    },
+    "tlt-upro-sprint": {
+     "exposure": 0.3250996015936255,
+     "holm_adjusted_p": 0.19074792774838906,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.6138619314579882,
+     "strategy_annualised_return": 0.08696154357234616,
+     "strategy_sharpe": 1.2056211666928,
+     "switches": 178,
+     "timing_excess": {
+      "annualised_mean": 0.05676611146529894,
+      "days": 1255,
+      "mean": 0.00022526234708451963,
+      "p_one_sided": 0.014243919531736484,
+      "sharpe": 0.8719113762739991,
+      "t": 2.190502149745925
+     }
+    },
+    "vcit-qqq-credit-lead": {
+     "exposure": 0.3155378486055777,
+     "holm_adjusted_p": 0.9815285689791939,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.7322021662184689,
+     "strategy_annualised_return": 0.0688434386992279,
+     "strategy_sharpe": 0.729714505165859,
+     "switches": 220,
+     "timing_excess": {
+      "annualised_mean": 0.027402196768210294,
+      "days": 1255,
+      "mean": 0.00010873887606432658,
+      "p_one_sided": 0.24538214224479848,
+      "sharpe": 0.33993624455432275,
+      "t": 0.6890937315362841
+     }
+    },
+    "vcit-tqqq-sprint": {
+     "exposure": 0.3553784860557769,
+     "holm_adjusted_p": 0.09680446786995708,
+     "holm_reject": false,
+     "matched_buy_hold_sharpe": 0.5892500641534877,
+     "strategy_annualised_return": 0.14199846516335338,
+     "strategy_sharpe": 1.3974327494373084,
+     "switches": 166,
+     "timing_excess": {
+      "annualised_mean": 0.10013237145142236,
+      "days": 1255,
+      "mean": 0.0003973506803627872,
+      "p_one_sided": 0.005094971993155636,
+      "sharpe": 1.1174350956752501,
+      "t": 2.569316170504288
+     }
+    }
+   },
+   "members_holm_rejected": 3,
+   "members_positive_excess": 22,
+   "rule": "threshold_flat_in_neutral",
+   "window": [
+    "2021-04-29",
+    "2026-04-28"
+   ]
+  }
+ },
+ "preregistration": "docs/research/edge-search-2026-11-17-preregistration.md",
+ "schema_version": 1,
+ "search": {
+  "configurations_eligible": 32824,
+  "configurations_total": 34848,
+  "eligible_positive_in_holdout_share": 0.3799049475993176,
+  "placebo": {
+   "draws": 200,
+   "expected_null_max_by_trials": {
+    "10": 0.3254533269430315,
+    "100": 0.6343489776852522,
+    "1000": 0.8451866424190945,
+    "10000": 1.0195831667192379
+   },
+   "null_max_selection_sharpe": {
+    "mean": 1.0980279780061069,
+    "p05": 0.9401763264957782,
+    "p95": 1.2771301750601949
+   },
+   "null_primary_holdout_sharpe": {
+    "mean": -0.2530122288915312,
+    "p05": -0.93683968592787,
+    "p95": 0.3854500613176874
+   },
+   "null_primary_selection_sharpe_mean": 2.2551332052021085,
+   "p_primary_holdout": 0.11442786069651742,
+   "p_selection_max": 0.8258706467661692
+  },
+  "plan": {
+   "cost_per_unit_turnover": 0.0005,
+   "delay": 2,
+   "directions": [
+    1,
+    -1
+   ],
+   "exposure_bounds": [
+    0.1,
+    0.9
+   ],
+   "holdout_window": [
+    "2022-01-03",
+    "2026-11-13"
+   ],
+   "min_switches": 40,
+   "placebo_draws": 200,
+   "placebo_min_shift": 252,
+   "primary_top_k": 100,
+   "seed": 20261117,
+   "selection_window": [
+    "2012-01-03",
+    "2021-12-31"
+   ],
+   "sensitivity_cost": 0.001,
+   "threshold_sigmas": [
+    0.0,
+    0.5,
+    1.0
+   ],
+   "top_k": [
+    1,
+    10,
+    100
+   ],
+   "windows": [
+    5,
+    10,
+    20
+   ]
+  },
+  "selection_holdout_spearman": {
+   "note": "configurations overlap; p-value is descriptive",
+   "p_two_sided": 0.0,
+   "rho": 0.2671401551286854
+  },
+  "selection_max_sharpe": 0.9839837685483994,
+  "selection_sharpe_quantiles": {
+   "0.5": -0.14966466315416588,
+   "0.9": 0.26336913654874067,
+   "0.99": 0.5668605510215623,
+   "0.999": 0.7749563110850193
+  },
+  "top": {
+   "1": {
+    "holdout": {
+     "annualised_mean": 0.02715615192027304,
+     "days": 1222,
+     "mean": 0.00010776250762013118,
+     "p_one_sided": 0.27615664669512896,
+     "sharpe": 0.28097746801792167,
+     "t": 0.5942972862444927
+    },
+    "holdout_at_sensitivity_cost": {
+     "annualised_mean": 0.02127890151110774,
+     "days": 1222,
+     "mean": 8.44400853615387e-05,
+     "p_one_sided": 0.32061704252014533,
+     "sharpe": 0.22017678160158366,
+     "t": 0.4659740365322638
+    },
+    "members_positive_in_holdout": 1,
+    "selection": {
+     "annualised_mean": 0.07768023392179335,
+     "days": 2517,
+     "mean": 0.00030825489651505284,
+     "p_one_sided": 0.0006835319620522889,
+     "sharpe": 0.9839837685483996,
+     "t": 3.201516190580937
+    }
+   },
+   "10": {
+    "holdout": {
+     "annualised_mean": 0.05433056360623193,
+     "days": 1222,
+     "mean": 0.0002155974746279045,
+     "p_one_sided": 0.023294241116693728,
+     "sharpe": 0.8294780338469371,
+     "t": 1.990022270972138
+    },
+    "holdout_at_sensitivity_cost": {
+     "annualised_mean": 0.04418457342619918,
+     "days": 1222,
+     "mean": 0.00017533560883412378,
+     "p_one_sided": 0.05310750234308749,
+     "sharpe": 0.6744845308938113,
+     "t": 1.6154420294650593
+    },
+    "members_positive_in_holdout": 8,
+    "selection": {
+     "annualised_mean": 0.12064581896015336,
+     "days": 2517,
+     "mean": 0.00047875324984187825,
+     "p_one_sided": 6.772656704098613e-15,
+     "sharpe": 2.135149269298803,
+     "t": 7.700577049900584
+    }
+   },
+   "100": {
+    "holdout": {
+     "annualised_mean": 0.008663161256762305,
+     "days": 1222,
+     "mean": 3.437762403477107e-05,
+     "p_one_sided": 0.26023684634239597,
+     "sharpe": 0.2782684901828454,
+     "t": 0.6426153926211712
+    },
+    "holdout_at_sensitivity_cost": {
+     "annualised_mean": -0.0011838109199971117,
+     "days": 1222,
+     "mean": -4.697662380940905e-06,
+     "p_one_sided": 0.5350587541265437,
+     "sharpe": -0.03804427782643786,
+     "t": -0.08799268294765557
+    },
+    "members_positive_in_holdout": 46,
+    "selection": {
+     "annualised_mean": 0.09872202172703605,
+     "days": 2517,
+     "mean": 0.00039175405447236506,
+     "p_one_sided": 1.890739069903407e-19,
+     "sharpe": 3.33214218011665,
+     "t": 8.94317453694911
+    }
+   }
+  },
+  "top_configurations": [
+   {
+    "direction": 1,
+    "follower": "DBC",
+    "holdout_sharpe": 0.2809774680179218,
+    "leader": "LQD",
+    "selection_sharpe": 0.9839837685483994,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "DBC",
+    "holdout_sharpe": 0.5828520262421318,
+    "leader": "HYG",
+    "selection_sharpe": 0.9691870648920988,
+    "threshold_sigma": 0.5,
+    "window": 20
+   },
+   {
+    "direction": 1,
+    "follower": "USO",
+    "holdout_sharpe": 0.21674775230063917,
+    "leader": "HYG",
+    "selection_sharpe": 0.9553549075043755,
+    "threshold_sigma": 0.0,
+    "window": 5
+   },
+   {
+    "direction": -1,
+    "follower": "TMF",
+    "holdout_sharpe": 0.6863708845976031,
+    "leader": "USO",
+    "selection_sharpe": 0.9368887393264596,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "XLU",
+    "holdout_sharpe": -0.31201336248308686,
+    "leader": "UUP",
+    "selection_sharpe": 0.9235525099200693,
+    "threshold_sigma": 1.0,
+    "window": 10
+   },
+   {
+    "direction": -1,
+    "follower": "UNG",
+    "holdout_sharpe": 0.029132216541194064,
+    "leader": "SHY",
+    "selection_sharpe": 0.9062139481521243,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "DBC",
+    "holdout_sharpe": -0.24608684954927657,
+    "leader": "USO",
+    "selection_sharpe": 0.8962814469728243,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "EEM",
+    "holdout_sharpe": 0.1439487690728295,
+    "leader": "VCIT",
+    "selection_sharpe": 0.8797332096925153,
+    "threshold_sigma": 0.5,
+    "window": 20
+   },
+   {
+    "direction": -1,
+    "follower": "UNG",
+    "holdout_sharpe": 0.7702449839667554,
+    "leader": "FXY",
+    "selection_sharpe": 0.8763158984934114,
+    "threshold_sigma": 0.0,
+    "window": 5
+   },
+   {
+    "direction": -1,
+    "follower": "TLT",
+    "holdout_sharpe": 0.6068826889891591,
+    "leader": "USO",
+    "selection_sharpe": 0.8744510500801659,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": -1,
+    "follower": "IBB",
+    "holdout_sharpe": -0.6235557492485106,
+    "leader": "XLU",
+    "selection_sharpe": 0.8723737025051373,
+    "threshold_sigma": 0.5,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "UNG",
+    "holdout_sharpe": 0.18153631540893106,
+    "leader": "XLV",
+    "selection_sharpe": 0.8715851164568623,
+    "threshold_sigma": 0.5,
+    "window": 5
+   },
+   {
+    "direction": -1,
+    "follower": "XLU",
+    "holdout_sharpe": -0.3601406766327068,
+    "leader": "FXE",
+    "selection_sharpe": 0.861394004684334,
+    "threshold_sigma": 0.0,
+    "window": 20
+   },
+   {
+    "direction": 1,
+    "follower": "XLB",
+    "holdout_sharpe": 0.02787847478364553,
+    "leader": "SHY",
+    "selection_sharpe": 0.8508071757377321,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": -1,
+    "follower": "XLB",
+    "holdout_sharpe": -0.5273768276949171,
+    "leader": "XLU",
+    "selection_sharpe": 0.8462240197559472,
+    "threshold_sigma": 0.5,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "XLU",
+    "holdout_sharpe": -0.08720724594165843,
+    "leader": "UUP",
+    "selection_sharpe": 0.8443189147641309,
+    "threshold_sigma": 0.0,
+    "window": 20
+   },
+   {
+    "direction": 1,
+    "follower": "USO",
+    "holdout_sharpe": 0.23909139552575093,
+    "leader": "LQD",
+    "selection_sharpe": 0.8286017434041583,
+    "threshold_sigma": 1.0,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "FXY",
+    "holdout_sharpe": -0.11293394674344845,
+    "leader": "EMB",
+    "selection_sharpe": 0.8221131319302188,
+    "threshold_sigma": 1.0,
+    "window": 10
+   },
+   {
+    "direction": -1,
+    "follower": "IWM",
+    "holdout_sharpe": -0.22837145096221045,
+    "leader": "XLU",
+    "selection_sharpe": 0.8179381905126272,
+    "threshold_sigma": 0.5,
+    "window": 5
+   },
+   {
+    "direction": 1,
+    "follower": "HYG",
+    "holdout_sharpe": -0.14360327622370858,
+    "leader": "TIP",
+    "selection_sharpe": 0.8137166171328158,
+    "threshold_sigma": 0.5,
+    "window": 5
+   }
+  ]
+ },
+ "status": "RETROSPECTIVE_RESEARCH_NOT_INVESTMENT_APPROVAL",
+ "verdicts": {
+  "h1_frozen_family_post_freeze": "NOT_SUPPORTED",
+  "h2_search_top100_holdout": "NOT_SUPPORTED",
+  "note": "Supported means retrospective evidence only, never approval to trade."
+ }
+}

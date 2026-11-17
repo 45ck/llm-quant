@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-11",
+  "as_of": "2026-11-17",
   "results": [
     {
       "id": "track-d-april-cohort",
@@ -59,6 +59,30 @@
         {
           "path": "docs/evidence/synthetic-reference-2026-11-11.json",
           "sha256": "3f222794649c9457e47db35d3a9c5ac2f1831d11454737a901b5c307ccf3cdc4"
+        }
+      ]
+    },
+    {
+      "id": "lead-lag-family-post-freeze",
+      "status": "failed_replication",
+      "summary": "23 frozen lead-lag strategies, 29 April to 13 November 2026: timing excess negative (Sharpe -1.75), 0 of 23 positive. The in-sample result did not persist.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/evidence/edge-search-2026-11-17.json",
+          "sha256": "bc194d1ae868840b86199e68f4b53fa718dd90e3d527336510a4a457e4a24b96"
+        }
+      ]
+    },
+    {
+      "id": "lead-lag-mechanical-search",
+      "status": "retrospective",
+      "summary": "34,848 rules: best in-sample Sharpe 0.98 is below the 1.10 found on placebo data; the top-100 portfolio falls from 3.33 to 0.28 in the 2022-2026 holdout.",
+      "trading_approved": false,
+      "artifacts": [
+        {
+          "path": "docs/evidence/edge-search-2026-11-17.json",
+          "sha256": "bc194d1ae868840b86199e68f4b53fa718dd90e3d527336510a4a457e4a24b96"
         }
       ]
     }

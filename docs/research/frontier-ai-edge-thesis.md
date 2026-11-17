@@ -1,7 +1,8 @@
 # Can frontier AI just go and find infinite Sharpe?
 
 [Research index](README.md) · [Research policy](../../RESEARCH_POLICY.md) ·
-[Pre-registration](edge-search-2026-11-17-preregistration.md)
+[Pre-registration](edge-search-2026-11-17-preregistration.md) ·
+[Results](edge-search-2026-11-17-results.md) · [Comparable projects](external-projects.md)
 
 **Research only. No validated investment edge or live-trading approval.**
 
@@ -96,6 +97,38 @@ Written before the run, for the experiment in the pre-registration:
 If P2 and P3 fail, so that the real search clearly beats the placebo and the
 advantage holds out of sample, that is evidence for the thesis in this corner of
 the market and will be reported as such.
+
+## Results (added 17 November 2026, after the run)
+
+Full tables are in the [results report](edge-search-2026-11-17-results.md).
+
+| Prediction | What happened |
+| --- | --- |
+| P1. Best selection Sharpe well above 1 | Wrong in size: best single rule 0.98. A portfolio of the top 100 showed 3.33 in sample. |
+| P2. Placebo nearly as high | Right: the best rule on placebo data averaged 1.10, higher than the real best. |
+| P3. Top 100 fades out of sample | Right: 3.33 fell to 0.28 and was not distinguishable from zero. The top 10 kept 0.83, a secondary and uncorrected observation. |
+| P4. Frozen family shows nothing after its freeze | Right: timing excess was negative, 0 of 23 members positive. |
+
+What this run adds to the argument:
+
+- **The search produced its most impressive number from nothing.** An in-sample
+  Sharpe of 3.3 for the selected portfolio sits beside 2.3 for the same procedure
+  on data with no lead-lag relation in it. An agent reporting the first figure
+  alone would be reporting mostly the size of its own search.
+- **More trials, higher fake Sharpe, on schedule.** The best placebo rule rose
+  from 0.33 with 10 tries to 1.02 with 10,000. That is the logarithmic growth the
+  theory predicts, lower in level because the rules overlap and pay costs.
+- **A real-looking in-sample effect reversed.** This repository's own family had a
+  timing Sharpe above 1 on its tuning window and about -1.7 in the months after.
+- **Nothing here refutes the weaker claim** that AI lowers the cost of honest
+  research. The whole experiment, including the placebo and the tests, took one
+  session. That is the usable part of the thesis: cheap falsification, not cheap
+  alpha.
+
+One corner of the market, one rule family and one run cannot show that no edge
+exists anywhere. They show that this search, done the way an unattended agent
+would do it, did not find one, and that its in-sample output would have looked
+like success.
 
 ## Sources
 

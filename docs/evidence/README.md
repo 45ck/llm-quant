@@ -8,6 +8,8 @@
 | [Model-audit verification receipt](verification-2026-11-11.json) | Commands and limits of the original 131-test focused verification. |
 | [Original test log](focused-tests-2026-11-11.txt) | Captured output from that focused run. |
 | [Organisation verification](organisation-2026-11-11.json) | Separate rerun and entry-point/template checks for the organisation update. |
+| [Edge-search results](edge-search-2026-11-17.json) | Aggregates of the pre-registered 17 November run: frozen family, search, holdout and placebo. |
+| [Edge-search verification receipt](edge-search-verification-2026-11-17.json) | Commands, counts and what was not executed for the 17 November change. |
 
 Keep dated evidence immutable; add a new receipt for a new run instead of rewriting
 an old success count. A receipt proves only the recorded scope. A hash checks

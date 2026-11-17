@@ -16,6 +16,9 @@ research. **Research only. No validated investment edge or live-trading approval
 | Your goal | Start with |
 | --- | --- |
 | Run an example without credentials | The offline reference below |
+| See the latest real-data test | [Edge-search results](docs/research/edge-search-2026-11-17-results.md) |
+| Ask whether AI can simply find high-Sharpe strategies | [The thesis and what the test showed](docs/research/frontier-ai-edge-thesis.md) |
+| Compare with other LLM-trading projects | [Eight pinned projects](docs/research/external-projects.md) |
 | Review established methods used here | [Standards and reuse](docs/research/standards-and-reuse.md) |
 | Understand historical successes and failures | [Model audit](docs/research/model-audit-2026-11-11.md) |
 | Submit a replication, idea or negative result | [Research contribution guide](docs/contributing/research.md) |
@@ -73,6 +76,15 @@ retained anchor to establish a prospective record. No real forward forecast was
 issued by this engineering increment, and no live-trading path was added.
 [Exact methods, timing, cost conventions, upstream sources and limits](docs/research/standards-and-reuse.md).
 
+## Comparable projects in one tree
+
+Eight public LLM-trading projects, among them TradingAgents, ai-hedge-fund,
+RD-Agent and Qlib, are attached under `external/` as Git submodules pinned to
+exact commits. `git submodule update --init --depth 1` fetches them beside this
+code. They are for reading and comparison: nothing here imports or runs them, no
+upstream file is copied, and two carry licences that forbid merging them into
+MIT code. [What each is, its licence and what happened to its claims](docs/research/external-projects.md).
+
 ## Established projects, connected to runnable research
 
 Nine upstream projects now have a defined role in the repository. These are
@@ -106,7 +118,17 @@ and integration QA. They point to actual code and tests, require the current
 policy, and grant no trading, spending or account-management permissions.
 [Skills and invocation guide](docs/skills/README.md).
 
-**Verification:** 341 focused tests passed; eight optional native checks skipped
+**Verification, 17 November 2026:** in a clean install of the pinned lock on
+Python 3.13.18, the focused command `pytest tests/test_decision_lab*.py
+tests/test_research_docs.py` passed 374 tests, including 13 new edge-search tests.
+The shared fixtures no longer import pydantic, DuckDB or Polars at collection
+time, which had made the quickstart fail on a clean install. The whole suite was
+also run locally for the first time on record: 1,464 passed, 12 skipped, and two
+modules could not be collected because `ccxt` is not in the dev profile. Hosted
+CI, whole-repository lint and typing remain unverified.
+[Receipt](docs/evidence/edge-search-verification-2026-11-17.json).
+
+**Verification, 11 November 2026:** 341 focused tests passed; eight optional native checks skipped
 because dependencies are absent. Mocked contracts are not native-library passes.
 The manual native workflow rejects missing or skipped selected tests. No manual
 native job was dispatched in this update. Full legacy/hosted/lint/type verification
@@ -129,7 +151,35 @@ unchanged; the new methods do not rehabilitate rejected or unverified strategies
 | [housing-phase-diagnostic](docs/evidence/model-audit-2026-11-11.json) | Retrospective research; no established edge | Tiny baseline advantage changes sign across starting quarters; zero or one severe-loss outcome per phase. |
 | [latest-inspected-paper-report](reports/daily/2026-11-06.md) | Performance evidence unavailable | The 6 November report contains no portfolio snapshots; its zero returns are not verified performance. |
 | [cost-aware-reference](docs/evidence/synthetic-reference-2026-11-11.json) | Artificial fixture; not market evidence | Five predeclared baselines exercised on an artificial fixture; no market-performance or profit claim. |
+| [lead-lag-family-post-freeze](docs/evidence/edge-search-2026-11-17.json) | Recorded failed replication | 23 frozen lead-lag strategies, 29 April to 13 November 2026: timing excess negative (Sharpe -1.75), 0 of 23 positive. The in-sample result did not persist. |
+| [lead-lag-mechanical-search](docs/evidence/edge-search-2026-11-17.json) | Retrospective research; no established edge | 34,848 rules: best in-sample Sharpe 0.98 is below the 1.10 found on placebo data; the top-100 portfolio falls from 3.33 to 0.28 in the 2022-2026 holdout. |
 <!-- research-register:end -->
+
+### 17 November 2026: a pre-registered search for an edge
+
+The plan was committed before the run and the run was executed once.
+**No edge was found; both pre-registered hypotheses failed.** All figures are
+timing Sharpe: return above holding the same asset at the same average exposure,
+net of cost.
+
+| Test | In sample | Out of sample |
+| --- | ---: | ---: |
+| This repository's 23 frozen lead-lag strategies | 1.13 (2021-2026, tuning window) | -1.75 (29 April-13 November 2026); 0 of 23 positive |
+| Top 100 of 34,848 searched rules | 3.33 (2012-2021) | 0.28 (2022-2026); not distinguishable from zero |
+| Same search on placebo data, top 100 | 2.26 | -0.25 |
+| Best single rule: real versus placebo | 0.98 versus 1.10 | — |
+
+A search this size shows a Sharpe above 2 for its selected portfolio when the
+data contain no lead-lag relation at all. The ten best rules kept a Sharpe of 0.83
+out of sample; that was a secondary, uncorrected observation and is recorded as a
+lead for a future forward test, not as a finding.
+[Plan](docs/research/edge-search-2026-11-17-preregistration.md) ·
+[Results and limits](docs/research/edge-search-2026-11-17-results.md) ·
+[Aggregates](docs/evidence/edge-search-2026-11-17.json) ·
+[Thesis](docs/research/frontier-ai-edge-thesis.md)
+
+Data: adjusted daily closes for 44 US ETFs from Yahoo Finance, kept locally and
+identified by hash; latest vintage, with survivorship in the ETF list.
 
 ### Historical strategy outcomes
 
@@ -180,6 +230,7 @@ src/llm_quant/       Existing research and paper modules; imports preserved
   decision_lab/     Sources, scenarios, baselines, journal and result catalogue
     integrations/   Explicit upstream adapters and held-out comparisons
 .claude/skills/     Seven repo-local research procedures with executable entry points
+external/           Eight comparable public projects as pinned Git submodules; reference only
 config/             Explicit plans and artificial examples
 requirements/       Pinned focused environment and separate QA tool versions
 scripts/            Reproducible reports, documentation and policy checks

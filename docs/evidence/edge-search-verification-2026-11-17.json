@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-17",
+  "status": "FOCUSED_AND_LOCAL_FULL_SUITE_EXECUTED_HOSTED_CI_NOT_EXECUTED",
+  "preregistration_commit": "18fe3aa",
+  "checks": [
+    {
+      "name": "focused-offline-contracts",
+      "environment": "clean venv, requirements/research-py313.lock only, CPython 3.13.18",
+      "command": "PYTHONPATH=src python -m pytest -q tests/test_decision_lab*.py tests/test_research_docs.py",
+      "result": "374 passed, 5 subtests passed",
+      "passed": true
+    },
+    {
+      "name": "ci-sequence",
+      "environment": "same lock-only venv",
+      "command": "check_research_docs.py; check_research_standards.py --environment; check_quant_integrations.py; catalog --check; compileall decision_lab; demo; project example; reference benchmark twice with cmp",
+      "result": "all exit 0; 24 entry points and 155 local links checked",
+      "passed": true
+    },
+    {
+      "name": "edge-search-rerun",
+      "environment": "lock-only venv, different from the one used for the published run",
+      "command": "python -m llm_quant.decision_lab.edge_search --prices ... --snapshot ... --out <scratch>; cmp with docs/evidence/edge-search-2026-11-17.json",
+      "result": "byte-identical",
+      "passed": true
+    },
+    {
+      "name": "independent-recomputation",
+      "command": "pandas recomputation of three frozen-family members, primary rule",
+      "result": "exposure, strategy Sharpe and timing-excess Sharpe equal to four decimals",
+      "passed": true
+    },
+    {
+      "name": "whole-test-suite",
+      "environment": "pip install -e '.[dev]' on CPython 3.13.18; unpinned latest resolver versions, not the lock",
+      "command": "PYTHONPATH=src python -m pytest tests/ -q --continue-on-collection-errors",
+      "result": "1464 passed, 12 skipped, 2 collection errors",
+      "passed": false,
+      "note": "tests/test_arb/test_basis.py and tests/test_funding_rates.py import ccxt, which the dev profile does not install. Identical counts with the original and the modified tests/conftest.py."
+    },
+    {
+      "name": "lint",
+      "command": "ruff format --check and ruff check on files added or edited in this change",
+      "result": "clean for edge_search.py, its test and conftest.py; the pre-existing decision_lab tree still reports 703 ruff findings and 33 unformatted files",
+      "passed": false
+    }
+  ],
+  "not_executed": [
+    "Hosted GitHub Actions: runs still fail within seconds before a runner is assigned",
+    "mypy and black over the whole repository",
+    "Optional native integrations (skfolio, arch, CVXPY, Pandera, Hypothesis, Qlib, Backtesting.py)",
+    "Independent reimplementation of the search and placebo"
+  ]
+}

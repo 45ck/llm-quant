@@ -11,6 +11,16 @@
 | [Housing verification increment](../decision-lab-followup-20261111.md) | Acquisition method, reproduction and freshness rejection. |
 | [Decision Lab](../../DECISION_LAB.md) | Runnable commands and model limitations. |
 
+## 17 November 2026: edge search and thesis
+
+| Record | Interpretation |
+| --- | --- |
+| [Pre-registration](edge-search-2026-11-17-preregistration.md) | Plan frozen in Git before the run: data, rules, costs, endpoints. |
+| [Results](edge-search-2026-11-17-results.md) | No edge found; both pre-registered hypotheses failed. |
+| [Machine-readable results](../evidence/edge-search-2026-11-17.json) | Every aggregate behind the report, with data and code hashes. |
+| [Can frontier AI find infinite Sharpe?](frontier-ai-edge-thesis.md) | The thesis, why it does not follow, predictions and outcome. |
+| [Comparable projects](external-projects.md) | Eight public projects pinned in `external/` and what happened to their claims. |
+
 ## Existing research library
 
 [Historical result reports](results/) · [Hypothesis notes](hypotheses/) ·
