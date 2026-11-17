@@ -1,23 +1,18 @@
-"""Shared test fixtures."""
+"""Shared test fixtures.
+
+Legacy-package imports live inside the fixtures that need them, so the offline
+research tests collect in the pinned research environment, which does not
+install pydantic, DuckDB or Polars.
+"""
 
 import pytest
-
-from llm_quant.config import (
-    AppConfig,
-    AssetEntry,
-    DataConfig,
-    GeneralConfig,
-    LLMConfig,
-    RiskLimits,
-    UniverseConfig,
-)
-from llm_quant.db.schema import init_schema
-from llm_quant.trading.portfolio import Portfolio, Position
 
 
 @pytest.fixture
 def tmp_db(tmp_path):
     """Create a temporary DuckDB with schema initialized."""
+    from llm_quant.db.schema import init_schema
+
     db_path = tmp_path / "test.duckdb"
     conn = init_schema(db_path)
     yield conn
@@ -27,6 +22,16 @@ def tmp_db(tmp_path):
 @pytest.fixture
 def sample_config(tmp_path):
     """Create a minimal AppConfig for testing."""
+    from llm_quant.config import (
+        AppConfig,
+        AssetEntry,
+        DataConfig,
+        GeneralConfig,
+        LLMConfig,
+        RiskLimits,
+        UniverseConfig,
+    )
+
     return AppConfig(
         general=GeneralConfig(db_path=str(tmp_path / "test.duckdb")),
         llm=LLMConfig(),
@@ -81,6 +86,8 @@ def sample_config(tmp_path):
 @pytest.fixture
 def sample_portfolio():
     """Create a Portfolio with some positions."""
+    from llm_quant.trading.portfolio import Portfolio, Position
+
     p = Portfolio(initial_capital=100_000.0)
     p.cash = 80_000.0
     p.positions = {
