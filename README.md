@@ -213,3 +213,8 @@ ingestion or private-data publication is authorized.
 
 Code: [MIT](LICENSE). Dataset rights are separate. No upstream implementation
 source was copied in this increment; dependencies retain their own licenses.
+
+## Development and CI cost
+
+Follow [AGENTS.md](AGENTS.md) and the [CI cost guide](docs/ci-costs.md)
+for focused local checks, candidate batching, retry warnings and required QA.
