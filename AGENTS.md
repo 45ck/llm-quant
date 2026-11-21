@@ -46,3 +46,14 @@ Read [the skills index](docs/skills/README.md) and select the matching procedure
 `.claude/skills/quant-*/SKILL.md` for integration, data, backtesting, uncertainty,
 experiment or QA work. The current RESEARCH_POLICY.md still takes precedence.
 Optional libraries must not be imported or installed merely to discover a skill.
+
+## CI cost and delivery
+
+- Batch a coherent implementation candidate after focused local checks; avoid repeated cosmetic pushes or unchanged full reruns.
+- Use one integration owner for shared CI, dependency and lockfile changes; reconcile concurrent work before publishing.
+- Read failed logs, reproduce the smallest failure, then retry only justified failed work. Code fixes need a new candidate; a rerun repeats the original revision.
+- Keep required QA, security, coverage and release gates. Never bypass hooks, use skip markers or weaken checks to reduce cost.
+- Request previews or manual heavy checks only for a concrete review or acceptance need under the existing delivery policy.
+- Record the commit, actual commands/results, run links and retry reason; mark unavailable checks NOT_RUN. Runner minutes and deployment counts are not invoices.
+- Retain fast/slow gates, offline research checks and `RESEARCH_POLICY.md`. No live-trading or paid-data authority is added.
+- Use the [CI cost guide](docs/ci-costs.md) for this repository's commands and warnings.

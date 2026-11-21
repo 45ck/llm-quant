@@ -44,6 +44,9 @@ dev = [
     "pytest-cov>=5.0.0",
     "ruff>=0.6.0",
     "mypy>=1.11.0",
+    "types-PyYAML>=6.0.12",
+    "ccxt>=4.5.93,<5", # Existing legacy exchange tests use offline mocks.
+    "polars[pyarrow]>=1.0.0", # Existing dataframe/database interchange tests.
 ]
 dashboard = [
     "streamlit>=1.38.0",
@@ -280,3 +283,6 @@ max-bool-expr = 4
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+# Keep namespace scripts and the installed src package under one module name each.
+explicit_package_bases = true
+mypy_path = ["$MYPY_CONFIG_FILE_DIR/src"]
