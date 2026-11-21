@@ -7,6 +7,12 @@ and repeated work; a smaller bill is not evidence of adequate QA.
 
 Read `RESEARCH_POLICY.md` and target `master`. Preserve the existing fast-before-commit and slow-before-PR requirements; focused research checks complement them.
 
+The Decision Lab job uses the pinned offline research environment. Shared legacy
+fixtures load their dependencies only when requested. Full `.[dev]` setup includes
+CCXT for mocked exchange tests, Polars' Arrow extra for database interchange, and
+PyYAML typing stubs. Match `quality.yml` for full check installation; no live
+services are authorized.
+
 ## Choose checks by the changed risk
 
 | Change | First check | Required follow-through |
@@ -27,7 +33,8 @@ dependency, test-runner or workflow changes need the broader applicable gates.
    then publish together. Keep ownership claims timely where the repository requires them.
 3. Read the actual remote result for that commit. On failure, capture the first
    relevant error, diagnose locally where possible, and retry the smallest failed
-   job set only when a fix or transient-failure explanation warrants it.
+   job set only when a transient-failure explanation warrants it. Code fixes need
+   a new candidate; a rerun uses the original revision even if the branch has moved.
 4. Request a preview or manual heavy run when someone needs that result. Reuse
    valid evidence for an unchanged candidate; do not poll by dispatching workflows.
 5. Record commit/PR, check scope, commands, outcomes, run links and retry reason in
@@ -51,7 +58,7 @@ Use the existing run/deployment records: accepted change, commit, run attempt, j
 duration, outcome and retry reason. Compare runner minutes, elapsed delivery time
 and failed/repeated work per accepted change. Keep provider CPU usage, credits and
 actual invoices separate; job counts and elapsed wall time alone are not billed cost.
-This guidance adds no schedule, workflow, dependency or paid service.
+This guidance adds no schedule or paid service.
 
 References: [GitHub job reruns](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
 and [skipped workflow checks](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs).

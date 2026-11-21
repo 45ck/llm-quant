@@ -51,7 +51,7 @@ Optional libraries must not be imported or installed merely to discover a skill.
 
 - Batch a coherent implementation candidate after focused local checks; avoid repeated cosmetic pushes or unchanged full reruns.
 - Use one integration owner for shared CI, dependency and lockfile changes; reconcile concurrent work before publishing.
-- Read failed logs, reproduce the smallest failure, then retry only the necessary failed job and its dependents with a stated reason.
+- Read failed logs, reproduce the smallest failure, then retry only justified failed work. Code fixes need a new candidate; a rerun repeats the original revision.
 - Keep required QA, security, coverage and release gates. Never bypass hooks, use skip markers or weaken checks to reduce cost.
 - Request previews or manual heavy checks only for a concrete review or acceptance need under the existing delivery policy.
 - Record the commit, actual commands/results, run links and retry reason; mark unavailable checks NOT_RUN. Runner minutes and deployment counts are not invoices.
